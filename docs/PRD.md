@@ -54,6 +54,9 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 - **Design-System:** siehe `docs/design-system.md`
 - **Kein fester Zeitdruck**, aber Marktreife als Ziel
 
+## Pre-Launch Checklist
+- [ ] **E-Mail-Templates anpassen** — Supabase erfordert Custom SMTP (z.B. Resend, kostenlos bis 3.000 Mails/Monat). Dann: Absendername auf "Stundenplaner" ändern, Bestätigungs- und Reset-E-Mails auf Deutsch umschreiben. Ort: Supabase Dashboard → Authentication → Email Templates.
+
 ## Non-Goals (v1)
 - Keine Community-/Sharing-Features
 - Keine Video-Integration
