@@ -39,6 +39,7 @@ export async function register(formData: { email: string; password: string; disp
       data: {
         display_name: parsed.data.displayName,
       },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
     },
   })
 
