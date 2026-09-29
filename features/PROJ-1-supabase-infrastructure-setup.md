@@ -1,8 +1,8 @@
 # PROJ-1: Supabase Infrastructure Setup
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-09-28
-**Last Updated:** 2026-09-29 (Deploying to Vercel)
+**Last Updated:** 2026-09-29 (Deployed to Vercel)
 
 ## Dependencies
 - None (Fundament für alle anderen Features)
@@ -202,4 +202,7 @@ Keine Bugs gefunden.
 - **Recommendation:** Bereit für Deployment
 
 ## Deployment
-_To be added by /deploy_
+- **Production URL:** https://stundenplaner-self.vercel.app
+- **Deployed:** 2026-09-29
+- **Platform:** Vercel (auto-deploy from GitHub main branch)
+- **Environment Variables:** NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_SITE_URL

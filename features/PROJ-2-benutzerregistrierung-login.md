@@ -1,8 +1,8 @@
 # PROJ-2: Benutzerregistrierung & Login
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-09-28
-**Last Updated:** 2026-09-29 (Frontend + Backend done)
+**Last Updated:** 2026-09-29 (Deployed to Vercel)
 
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — für Supabase Auth und Client-Verbindung
@@ -278,4 +278,8 @@ Die folgenden Acceptance Criteria erfordern manuelle Tests im Browser mit echtem
 - **Recommendation:** Manuelle Tests im Browser durchführen, dann deployen
 
 ## Deployment
-_To be added by /deploy_
+- **Production URL:** https://stundenplaner-self.vercel.app
+- **Deployed:** 2026-09-29
+- **Platform:** Vercel (auto-deploy from GitHub main branch)
+- **Supabase Site URL:** https://stundenplaner-self.vercel.app
+- **Supabase Redirect URL:** https://stundenplaner-self.vercel.app/auth/callback
