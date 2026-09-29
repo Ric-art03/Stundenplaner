@@ -2,7 +2,7 @@
 
 ## Status: Approved
 **Created:** 2026-09-28
-**Last Updated:** 2026-09-28 (QA passed — production ready)
+**Last Updated:** 2026-09-29 (Deploying to Vercel)
 
 ## Dependencies
 - None (Fundament für alle anderen Features)
