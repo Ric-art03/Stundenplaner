@@ -102,8 +102,13 @@ export function ExerciseWizard({ initialData, exerciseId, onSave, customCategori
         const key = issue.path[0]?.toString()
         if (key && !fieldErrors[key]) {
           if (key === 'variants' && issue.path.length > 1) {
-            const idx = Number(issue.path[1]) + 1
-            fieldErrors._form = `Variante ${idx}: ${issue.message}`
+            const idx = Number(issue.path[1])
+            const field = issue.path[2]?.toString()
+            if (field === 'participantsMax') {
+              fieldErrors[`variant_${idx}_participantsMax`] = issue.message
+            } else {
+              fieldErrors._form = `Variante ${idx + 1}: ${issue.message}`
+            }
           } else if (key === 'links' && issue.path.length > 1) {
             const idx = Number(issue.path[1]) + 1
             fieldErrors._form = `Link ${idx}: ${issue.message}`
@@ -211,7 +216,7 @@ export function ExerciseWizard({ initialData, exerciseId, onSave, customCategori
             customMaterials={customMaterials} />
         )}
         {step === 3 && (
-          <StepExtras data={data} update={update} />
+          <StepExtras data={data} errors={errors} update={update} />
         )}
       </div>
 
@@ -478,10 +483,20 @@ function StepLogistik({ data, errors, update, customMaterials }: StepProps) {
 
 interface StepExtrasProps {
   data: ExerciseFormData
+  errors: Record<string, string>
   update: <K extends keyof ExerciseFormData>(field: K, value: ExerciseFormData[K]) => void
 }
 
-function StepExtras({ data, update }: StepExtrasProps) {
+function StepExtras({ data, errors, update }: StepExtrasProps) {
+  const variantErrors = React.useMemo(() => {
+    const result: Record<number, string> = {}
+    for (const [key, msg] of Object.entries(errors)) {
+      const match = key.match(/^variant_(\d+)_participantsMax$/)
+      if (match) result[Number(match[1])] = msg
+    }
+    return Object.keys(result).length > 0 ? result : undefined
+  }, [errors])
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">Extras</h2>
@@ -490,6 +505,7 @@ function StepExtras({ data, update }: StepExtrasProps) {
         <VariantInput
           variants={data.variants}
           onChange={(v) => update('variants', v)}
+          variantErrors={variantErrors}
         />
       </div>
       <div className="space-y-2">

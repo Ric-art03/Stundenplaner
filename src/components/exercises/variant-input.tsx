@@ -13,9 +13,10 @@ import { AGE_GROUPS, ORGANIZATION_FORMS, type ExerciseVariant } from '@/lib/type
 interface VariantInputProps {
   variants: ExerciseVariant[]
   onChange: (variants: ExerciseVariant[]) => void
+  variantErrors?: Record<number, string>
 }
 
-export function VariantInput({ variants, onChange }: VariantInputProps) {
+export function VariantInput({ variants, onChange, variantErrors }: VariantInputProps) {
   const [expandedExtras, setExpandedExtras] = React.useState<Record<number, boolean>>({})
 
   function addVariant() {
@@ -115,7 +116,11 @@ export function VariantInput({ variants, onChange }: VariantInputProps) {
                     onChange={(e) =>
                       updateVariant(index, 'participantsMax', e.target.value ? parseInt(e.target.value) : null)
                     }
+                    className={variantErrors?.[index] ? 'border-destructive' : ''}
                   />
+                  {variantErrors?.[index] && (
+                    <p className="text-xs text-destructive mt-1">{variantErrors[index]}</p>
+                  )}
                 </div>
               </div>
               <div>
