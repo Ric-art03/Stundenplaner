@@ -19,7 +19,7 @@
 | PROJ-2 | Benutzerregistrierung & Login | P0 | PROJ-1 | Deployed | [Spec](PROJ-2-benutzerregistrierung-login.md) | 2026-09-28 |
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
-| PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Roadmap | — | 2026-09-28 |
+| PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Approved | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Roadmap | — | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Roadmap | — | 2026-09-28 |
 | PROJ-8 | Favoriten-System | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
@@ -29,10 +29,11 @@
 | PROJ-12 | Community-Features (Übungen teilen) | P2 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Roadmap | — | 2026-10-01 |
+| PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-15
+## Next Available ID: PROJ-16
 
 ## Empfohlene Build-Reihenfolge (MVP)
 

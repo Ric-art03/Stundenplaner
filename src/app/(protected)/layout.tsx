@@ -32,6 +32,12 @@ export default async function ProtectedLayout({
               >
                 Übungen
               </Link>
+              <Link
+                href="/groups"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Gruppen
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">

@@ -216,6 +216,132 @@ export type Database = {
         }
         Relationships: []
       }
+      venues: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      venue_materials: {
+        Row: {
+          id: string
+          venue_id: string
+          name: string
+          quantity: number
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          venue_id: string
+          name: string
+          quantity: number
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          venue_id?: string
+          name?: string
+          quantity?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      groups: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          sports: Json
+          age_groups: Json
+          participants_min: number | null
+          participants_max: number | null
+          unit_duration: number
+          venue_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          sports?: Json
+          age_groups?: Json
+          participants_min?: number | null
+          participants_max?: number | null
+          unit_duration: number
+          venue_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          sports?: Json
+          age_groups?: Json
+          participants_min?: number | null
+          participants_max?: number | null
+          unit_duration?: number
+          venue_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      group_schedules: {
+        Row: {
+          id: string
+          group_id: string
+          schedule_type: string
+          weekday: string | null
+          date: string | null
+          start_time: string
+          end_time: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          schedule_type?: string
+          weekday?: string | null
+          date?: string | null
+          start_time: string
+          end_time: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          schedule_type?: string
+          weekday?: string | null
+          date?: string | null
+          start_time?: string
+          end_time?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
