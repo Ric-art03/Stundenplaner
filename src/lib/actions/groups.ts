@@ -152,6 +152,17 @@ export async function createVenue(
   const parsed = venueSchema.safeParse(data)
   if (!parsed.success) return { error: 'Ungültige Eingabe.' }
 
+  const { data: existing } = await supabase
+    .from('venues')
+    .select('id')
+    .eq('user_id', user.id)
+    .ilike('name', data.name.trim())
+    .limit(1)
+
+  if (existing && existing.length > 0) {
+    return { error: `Eine Halle mit dem Namen "${data.name.trim()}" existiert bereits.` }
+  }
+
   const { data: venue, error } = await supabase
     .from('venues')
     .insert({
@@ -189,6 +200,18 @@ export async function updateVenue(
 
   const parsed = venueSchema.safeParse(data)
   if (!parsed.success) return { error: 'Ungültige Eingabe.' }
+
+  const { data: existing } = await supabase
+    .from('venues')
+    .select('id')
+    .eq('user_id', user.id)
+    .ilike('name', data.name.trim())
+    .neq('id', id)
+    .limit(1)
+
+  if (existing && existing.length > 0) {
+    return { error: `Eine Halle mit dem Namen "${data.name.trim()}" existiert bereits.` }
+  }
 
   const { error } = await supabase
     .from('venues')

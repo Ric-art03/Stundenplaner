@@ -254,6 +254,7 @@ function DatePicker({
           selected={selected}
           onSelect={handleSelect}
           locale={de}
+          classNames={{ root: 'w-[280px]' }}
         />
       </PopoverContent>
     </Popover>
