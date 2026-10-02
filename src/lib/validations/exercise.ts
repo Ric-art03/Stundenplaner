@@ -21,7 +21,15 @@ const variantSchema = z.object({
   duration: z.number().int().min(1).nullable().optional(),
   ageGroups: z.array(z.string()).optional(),
   organizationForms: z.array(z.string()).optional(),
-})
+}).refine(
+  (data) => {
+    if (data.participantsMin != null && data.participantsMax != null) {
+      return data.participantsMin <= data.participantsMax
+    }
+    return true
+  },
+  { message: 'Minimum muss kleiner oder gleich Maximum sein', path: ['participantsMax'] }
+)
 
 const httpUrl = z.string().url('Ungültige URL').refine(
   (url) => /^https?:\/\//i.test(url),

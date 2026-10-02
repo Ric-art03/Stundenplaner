@@ -126,7 +126,7 @@ export function VariantInput({ variants, onChange }: VariantInputProps) {
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Abweichende Altersgruppe(n)</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Abweichende Altersgruppe</label>
                 <MultiSelect
                   options={AGE_GROUPS}
                   selected={variant.ageGroups ?? []}
@@ -137,7 +137,7 @@ export function VariantInput({ variants, onChange }: VariantInputProps) {
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Abweichende Organisationsform(en)</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Abweichende Organisationsform</label>
                 <MultiSelect
                   options={ORGANIZATION_FORMS}
                   selected={variant.organizationForms ?? []}
