@@ -1,6 +1,6 @@
 # PROJ-5: Gruppenprofile
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-10-02
 **Last Updated:** 2026-10-02
 
@@ -513,4 +513,9 @@ Keine neuen Pakete. Bestehender Stack reicht:
 **✅ READY — No Critical or High bugs. All 22 acceptance criteria pass, all 11 edge cases pass, security audit clean, no regressions.**
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-10-02
+**Commit:** 157616c
+**Tag:** v1.4.0-PROJ-5
+**Method:** Git push to main → Vercel auto-deploy
+**No new environment variables required** — uses existing Supabase connection
