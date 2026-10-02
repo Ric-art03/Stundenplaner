@@ -1,8 +1,9 @@
 # PROJ-3: Übungsdatenbank (CRUD + Metadaten)
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-09-28
 **Last Updated:** 2026-10-02
+**Deployed:** 2026-10-02
 
 ### Implementation Notes (Frontend)
 - Types, Konstanten und Zod-Validierung: `src/lib/types/exercise.ts`, `src/lib/validations/exercise.ts`
