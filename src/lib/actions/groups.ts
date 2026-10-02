@@ -377,6 +377,17 @@ export async function createGroup(
   const parsed = groupSchema.safeParse(data)
   if (!parsed.success) return { error: 'Ungültige Eingabe.' }
 
+  const { data: existingGroup } = await supabase
+    .from('groups')
+    .select('id')
+    .eq('user_id', user.id)
+    .ilike('name', data.name.trim())
+    .limit(1)
+
+  if (existingGroup && existingGroup.length > 0) {
+    return { error: `Eine Gruppe mit dem Namen "${data.name.trim()}" existiert bereits.` }
+  }
+
   const { data: group, error } = await supabase
     .from('groups')
     .insert({
@@ -422,6 +433,18 @@ export async function updateGroup(
 
   const parsed = groupSchema.safeParse(data)
   if (!parsed.success) return { error: 'Ungültige Eingabe.' }
+
+  const { data: existingGroup } = await supabase
+    .from('groups')
+    .select('id')
+    .eq('user_id', user.id)
+    .ilike('name', data.name.trim())
+    .neq('id', id)
+    .limit(1)
+
+  if (existingGroup && existingGroup.length > 0) {
+    return { error: `Eine Gruppe mit dem Namen "${data.name.trim()}" existiert bereits.` }
+  }
 
   const { error } = await supabase
     .from('groups')
