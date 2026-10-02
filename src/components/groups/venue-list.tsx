@@ -143,6 +143,13 @@ export function VenueList({
                   <span className="font-medium">{venue.name}</span>
                 </div>
 
+                {venue.materials.length === 0 && (
+                  <p className="text-xs text-muted-foreground ml-6 flex items-center gap-1">
+                    <Package className="h-3 w-3 shrink-0" />
+                    Kein Material
+                  </p>
+                )}
+
                 {venue.materials.length > 0 && (() => {
                   const isExpanded = expandedMaterials.has(venue.id)
                   const showToggle = venue.materials.length > 6

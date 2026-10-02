@@ -57,7 +57,11 @@ export function VenueDialog({ open, onOpenChange, venue, onSave, customMaterials
   }
 
   async function handleSave() {
-    const result = venueSchema.safeParse(form)
+    const cleanedForm = {
+      ...form,
+      materials: form.materials.filter((m) => m.name.trim() !== ''),
+    }
+    const result = venueSchema.safeParse(cleanedForm)
     if (!result.success) {
       const fieldErrors: Record<string, string> = {}
       for (const issue of result.error.issues) {
@@ -70,7 +74,7 @@ export function VenueDialog({ open, onOpenChange, venue, onSave, customMaterials
 
     setSaving(true)
     try {
-      const res = await onSave(form)
+      const res = await onSave(cleanedForm)
       if (res.error) {
         if (res.error.includes('existiert bereits')) {
           setErrors({ name: res.error })
