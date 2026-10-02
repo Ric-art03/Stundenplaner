@@ -17,7 +17,7 @@
 |----|---------|----------|--------------|--------|------|---------|
 | PROJ-1 | Supabase Infrastructure Setup | P0 | None | Deployed | [Spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-09-28 |
 | PROJ-2 | Benutzerregistrierung & Login | P0 | PROJ-1 | Deployed | [Spec](PROJ-2-benutzerregistrierung-login.md) | 2026-09-28 |
-| PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Roadmap | — | 2026-09-28 |
+| PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Approved | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Roadmap | — | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Roadmap | — | 2026-09-28 |
@@ -28,10 +28,11 @@
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |
 | PROJ-12 | Community-Features (Übungen teilen) | P2 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
+| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Roadmap | — | 2026-10-01 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-14
+## Next Available ID: PROJ-15
 
 ## Empfohlene Build-Reihenfolge (MVP)
 
@@ -43,3 +44,4 @@
 6. **PROJ-4** — Starter-Datenbank (Inhalte einfüllen)
 7. **PROJ-6** — Einheiten-Generator (Herzstück der App)
 8. **PROJ-7** — Einheiten-Editor (Feinschliff der generierten Einheiten)
+9. **PROJ-14** — Live-Modus (Stundenbegleitung während der Durchführung)
