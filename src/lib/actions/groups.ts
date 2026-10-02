@@ -144,11 +144,12 @@ export async function getVenue(id: string): Promise<Venue | null> {
 }
 
 export async function createVenue(
-  data: VenueFormData,
+  rawData: VenueFormData,
 ): Promise<{ id?: string; error?: string }> {
   const { supabase, user } = await getAuthUser()
   if (!user) return { error: 'Nicht angemeldet.' }
 
+  const data = { ...rawData, materials: rawData.materials.filter((m) => m.name.trim() !== '') }
   const parsed = venueSchema.safeParse(data)
   if (!parsed.success) return { error: 'Ungültige Eingabe.' }
 
@@ -193,11 +194,12 @@ export async function createVenue(
 
 export async function updateVenue(
   id: string,
-  data: VenueFormData,
+  rawData: VenueFormData,
 ): Promise<{ success?: boolean; error?: string }> {
   const { supabase, user } = await getAuthUser()
   if (!user) return { error: 'Nicht angemeldet.' }
 
+  const data = { ...rawData, materials: rawData.materials.filter((m) => m.name.trim() !== '') }
   const parsed = venueSchema.safeParse(data)
   if (!parsed.success) return { error: 'Ungültige Eingabe.' }
 
