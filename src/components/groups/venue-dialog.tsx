@@ -72,7 +72,11 @@ export function VenueDialog({ open, onOpenChange, venue, onSave, customMaterials
     try {
       const res = await onSave(form)
       if (res.error) {
-        toast({ variant: 'destructive', title: 'Fehler', description: res.error })
+        if (res.error.includes('existiert bereits')) {
+          setErrors({ name: res.error })
+        } else {
+          toast({ variant: 'destructive', title: 'Fehler', description: res.error })
+        }
         return
       }
       onOpenChange(false)

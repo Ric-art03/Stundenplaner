@@ -143,7 +143,12 @@ export function GroupForm({
     try {
       const res = await onSave(form)
       if (res.error) {
-        toast({ variant: 'destructive', title: 'Fehler', description: res.error })
+        if (res.error.includes('existiert bereits')) {
+          setErrors({ name: res.error })
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        } else {
+          toast({ variant: 'destructive', title: 'Fehler', description: res.error })
+        }
         return
       }
       toast({ title: isEdit ? 'Gruppe aktualisiert' : 'Gruppe erstellt' })
