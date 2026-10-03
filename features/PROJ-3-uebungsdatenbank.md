@@ -26,6 +26,20 @@
 - **Materialfilter:** Post-Query-Filter da Materialien in separater Tabelle; "Kein Material" als Spezialfall
 - **Typdefinitionen:** `src/lib/database.types.ts` mit `type Database` (nicht interface) und `Relationships: []` auf jeder Tabelle (Supabase-Client-Anforderung)
 
+### Bekannte Lücke → vorgemerkt als PROJ-16 (P0)
+
+**Eigene Kategorien lassen sich derzeit überhaupt nicht löschen — nirgends in der App.** Sie liegen in der eigenen Tabelle `custom_categories`, getrennt von den Übungen. Entfernt der Nutzer den Tag aus der Übung, in der er ihn angelegt hat, bleibt die Kategorie bestehen und erscheint weiter in jeder Auswahlliste. Beim Testen von PROJ-6 ließen sich Fehleingaben wie `efefefed` oder `iwjiwf` nur per SQL im Supabase-Dashboard entfernen; ein normaler Nutzer hätte keine Möglichkeit gehabt.
+
+Das ist nicht nur kosmetisch: Eigene **Phasen** erscheinen im Segment-Editor des Generators als wählbare Phasen. Eine versehentlich angelegte Phase landet dort als Auswahl, für die es garantiert keine Übungen gibt — der Nutzer baut sich damit ohne Vorwarnung ein leeres Segment.
+
+Festgehaltene Eckpunkte für die Spec:
+
+- **Eigene Seite „Meine Kategorien"**, die alle Einträge des Nutzers nach Typ gruppiert zeigt (Sportart, Material, Phase, Organisationsform, Altersgruppe), jeweils mit Anzahl der Verwendungen und Löschen-Button
+- **Warnung vor dem Löschen** nach dem Muster der Hallen-Löschung aus PROJ-5: „wird in 3 Übungen verwendet", mit Namen der betroffenen Einträge
+- **Löschen entfernt den Eintrag nur aus den Auswahllisten, nicht aus bestehenden Übungen.** Dort steht der Begriff als Text in einer JSONB-Liste und muss erhalten bleiben — alles andere würde dem Nutzer unbemerkt Daten aus fertigen Übungen reißen
+- **Bewusst nicht als Löschkreuz direkt in der Auswahlliste:** Dort fehlt der Überblick, der das eigentliche Problem ist, und ein Fehlklick wäre zu leicht
+- **Kosten:** keine Migration, nur Lesen und Löschen auf einer bestehenden Tabelle plus eine Seite
+
 **Backend-Anforderung: Eigene Kategorien persistent machen**
 Beim Speichern einer Übung sollen alle nicht-vordefinierten Einträge (eigene Sportarten, Materialien, Phasen, Organisationsformen, Altersgruppen) automatisch in die `custom_categories`-Tabelle geschrieben werden. Beim Laden des Wizards sollen die eigenen Kategorien des Nutzers abgerufen und in die Auswahllisten eingefügt werden (zusammen mit den vordefinierten). Das Frontend (`multi-select.tsx`) unterstützt bereits eigene Einträge — es müssen nur die gespeicherten eigenen Kategorien beim Laden übergeben werden.
 

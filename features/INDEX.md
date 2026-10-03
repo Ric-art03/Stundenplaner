@@ -29,10 +29,11 @@
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Roadmap | — | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
+| PROJ-16 | Eigene Kategorien verwalten | P0 | PROJ-3 | Roadmap | — | 2026-10-04 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-16
+## Next Available ID: PROJ-17
 
 ## Empfohlene Build-Reihenfolge (MVP)
 
@@ -44,3 +45,4 @@
 6. **PROJ-6** — Einheiten-Generator (Herzstück der App)
 7. **PROJ-7** — Einheiten-Editor (Feinschliff der generierten Einheiten)
 8. **PROJ-14** — Live-Modus (Stundenbegleitung während der Durchführung)
+9. **PROJ-16** — Eigene Kategorien verwalten (behebt eine Lücke aus PROJ-3, blockiert nichts, muss aber vor der Marktreife rein)
