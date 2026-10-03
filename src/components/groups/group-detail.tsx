@@ -68,9 +68,20 @@ export function GroupDetail({ group, units, onDelete }: GroupDetailProps) {
           <h1 className="text-2xl font-bold">{group.name}</h1>
           <div className="flex flex-wrap items-center gap-2 mt-2">
             {group.sports.map((sport) => (
-              <Badge key={sport} variant="outline">{sport}</Badge>
+              <Badge
+                key={sport}
+                variant={sport === group.primarySport ? 'default' : 'outline'}
+                title={sport === group.primarySport ? 'Hauptsportart' : undefined}
+              >
+                {sport}
+              </Badge>
             ))}
           </div>
+          {group.primarySport && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Hauptsportart: {group.primarySport} — der Generator gewichtet sie doppelt.
+            </p>
+          )}
         </div>
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2 shrink-0">
           <Button size="sm" asChild>

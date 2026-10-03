@@ -190,13 +190,50 @@ export function GroupForm({
         <MultiSelect
           options={sportsOptions}
           selected={form.sports}
-          onChange={(v) => updateField('sports', v)}
+          onChange={(v) => {
+            updateField('sports', v)
+            // Eine abgewählte Sportart darf nicht Hauptsportart bleiben.
+            if (form.primarySport && !v.includes(form.primarySport)) {
+              updateField('primarySport', null)
+            }
+          }}
           placeholder="Sportarten auswählen..."
           allowCustom
           customLabel="Eigene Sportart hinzufügen"
           error={errors.sports}
         />
       </div>
+
+      {/* Hauptsportart */}
+      {form.sports.length > 1 && (
+        <div className="space-y-2">
+          <Label htmlFor="primary-sport">Hauptsportart</Label>
+          <Select
+            value={form.primarySport ?? 'none'}
+            onValueChange={(v) => updateField('primarySport', v === 'none' ? null : v)}
+          >
+            <SelectTrigger id="primary-sport">
+              <SelectValue placeholder="Keine" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Keine — alle gleichwertig</SelectItem>
+              {form.sports.map((sport) => (
+                <SelectItem key={sport} value={sport}>
+                  {sport}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Der Generator wählt dann ungefähr jede zweite Übung aus dieser Sportart, die
+            übrigen wechseln sich auf den restlichen Plätzen ab. Leer lassen, wenn alle
+            Sportarten gleichwertig sind.
+          </p>
+          {errors.primarySport && (
+            <p className="text-sm text-destructive">{errors.primarySport}</p>
+          )}
+        </div>
+      )}
 
       {/* Altersgruppe */}
       <div className="space-y-2">

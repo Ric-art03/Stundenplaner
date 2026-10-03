@@ -42,12 +42,19 @@ export const scheduleSchema = z.object({
 export const groupSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich').max(100, 'Maximal 100 Zeichen'),
   sports: z.array(z.string()).min(1, 'Mindestens eine Sportart auswählen'),
+  primarySport: z.string().nullable(),
   ageGroups: z.array(z.string()).min(1, 'Mindestens eine Altersgruppe auswählen'),
   participants: z.number().int().min(1, 'Mindestens 1 Teilnehmer').nullable(),
   unitDuration: z.number().int().min(5, 'Mindestens 5 Minuten').max(300, 'Maximal 300 Minuten'),
   venueId: z.string().nullable(),
   schedules: z.array(scheduleSchema),
-})
+}).refine(
+  (data) => data.primarySport === null || data.sports.includes(data.primarySport),
+  {
+    message: 'Die Hauptsportart muss eine der ausgewählten Sportarten sein',
+    path: ['primarySport'],
+  }
+)
 
 export type VenueFormSchema = z.infer<typeof venueSchema>
 export type GroupFormSchema = z.infer<typeof groupSchema>

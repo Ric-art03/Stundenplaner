@@ -273,6 +273,7 @@ export type Database = {
           user_id: string
           name: string
           sports: Json
+          primary_sport: string | null
           age_groups: Json
           participants: number | null
           unit_duration: number
@@ -285,6 +286,7 @@ export type Database = {
           user_id: string
           name: string
           sports?: Json
+          primary_sport?: string | null
           age_groups?: Json
           participants?: number | null
           unit_duration: number
@@ -297,6 +299,7 @@ export type Database = {
           user_id?: string
           name?: string
           sports?: Json
+          primary_sport?: string | null
           age_groups?: Json
           participants?: number | null
           unit_duration?: number

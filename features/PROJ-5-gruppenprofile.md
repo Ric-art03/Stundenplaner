@@ -21,6 +21,20 @@ Weder „ca." noch „max" als Beschriftung, weil beide in die Irre führen: „
 
 **Betroffene Dateien:** `database.types.ts`, `types/group.ts`, `validations/group.ts` (+ Tests), `actions/groups.ts`, `group-form.tsx`, `group-card.tsx`, `group-detail.tsx`, `groups/[id]/edit/page.tsx`
 
+### Nachträgliche Änderung (2026-10-04): Optionale Hauptsportart
+
+Der Generator rotiert gleichmäßig über alle getaggten Sportarten einer Gruppe. Bei einer Capoeira-Gruppe mit fünf Tags wäre damit nur jede fünfte Übung Capoeira — für ein Capoeira-Training offensichtlich falsch.
+
+Ein Werkzeug dafür gab es bereits: die Sportart-Auswahl pro Segment im Zeitverlauf. Die greift aber nur im Modus „Individuell" und ist damit für den Ein-Klick-Weg nutzlos, den PROJ-6 ausdrücklich schützt. Genau dort lag die Lücke.
+
+**Neu:** ein optionales Feld `primary_sport`, auswählbar aus den getaggten Sportarten der Gruppe. Der Generator gewichtet sie in der Rotation **doppelt** — sie erscheint zweimal im Rotationszyklus, jede andere einmal. Ist keine gesetzt, bleibt das Verhalten unverändert gleichmäßig.
+
+**Warum doppelt gewichten statt priorisieren:** Beim Spec-Gespräch zu PROJ-6 wurde „Hauptsportart zuerst, Rest nur im Notfall" bewusst verworfen, zugunsten echter Abwechslung. Eine Gewichtung erhält beides — die Hauptsportart dominiert, die übrigen kommen weiter vor. Strikte Priorisierung würde die damalige Entscheidung still zurückdrehen.
+
+Das Feld erscheint im Formular erst, wenn mindestens zwei Sportarten getaggt sind — bei einer einzigen hat es keine Bedeutung. Wird die als Hauptsportart gewählte Sportart wieder abgewählt, setzt sich das Feld automatisch zurück. Validierung und Datenbank-Constraint stellen beide sicher, dass die Hauptsportart immer eine der getaggten Sportarten ist.
+
+**Migration:** `alter table groups add column primary_sport text` plus `check (primary_sport is null or sports ? primary_sport)`.
+
 ### Nachträgliche Änderung (2026-10-04): „Trainingszeiten" heißen „Hallenzeiten"
 
 Der Begriff war missverständlich. Gemeint ist nicht die Dauer des Trainings, sondern **der Zeitraum, in dem die Halle zur Verfügung steht** — der regelmäßig länger ist, weil Auf- und Abbau, Umziehen und Ankommen hineinfallen. Die tatsächliche Trainingsdauer steckt getrennt davon in der Einheitsdauer. Umbenannt in Formular, Buttons und Detailansicht.
@@ -92,6 +106,7 @@ Im Hallen-Editor verschwindet ein Material nach der Auswahl aus den Listen der �
 |------|-----|---------|-------------|
 | Name | Text | Ja | Bezeichnung der Gruppe (z.B. "Kinderturnen") |
 | Sportart(en) | Multi-Select | Ja | Aus vordefinierter Liste + eigene (shared mit Übungen) |
+| Hauptsportart | Einfachauswahl | Nein | Eine der getaggten Sportarten. Der Generator gewichtet sie doppelt. Erscheint im Formular erst ab zwei Sportarten |
 | Altersgruppe(n) | Multi-Select | Ja | Aus vordefinierter Liste + eigene (shared mit Übungen) |
 | Teilnehmerzahl | Zahl | Nein | **Eine** Zahl: die Größe, für die der Übungsleiter plant. Siehe „Nachträgliche Änderung" unten |
 | Halle/Ort | Referenz | Nein | Verweis auf eine angelegte Halle |

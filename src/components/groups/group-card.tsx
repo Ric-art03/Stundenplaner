@@ -106,7 +106,12 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
           </div>
           <div className="flex flex-wrap gap-1 mt-1">
             {group.sports.map((sport) => (
-              <Badge key={sport} variant="outline" className="text-xs">
+              <Badge
+                key={sport}
+                variant={sport === group.primarySport ? 'default' : 'outline'}
+                className="text-xs"
+                title={sport === group.primarySport ? 'Hauptsportart' : undefined}
+              >
                 {sport}
               </Badge>
             ))}

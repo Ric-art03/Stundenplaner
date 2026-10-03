@@ -259,6 +259,8 @@ Die ursprüngliche Fassung der Spec schrieb nur „die Teilnehmerzahl der Gruppe
 ### Auswahl innerhalb eines Segments
 
 1. **Sportart-Rotation:** Pro Übungs-Slot wird eine Sportart aus den für das Segment gewählten Sportarten gezogen — in gemischter Reihenfolge, aber jede kommt dran, bevor sich eine wiederholt. Bei zwei getaggten Sportarten und drei Slots also A, B, A.
+
+   **Gewichtung durch die Hauptsportart:** Hat die Gruppe eine Hauptsportart gesetzt (optionales Feld aus PROJ-5) und ist diese unter den für das Segment gewählten Sportarten, erscheint sie **zweimal** im Rotationszyklus, jede andere einmal. Bei den Sportarten [Capoeira, Kampfsport, Allgemeinsport] mit Hauptsportart Capoeira ergibt das den Zyklus [Capoeira, Capoeira, Kampfsport, Allgemeinsport] — also etwa jede zweite Übung aus der Hauptsportart, ohne dass die übrigen verschwinden. Ohne gesetzte Hauptsportart bleibt die Rotation gleichmäßig.
 2. **Frische-Regel:** Übungen, die in den **letzten zwei Einheiten dieser Gruppe** verwendet wurden, werden an das Ende des Pools sortiert — nicht ausgeschlossen, damit bei kleiner Datenbank keine unnötigen Lücken entstehen.
 3. **Keine Dopplungen:** Innerhalb einer Einheit kommt keine Übung zweimal vor. Eine Hauptübung und eine ihrer eigenen Varianten gelten dabei als dieselbe Übung und schließen sich gegenseitig aus.
 4. **Füllen:** Es werden Übungen gezogen, bis das Minutenbudget des Segments etwa erreicht ist.
@@ -369,6 +371,9 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 - [ ] Angenommen eine Variante hat kein eigenes Material eingetragen, wenn der Generator ihr Material prüft, dann gilt das Material der Hauptübung
 - [ ] Angenommen eine Hauptübung und eine ihrer Varianten passen beide, wenn der Generator die Einheit füllt, dann erscheint nur eine von beiden in der Einheit
 - [ ] Angenommen das Segment hat drei Übungs-Slots und die Gruppe ist mit zwei Sportarten getaggt, wenn der Generator läuft, dann werden beide Sportarten genutzt, bevor sich eine wiederholt
+- [ ] Angenommen die Gruppe hat eine Hauptsportart gesetzt, wenn der Generator ein Segment mit vier Übungen füllt, dann stammen etwa zwei davon aus der Hauptsportart und die übrigen aus den anderen gewählten Sportarten
+- [ ] Angenommen die Gruppe hat keine Hauptsportart gesetzt, wenn der Generator läuft, dann rotieren alle gewählten Sportarten gleichmäßig
+- [ ] Angenommen die Hauptsportart der Gruppe ist für ein Segment abgewählt, wenn der Generator dieses Segment füllt, dann greift keine Gewichtung und die verbleibenden Sportarten rotieren gleichmäßig
 
 ### Zeitbudget und Dauer
 - [ ] Angenommen ein Segment hat 12 Minuten Budget und die gewählte Übung ist auf 10 Minuten geschätzt, wenn der Generator die Dauer anpasst, dann steht die Übung mit 12 Minuten Plandauer im Plan und die geschätzten 10 Minuten bleiben sichtbar
@@ -473,6 +478,7 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 | Weiche Kriterien: Sportart und Schwierigkeitsgrad | Ein allgemeines Laufspiel passt auch ins Volleyball-Aufwärmen; strikte Filterung würde bei kleinen Datenbanken zu viele Segmente leer lassen | 2026-10-03 |
 | „Weich" bei Sportart heißt Rotation innerhalb der Gruppen-Tags, nicht Fallback | Vom Nutzer so festgelegt: die getaggten Sportarten der Gruppe wechseln sich ab, statt dass eine bevorzugt und der Rest nur im Notfall genutzt wird. Erzeugt echte Abwechslung statt Rangfolge | 2026-10-03 |
 | Sportart-Rotation pro Übungs-Slot, nicht pro Phase | Gibt innerhalb eines Segments mehr Abwechslung; bei drei Slots und zwei Sportarten kommen beide dran | 2026-10-03 |
+| Optionale Hauptsportart am Gruppenprofil, in der Rotation doppelt gewichtet (Änderung an PROJ-5) | Gleichmäßige Rotation macht bei einer Capoeira-Gruppe mit fünf Tags nur jede fünfte Übung zu Capoeira. Die Sportart-Auswahl pro Segment löst das zwar, greift aber nur im Modus „Individuell" und damit nicht auf dem Ein-Klick-Weg. Doppelte Gewichtung statt Priorisierung, weil die Entscheidung für echte Abwechslung statt Rangfolge bestehen bleiben soll | 2026-10-04 |
 | Sportart und Schwierigkeitsgrad pro Segment überschreibbar, mindestens eine Sportart Pflicht | Erlaubt gezielte Stundenbilder (allgemeines Aufwärmen, sportartspezifischer Hauptteil), ohne den Ein-Klick-Weg zu belasten. Null Sportarten wären eine sinnlose Konfiguration | 2026-10-03 |
 | OR-Matching innerhalb einer Kategorie | Eine Übung mit mehreren Sportart-Tags muss nur einen Treffer haben; alles andere würde breit getaggte Übungen systematisch benachteiligen | 2026-10-03 |
 | Material wird pro Übung geprüft, nicht kumulativ über das Segment | Übungen laufen nacheinander ab und konkurrieren nicht um dasselbe Material | 2026-10-03 |

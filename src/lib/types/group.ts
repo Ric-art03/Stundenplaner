@@ -61,6 +61,11 @@ export interface Group {
   userId: string
   name: string
   sports: string[]
+  /**
+   * Optional. Muss eine der Sportarten aus `sports` sein. Der Generator
+   * gewichtet sie in der Rotation doppelt, verdrängt die übrigen aber nicht.
+   */
+  primarySport: string | null
   ageGroups: string[]
   /**
    * Die Zahl, für die der Übungsleiter plant — Material und Aufstellung
@@ -79,6 +84,7 @@ export interface Group {
 export interface GroupFormData {
   name: string
   sports: string[]
+  primarySport: string | null
   ageGroups: string[]
   participants: number | null
   unitDuration: number
@@ -89,6 +95,7 @@ export interface GroupFormData {
 export const EMPTY_GROUP_FORM: GroupFormData = {
   name: '',
   sports: [],
+  primarySport: null,
   ageGroups: [],
   participants: null,
   unitDuration: 60,

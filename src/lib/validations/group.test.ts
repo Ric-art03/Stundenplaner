@@ -152,6 +152,7 @@ describe('groupSchema', () => {
   const validGroup = {
     name: 'Kinderturnen',
     sports: ['Turnen'],
+    primarySport: null,
     ageGroups: ['Kinder (4–6)'],
     participants: 18,
     unitDuration: 60,
@@ -230,6 +231,33 @@ describe('groupSchema', () => {
 
   it('passes when participants is null', () => {
     const result = groupSchema.safeParse({ ...validGroup, participants: null })
+    expect(result.success).toBe(true)
+  })
+
+  it('passes when primarySport is one of the selected sports', () => {
+    const result = groupSchema.safeParse({
+      ...validGroup,
+      sports: ['Turnen', 'Tanzen'],
+      primarySport: 'Tanzen',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('fails when primarySport is not among the selected sports', () => {
+    const result = groupSchema.safeParse({
+      ...validGroup,
+      sports: ['Turnen', 'Tanzen'],
+      primarySport: 'Volleyball',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path.join('.'))
+      expect(paths).toContain('primarySport')
+    }
+  })
+
+  it('passes when primarySport is null', () => {
+    const result = groupSchema.safeParse({ ...validGroup, primarySport: null })
     expect(result.success).toBe(true)
   })
 
