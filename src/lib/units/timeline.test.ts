@@ -10,6 +10,7 @@ import {
   setSegmentMinutes,
   reorderSegments,
   rescaleSegments,
+  resolvePrimarySport,
 } from './timeline'
 import type { DifficultyLevel } from '@/lib/types/exercise'
 
@@ -99,6 +100,41 @@ describe('buildClassicSegments', () => {
   })
 })
 
+describe('resolvePrimarySport', () => {
+  it('übernimmt eine Hauptsportart, die unter den Sportarten ist', () => {
+    expect(resolvePrimarySport(['Turnen', 'Tanzen'], 'Tanzen')).toBe('Tanzen')
+  })
+
+  it('verwirft eine Hauptsportart, die nicht unter den Sportarten ist', () => {
+    expect(resolvePrimarySport(['Turnen', 'Tanzen'], 'Volleyball')).toBeNull()
+  })
+
+  it('verwirft die Hauptsportart bei nur einer Sportart — es gibt nichts zu gewichten', () => {
+    expect(resolvePrimarySport(['Turnen'], 'Turnen')).toBeNull()
+  })
+
+  it('bleibt bei null', () => {
+    expect(resolvePrimarySport(['Turnen', 'Tanzen'], null)).toBeNull()
+  })
+})
+
+describe('buildClassicSegments mit Hauptsportart', () => {
+  it('belegt jedes Segment mit der Hauptsportart der Gruppe vor', () => {
+    const segments = buildClassicSegments(60, ['Capoeira', 'Kampfsport'], DIFFICULTIES, 'Capoeira')
+    expect(segments.every((s) => s.primarySport === 'Capoeira')).toBe(true)
+  })
+
+  it('lässt die Hauptsportart leer, wenn die Gruppe nur eine Sportart hat', () => {
+    const segments = buildClassicSegments(60, ['Turnen'], DIFFICULTIES, 'Turnen')
+    expect(segments.every((s) => s.primarySport === null)).toBe(true)
+  })
+
+  it('lässt die Hauptsportart leer, wenn keine gesetzt ist', () => {
+    const segments = buildClassicSegments(60, ['Turnen', 'Tanzen'], DIFFICULTIES)
+    expect(segments.every((s) => s.primarySport === null)).toBe(true)
+  })
+})
+
 describe('addSegment', () => {
   it('nimmt dem längsten Segment Minuten ab und erhält die Gesamtdauer', () => {
     const segments = buildClassicSegments(60, SPORTS, DIFFICULTIES)
@@ -109,8 +145,8 @@ describe('addSegment', () => {
 
   it('fügt nichts hinzu, wenn kein Segment genug Minuten abgeben kann', () => {
     const segments = [
-      { id: 'a', name: 'Aufwärmen', minutes: 1, fillMode: 'generate' as const, sports: SPORTS, difficulties: DIFFICULTIES, notes: '' },
-      { id: 'b', name: 'Hauptteil', minutes: 1, fillMode: 'generate' as const, sports: SPORTS, difficulties: DIFFICULTIES, notes: '' },
+      { id: 'a', name: 'Aufwärmen', minutes: 1, fillMode: 'generate' as const, sports: SPORTS, primarySport: null, difficulties: DIFFICULTIES, notes: '' },
+      { id: 'b', name: 'Hauptteil', minutes: 1, fillMode: 'generate' as const, sports: SPORTS, primarySport: null, difficulties: DIFFICULTIES, notes: '' },
     ]
     expect(addSegment(segments, 'Cool-Down', SPORTS, DIFFICULTIES)).toHaveLength(2)
   })

@@ -71,21 +71,44 @@ function nextId(): string {
   return `segment-${idCounter}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+/**
+ * Die Hauptsportart gilt nur, wenn sie unter den Sportarten des Segments ist
+ * und dort überhaupt etwas zu gewichten gibt (mindestens zwei Sportarten).
+ */
+export function resolvePrimarySport(
+  sports: string[],
+  candidate: string | null
+): string | null {
+  if (!candidate || sports.length < 2 || !sports.includes(candidate)) return null
+  return candidate
+}
+
 export function createSegment(
   name: string,
   minutes: number,
   sports: string[],
   difficulties: DifficultyLevel[],
+  primarySport: string | null = null,
   fillMode: SegmentConfig['fillMode'] = 'generate'
 ): SegmentConfig {
-  return { id: nextId(), name, minutes, fillMode, sports, difficulties, notes: '' }
+  return {
+    id: nextId(),
+    name,
+    minutes,
+    fillMode,
+    sports,
+    primarySport: resolvePrimarySport(sports, primarySport),
+    difficulties,
+    notes: '',
+  }
 }
 
 /** Die klassische Verteilung 20 / 60 / 20 auf die Einheitsdauer umgerechnet. */
 export function buildClassicSegments(
   total: number,
   sports: string[],
-  difficulties: DifficultyLevel[]
+  difficulties: DifficultyLevel[],
+  primarySport: string | null = null
 ): SegmentConfig[] {
   const raw = CLASSIC_DISTRIBUTION.map((phase) =>
     Math.max(MIN_SEGMENT_MINUTES, Math.round(phase.share * total))
@@ -93,7 +116,7 @@ export function buildClassicSegments(
   const minutes = distributeRemainder(raw, total)
 
   return CLASSIC_DISTRIBUTION.map((phase, i) =>
-    createSegment(phase.name, minutes[i], sports, difficulties)
+    createSegment(phase.name, minutes[i], sports, difficulties, primarySport)
   )
 }
 
@@ -105,7 +128,8 @@ export function addSegment(
   segments: SegmentConfig[],
   name: string,
   sports: string[],
-  difficulties: DifficultyLevel[]
+  difficulties: DifficultyLevel[],
+  primarySport: string | null = null
 ): SegmentConfig[] {
   const longestIndex = segments.reduce(
     (best, s, i) => (s.minutes > segments[best].minutes ? i : best),
@@ -120,7 +144,7 @@ export function addSegment(
     i === longestIndex ? { ...s, minutes: s.minutes - take } : s
   )
 
-  return [...updated, createSegment(name, take, sports, difficulties)]
+  return [...updated, createSegment(name, take, sports, difficulties, primarySport)]
 }
 
 /** Entfernt ein Segment und gibt dessen Minuten an das längste verbleibende. */

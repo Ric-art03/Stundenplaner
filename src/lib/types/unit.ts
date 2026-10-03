@@ -27,6 +27,12 @@ export interface SegmentConfig {
   minutes: number
   fillMode: SegmentFillMode
   sports: string[]
+  /**
+   * Wird in diesem Segment doppelt gewichtet. Vorbelegt mit der Hauptsportart
+   * der Gruppe, pro Segment aber frei änderbar. Muss eine der Sportarten aus
+   * `sports` sein; bei nur einer gewählten Sportart ohne Bedeutung.
+   */
+  primarySport: string | null
   difficulties: DifficultyLevel[]
   /** Freie Notiz, vor allem für Segmente die der Nutzer selbst füllt. */
   notes: string
@@ -70,6 +76,7 @@ export interface UnitSegment {
   minutes: number
   fillMode: SegmentFillMode
   sports: string[]
+  primarySport: string | null
   difficulties: DifficultyLevel[]
   notes: string
   gapReason: string | null

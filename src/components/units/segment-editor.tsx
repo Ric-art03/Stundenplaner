@@ -8,7 +8,15 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { MultiSelect } from '@/components/exercises/multi-select'
+import { resolvePrimarySport } from '@/lib/units/timeline'
 import { PhaseSelect } from './phase-select'
 import { DIFFICULTY_LEVELS } from '@/lib/types/exercise'
 import type { DifficultyLevel } from '@/lib/types/exercise'
@@ -117,7 +125,15 @@ export function SegmentEditor({
             <MultiSelect
               options={sportOptions}
               selected={segment.sports}
-              onChange={(sports) => onChange({ ...segment, sports })}
+              onChange={(sports) =>
+                onChange({
+                  ...segment,
+                  sports,
+                  // Eine abgewählte oder allein übrig gebliebene Sportart kann
+                  // keine Hauptsportart mehr sein.
+                  primarySport: resolvePrimarySport(sports, segment.primarySport),
+                })
+              }
               placeholder="Sportart auswählen"
               error={segment.sports.length === 0 ? 'Mindestens eine Sportart auswählen' : undefined}
             />
@@ -126,6 +142,34 @@ export function SegmentEditor({
               wechselt zwischen den ausgewählten Sportarten ab.
             </p>
           </div>
+
+          {segment.sports.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor={`primary-${segment.id}`}>Hauptsportart in dieser Phase</Label>
+              <Select
+                value={segment.primarySport ?? 'none'}
+                onValueChange={(value) =>
+                  onChange({ ...segment, primarySport: value === 'none' ? null : value })
+                }
+              >
+                <SelectTrigger id={`primary-${segment.id}`}>
+                  <SelectValue placeholder="Keine" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Keine — alle gleichwertig</SelectItem>
+                  {segment.sports.map((sport) => (
+                    <SelectItem key={sport} value={sport}>
+                      {sport}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Wird in dieser Phase doppelt gewichtet — etwa jede zweite Übung stammt daraus.
+                Vorbelegt mit der Hauptsportart deiner Gruppe, hier aber frei änderbar.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Schwierigkeitsgrad</Label>

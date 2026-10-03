@@ -79,7 +79,9 @@ export function UnitConfigForm({
       setSelectedId(null)
       return
     }
-    setClassicSegments(buildClassicSegments(group.unitDuration, group.sports, ALL_DIFFICULTIES))
+    setClassicSegments(
+      buildClassicSegments(group.unitDuration, group.sports, ALL_DIFFICULTIES, group.primarySport)
+    )
     setCustomSegments(null)
     setMode('standard')
     setSelectedId(null)
@@ -115,7 +117,12 @@ export function UnitConfigForm({
 
   function resetToStandard() {
     if (!group) return
-    const fresh = buildClassicSegments(group.unitDuration, group.sports, ALL_DIFFICULTIES)
+    const fresh = buildClassicSegments(
+      group.unitDuration,
+      group.sports,
+      ALL_DIFFICULTIES,
+      group.primarySport
+    )
     setCustomSegments(fresh)
     setSelectedId(fresh[0]?.id ?? null)
     toast({ title: 'Auf Standard zurückgesetzt' })
@@ -123,7 +130,13 @@ export function UnitConfigForm({
 
   function handleAddSegment() {
     if (!group) return
-    const next = addSegment(segments, 'Hauptteil', group.sports, ALL_DIFFICULTIES)
+    const next = addSegment(
+      segments,
+      'Hauptteil',
+      group.sports,
+      ALL_DIFFICULTIES,
+      group.primarySport
+    )
     if (next.length === segments.length) {
       toast({
         variant: 'destructive',

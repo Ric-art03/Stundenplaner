@@ -1,17 +1,26 @@
 import { z } from 'zod'
 import { DIFFICULTY_LEVELS } from '@/lib/types/exercise'
 
-export const segmentConfigSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1, 'Phase auswählen').max(60, 'Maximal 60 Zeichen'),
-  minutes: z.number().int().min(1, 'Mindestens 1 Minute'),
-  fillMode: z.enum(['generate', 'empty']),
-  sports: z.array(z.string()).min(1, 'Mindestens eine Sportart auswählen'),
-  difficulties: z
-    .array(z.enum(DIFFICULTY_LEVELS))
-    .min(1, 'Mindestens einen Schwierigkeitsgrad auswählen'),
-  notes: z.string().max(2000, 'Maximal 2.000 Zeichen'),
-})
+export const segmentConfigSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1, 'Phase auswählen').max(60, 'Maximal 60 Zeichen'),
+    minutes: z.number().int().min(1, 'Mindestens 1 Minute'),
+    fillMode: z.enum(['generate', 'empty']),
+    sports: z.array(z.string()).min(1, 'Mindestens eine Sportart auswählen'),
+    primarySport: z.string().nullable(),
+    difficulties: z
+      .array(z.enum(DIFFICULTY_LEVELS))
+      .min(1, 'Mindestens einen Schwierigkeitsgrad auswählen'),
+    notes: z.string().max(2000, 'Maximal 2.000 Zeichen'),
+  })
+  .refine(
+    (data) => data.primarySport === null || data.sports.includes(data.primarySport),
+    {
+      message: 'Die Hauptsportart muss eine der gewählten Sportarten sein',
+      path: ['primarySport'],
+    }
+  )
 
 export const unitConfigSchema = z
   .object({
