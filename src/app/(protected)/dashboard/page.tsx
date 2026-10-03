@@ -48,17 +48,19 @@ export default async function DashboardPage() {
               </CardHeader>
             </Card>
           </Link>
-          <Card className="opacity-50">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <div className="rounded-lg bg-muted p-3">
-                <Calendar className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-lg text-muted-foreground">Einheiten-Generator</CardTitle>
-                <CardDescription>Demnächst verfügbar</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
+          <Link href="/units/new">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center gap-4">
+                <div className="rounded-lg bg-primary/10 p-3">
+                  <Calendar className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Einheiten-Generator</CardTitle>
+                  <CardDescription>Einheit für eine Gruppe zusammenstellen</CardDescription>
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
         </div>
       </div>
     </main>

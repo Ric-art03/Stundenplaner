@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowLeft, Pencil, Clock, Users, MapPin, Package, CalendarDays, RefreshCw,
+  ArrowLeft, Pencil, Clock, Users, MapPin, Package, CalendarDays, RefreshCw, Sparkles,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,15 +22,17 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { WEEKDAY_SHORT } from '@/lib/types/group'
+import { UnitList } from '@/components/units/unit-list'
 import type { Group } from '@/lib/types/group'
+import type { UnitSummary } from '@/lib/types/unit'
 
 interface GroupDetailProps {
   group: Group
+  units: UnitSummary[]
   onDelete: (id: string) => Promise<{ success?: boolean; error?: string }>
 }
 
-export function GroupDetail({ group, onDelete }: GroupDetailProps) {
+export function GroupDetail({ group, units, onDelete }: GroupDetailProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [deleting, setDeleting] = React.useState(false)
@@ -55,7 +57,7 @@ export function GroupDetail({ group, onDelete }: GroupDetailProps) {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
             <Link href="/groups">
@@ -70,7 +72,13 @@ export function GroupDetail({ group, onDelete }: GroupDetailProps) {
             ))}
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2 shrink-0">
+          <Button size="sm" asChild>
+            <Link href={`/units/new?group=${group.id}`}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Einheit generieren
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/groups/${group.id}/edit`}>
               <Pencil className="mr-2 h-4 w-4" />
@@ -111,19 +119,11 @@ export function GroupDetail({ group, onDelete }: GroupDetailProps) {
           label="Einheitsdauer"
           value={`${group.unitDuration} Minuten`}
         />
-        {(group.participantsMin || group.participantsMax) && (
+        {group.participants && (
           <MetaItem
             icon={<Users className="h-4 w-4" />}
             label="Teilnehmer"
-            value={
-              group.participantsMin && group.participantsMax
-                ? group.participantsMin === group.participantsMax
-                  ? `${group.participantsMin}`
-                  : `${group.participantsMin}–${group.participantsMax}`
-                : group.participantsMin
-                  ? `ab ${group.participantsMin}`
-                  : `bis ${group.participantsMax}`
-            }
+            value={`${group.participants}`}
           />
         )}
       </section>
@@ -147,7 +147,7 @@ export function GroupDetail({ group, onDelete }: GroupDetailProps) {
             {recurring.length > 0 && (
               <div>
                 <h2 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                  <RefreshCw className="h-3.5 w-3.5" /> Wiederkehrende Trainingszeiten
+                  <RefreshCw className="h-3.5 w-3.5" /> Wiederkehrende Hallenzeiten
                 </h2>
                 <div className="space-y-1">
                   {recurring.map((s, i) => (
@@ -216,6 +216,26 @@ export function GroupDetail({ group, onDelete }: GroupDetailProps) {
           </div>
         </section>
       )}
+
+      {/* Generierte Einheiten */}
+      <section>
+        <h2 className="text-sm font-medium text-muted-foreground mb-2">Einheiten</h2>
+        {units.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center">
+            <p className="text-sm text-muted-foreground mb-3">
+              Für diese Gruppe wurde noch keine Einheit generiert.
+            </p>
+            <Button size="sm" asChild>
+              <Link href={`/units/new?group=${group.id}`}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Erste Einheit generieren
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          <UnitList units={units} />
+        )}
+      </section>
     </div>
   )
 }
