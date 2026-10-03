@@ -112,7 +112,7 @@ export function ExerciseToolbar({
             className="pl-9"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" className="relative">
@@ -230,7 +230,7 @@ export function ExerciseToolbar({
               onSortChange(field, dir)
             }}
           >
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="min-w-[9rem] flex-1 sm:w-[200px] sm:flex-none">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -264,9 +264,9 @@ export function ExerciseToolbar({
             </Button>
           </div>
 
-          <Button asChild>
-            <Link href="/exercises/new">
-              <Plus className="mr-2 h-4 w-4" />
+          <Button asChild className="h-10 w-10 shrink-0 p-0 sm:w-auto sm:px-4">
+            <Link href="/exercises/new" aria-label="Neue Übung">
+              <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Neue Übung</span>
             </Link>
           </Button>

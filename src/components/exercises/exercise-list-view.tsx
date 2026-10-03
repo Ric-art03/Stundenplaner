@@ -30,7 +30,7 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
               <h3 className="font-medium truncate">{exercise.name}</h3>
               <DifficultyDot difficulty={exercise.difficulty} />
             </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
               {exercise.phases.map((phase) => (
                 <Badge key={phase} variant="secondary" className="text-xs font-normal">
                   {phase}
@@ -39,16 +39,11 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
               {exercise.phases.length > 0 && exercise.sports.length > 0 && (
                 <span className="text-muted-foreground/30">|</span>
               )}
-              {exercise.sports.slice(0, 3).map((sport) => (
+              {exercise.sports.map((sport) => (
                 <Badge key={sport} variant="outline" className="text-xs">
                   {sport}
                 </Badge>
               ))}
-              {exercise.sports.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{exercise.sports.length - 3}
-                </Badge>
-              )}
               {exercise.sports.length > 0 && (
                 <span className="text-muted-foreground/30">|</span>
               )}

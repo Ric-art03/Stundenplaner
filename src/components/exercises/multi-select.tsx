@@ -74,7 +74,7 @@ export function MultiSelect({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className={`w-full justify-between font-normal ${
+            className={`w-full justify-between font-normal focus-visible:ring-offset-0 focus-visible:ring-inset ${
               open ? 'text-primary border-primary' : selected.length === 0 ? 'text-muted-foreground' : ''
             } ${error ? 'border-destructive' : ''}`}
           >

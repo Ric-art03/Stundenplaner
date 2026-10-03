@@ -221,10 +221,14 @@ export function ExerciseWizard({ initialData, exerciseId, onSave, customCategori
       </div>
 
       <div className="flex justify-between mt-8 pt-4 border-t">
-        <Button variant="outline" onClick={goBack} disabled={step === 0}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Zurück
-        </Button>
+        {step > 0 ? (
+          <Button variant="outline" onClick={goBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Zurück
+          </Button>
+        ) : (
+          <span />
+        )}
         {step < 3 ? (
           <Button onClick={goNext}>
             Weiter

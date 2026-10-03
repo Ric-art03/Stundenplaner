@@ -15,7 +15,7 @@ export default async function GroupsPage() {
           <h1 className="text-2xl font-bold mb-1">Meine Gruppen</h1>
           <p className="text-muted-foreground">Deine Trainingsgruppen und ihre Profile.</p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
           <Button variant="outline" size="sm" asChild>
             <Link href="/groups/venues">
               <MapPin className="mr-2 h-4 w-4" />

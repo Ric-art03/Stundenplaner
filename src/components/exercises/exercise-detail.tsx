@@ -51,7 +51,7 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
             <Link href="/exercises">
@@ -66,7 +66,7 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
             ))}
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/exercises/${exercise.id}/edit`}>
               <Pencil className="mr-2 h-4 w-4" />
