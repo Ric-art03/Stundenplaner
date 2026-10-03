@@ -34,10 +34,9 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 | P0 (MVP) | Gruppenprofile (Sportart, Alter, Halle, Material) | Deployed |
 | P0 (MVP) | Einheiten-Generator (automatische Zusammenstellung) | Planned |
 | P0 (MVP) | Einheiten-Editor (Phasen anpassen, tauschen, Lücken) | Planned |
-| P0 (MVP) | Favoriten-System | Planned |
 | P0 (MVP) | Live-Modus (Stundenbegleitung) | Planned |
 | P1 | Kalenderansicht & Langzeitplanung | Planned |
-| P1 | Favoriten-Rotation über mehrere Wochen | Planned |
+| P1 | Übungsrotation (Abwechslung über Wochen) | Planned |
 | P1 | PWA (Homescreen-Installation) | Planned |
 | P2 | Community-Features (Übungen teilen) | Planned |
 | P2 | Mehrsprachigkeit (i18n) | Planned |

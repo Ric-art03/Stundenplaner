@@ -20,11 +20,10 @@
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
-| PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Roadmap | — | 2026-09-28 |
+| PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Planned | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Roadmap | — | 2026-09-28 |
-| PROJ-8 | Favoriten-System | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-9 | Kalenderansicht & Langzeitplanung | P1 | PROJ-6, PROJ-7 | Roadmap | — | 2026-09-28 |
-| PROJ-10 | Favoriten-Rotation | P1 | PROJ-8, PROJ-9 | Roadmap | — | 2026-09-28 |
+| PROJ-10 | Übungsrotation (Abwechslung über Wochen) | P1 | PROJ-6, PROJ-9 | Roadmap | — | 2026-09-28 |
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |
 | PROJ-12 | Community-Features (Übungen teilen) | P2 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
@@ -41,8 +40,7 @@
 2. **PROJ-2** — Benutzerregistrierung & Login (Nutzerdaten brauchen Auth)
 3. **PROJ-3** — Übungsdatenbank (Kernfunktion: Übungen erfassen)
 4. **PROJ-5** — Gruppenprofile (parallel zu oder direkt nach PROJ-3)
-5. **PROJ-8** — Favoriten-System (erweitert die Datenbank)
-6. **PROJ-4** — Starter-Datenbank (Inhalte einfüllen)
-7. **PROJ-6** — Einheiten-Generator (Herzstück der App)
-8. **PROJ-7** — Einheiten-Editor (Feinschliff der generierten Einheiten)
-9. **PROJ-14** — Live-Modus (Stundenbegleitung während der Durchführung)
+5. **PROJ-4** — Starter-Datenbank (Inhalte einfüllen + Import in eigene DB)
+6. **PROJ-6** — Einheiten-Generator (Herzstück der App)
+7. **PROJ-7** — Einheiten-Editor (Feinschliff der generierten Einheiten)
+8. **PROJ-14** — Live-Modus (Stundenbegleitung während der Durchführung)

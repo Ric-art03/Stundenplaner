@@ -45,7 +45,7 @@ Beim Speichern einer Übung sollen alle nicht-vordefinierten Einträge (eigene S
 ## Out of Scope
 - **Schnelleingabe-Modus / Einzelformular** — bewusst auf später verschoben; die Wizard-Struktur wird so gebaut, dass ein Einzelformular-Modus mit minimalem Aufwand nachgerüstet werden kann
 - **Starter-Datenbank (vorkuratierte Übungen)** — eigenes Feature (PROJ-4); PROJ-3 deckt nur die eigene, persönliche Datenbank ab
-- **Favoriten-System / Import aus Starter-DB** — eigenes Feature (PROJ-8); das Hinzufügen von Referenz-Übungen zur eigenen Datenbank wird dort spezifiziert
+- **Import aus Starter-DB** — Teil von PROJ-4; das Browsen und Übernehmen kuratierter Übungen in die eigene Datenbank wird dort spezifiziert
 - **Community-Features / Übungen teilen** — deferred zu PROJ-12
 - **Video-Upload** — zu hoher Infrastruktur-Aufwand für MVP; stattdessen Link-Feld für externe Videos (YouTube etc.)
 - **Musik-Datei-Upload** — nur Link-Feld (Spotify, YouTube etc.), kein Datei-Upload
@@ -225,7 +225,7 @@ Beim Speichern einer Übung sollen alle nicht-vordefinierten Einträge (eigene S
 | Links + Bildupload, kein Video-Upload | Links sind zero-cost (YouTube etc.); Bildupload nutzt vorhandene Supabase-Infrastruktur; Video-Upload wäre zu aufwendig (Speicher, Player) | 2026-09-30 |
 | Varianten als Textblöcke mit optionalen abweichenden Bedingungen | Einfacher Normalfall (nur Text), aber mächtig wenn nötig; Variante erbt Hauptübungs-Bedingungen, nur Abweichendes wird eingetragen | 2026-09-30 |
 | Musik: Toggle + Link-Feld statt Datei-Upload | Link ist sofort nutzbar (Spotify, YouTube), kein Speicher-Overhead; Link ist im fertigen Stundenplan direkt klickbar | 2026-09-30 |
-| Starter-Übungen als separate Referenz, nicht als Kopie importiert | Nutzer fügt Starter-Übungen über Favoriten (PROJ-8) zur eigenen DB hinzu, erst dann editierbar; hält Referenz-DB sauber | 2026-09-30 |
+| Starter-Übungen als separate Referenz, nicht als Kopie importiert | Nutzer übernimmt Starter-Übungen über PROJ-4 in die eigene DB, erst dann editierbar; hält Referenz-DB sauber | 2026-09-30 |
 | Schwierigkeitsgrad: 3 Stufen (Leicht/Mittel/Schwer) | Schnell auszuwählen, intuitiv für Ehrenamtliche, granular genug für Generator-Matching | 2026-09-30 |
 | Scrollbare Liste mit "Mehr laden" statt Pagination | Erwartete Datenmenge (20–80 eigene Übungen) braucht keine echte Pagination; "Mehr laden" als Sicherheitsnetz für Power-User | 2026-09-30 |
 
