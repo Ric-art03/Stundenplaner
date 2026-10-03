@@ -1,8 +1,9 @@
 # PROJ-6: Einheiten-Generator
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-03
 **Last Updated:** 2026-10-03
+**Architected:** 2026-10-03
 
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Datenbank
@@ -345,6 +346,10 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 - [ ] Sollen Musik-Hinweise („Musik benötigt") im Stundenverlauf besonders hervorgehoben werden, damit der Nutzer vor der Stunde weiß, dass er eine Box braucht?
 - [ ] Ist die Frische-Regel mit „letzten zwei Einheiten" die richtige Tiefe, oder zeigt der echte Einsatz, dass mehr Gedächtnis nötig ist? Bewusst erst nach Praxiserfahrung zu entscheiden
 
+### Neu aus der Architektur-Phase
+- [ ] **Trägt der Zeitstrahl auch PROJ-7?** Der Editor muss voraussichtlich Übungen zwischen Segmenten verschieben können. Das ist ein anderes Interaktionsmodell (Ziehen von Inhalten) als das Verschieben von Segmentgrenzen. Ob dafür dieselbe Grundlage reicht oder ein zusätzliches Paket nötig wird, sollte beim Entwurf von PROJ-7 entschieden werden — nicht vorab auf Vermutung
+- [ ] **Wie viele Segmente bleiben auf dem Zeitstrahl bedienbar, besonders auf Smartphone-Breite?** Bei acht Segmenten auf 375 px wird ein einzelnes Segment sehr schmal. Das Minutenfeld je Segment ist als Rückfallebene vorgesehen, aber ob zusätzlich eine Begrenzung oder eine andere Darstellung nötig ist, zeigt erst der Bau. Falls ja, gehört es als Edge Case in die Spec nachgetragen
+
 ## Decision Log
 
 ### Product Decisions
@@ -392,12 +397,186 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Zeitstrahl auf der shadcn-Komponente „Resizable" statt Eigenentwicklung | Die Zieh-Mathematik samt Maus-, Touch- und Tastaturbedienung und konstanter Gesamtsumme ist der aufwendigste und fehleranfälligste Teil und bereits fertig vorhanden. Entspricht außerdem der Projektregel „shadcn/ui zuerst". Korrigiert die Annahme der Spec, der Zeitstrahl sei reine Eigenentwicklung | 2026-10-03 |
+| Minutenwerte sind die Wahrheit, Prozentwerte nur Anzeige | Ohne diese Richtung würde sich eine 60-Minuten-Einheit durch Rundungsfehler beim Ziehen schleichend auf 59 oder 61 Minuten verschieben | 2026-10-03 |
+| Rundungsdifferenz geht immer an das längste Segment | Garantiert, dass die Segmentsumme exakt der Einheitsdauer entspricht, und wirkt sich relativ am geringsten aus | 2026-10-03 |
+| Auswahlalgorithmus strikt von der Datenbankanbindung getrennt (reine Logik) | 56 Akzeptanzkriterien beschreiben überwiegend Auswahlverhalten. Nur als reine Logik sind sie vollständig und schnell automatisiert testbar, ohne für jeden Fall Testdaten in einer Datenbank anzulegen. Bei dieser Komplexität der Unterschied zwischen beherrschbar und unbeherrschbar | 2026-10-03 |
+| Zufall wird als Startwert hineingegeben, nicht im Generator erzeugt | Macht Tests reproduzierbar, erlaubt „Neu generieren" durch einfaches Wechseln des Startwerts und macht gemeldete Ergebnisse exakt nachstellbar | 2026-10-03 |
+| Verwendeter Zufalls-Startwert wird an der Einheit gespeichert | Ein konkretes Ergebnis bleibt dadurch rekonstruierbar, etwa zur Fehlersuche | 2026-10-03 |
+| Generierung als Server Action, nicht im Browser | Der Kandidatenpool (alle Übungen mit Material und Varianten) müsste sonst vollständig in den Browser geladen werden — langsam und unnötige Datenherausgabe. Gleiches Muster wie PROJ-3 und PROJ-5 | 2026-10-03 |
+| Vier eigene Tabellen: Einheit, Segment, Eintrag, Übungsverwendung | Segmente und Einträge sind strukturierte, sortierte Listen mit mehreren Feldern und Fremdverweisen; als JSONB wären Verweise auf Übungen und deren Löschbehandlung nicht sauber abbildbar | 2026-10-03 |
+| Übungsverwendung als eigene Tabelle statt aus den Einheiten errechnet | „Welche Übungen hat diese Gruppe zuletzt gesehen" wird damit eine einfache schnelle Abfrage, statt bei jedem Generieren alle Einheiten mit allen Segmenten und Einträgen zu durchsuchen | 2026-10-03 |
+| Gesamtdauer wird in die Einheit kopiert, nicht aus der Gruppe gelesen | Ändert der Nutzer später die Einheitsdauer seiner Gruppe, dürfen bestehende Einheiten sich nicht nachträglich verschieben | 2026-10-03 |
+| Eine einzige gemeinsame Stelle berechnet die effektiven Variantendaten | Die Regel „Variantenmaterial ersetzt" an mehreren Orten nachzubauen würde garantiert auseinanderlaufen; bei einem harten Auswahlkriterium wie Material wäre das ein echter Fehler. Wird auch von PROJ-7 genutzt | 2026-10-03 |
+| Schreiben mit Aufräumschritt statt unteilbarer Datenbankfunktion | Das Projekt schreibt in PROJ-3 und PROJ-5 bereits so in mehrere Tabellen; der Aufräumschritt deckt die realistischen Fehlerfälle ab, und ein Fehlschlag ist folgenlos, weil der Nutzer einfach erneut generiert. Eine Datenbankfunktion wäre Komplexität ohne Gewinn | 2026-10-03 |
+| Gruppenzugehörigkeit und Übungsbesitz werden serverseitig geprüft | Die Gruppen-Kennung kommt aus einem Formularfeld und darf nicht als vertrauenswürdig gelten | 2026-10-03 |
+| Markierung „manuell bearbeitet" an der Einheit | Grundlage für die Warnung beim Neu-Generieren; wird von PROJ-7 gesetzt und schon jetzt mit angelegt, damit der Editor nichts nachrüsten muss | 2026-10-03 |
+| Routenbenennung `/units` | Folgt dem bestehenden Muster englischer Plural-Routen für deutsche Fachbegriffe wie `/exercises` und `/groups`; „sessions" wäre mit der Auth-Sitzung verwechselbar | 2026-10-03 |
+| Variantenmaterial-Nacharbeit als eigener Commit auf PROJ-3 im Rahmen des PROJ-6-Baus | Es ist kein Blocker (die Semantik sitzt in der Zusammenführungsstelle), aber inhaltlich eine PROJ-3-Datei und sollte dort nachvollziehbar bleiben | 2026-10-03 |
+| Nur ein neues Paket (`react-resizable-panels` über shadcn) | Supabase, Zod, shadcn/ui, Lucide, `date-fns`, Vitest und Playwright decken alles Übrige ab | 2026-10-03 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+**Erstellt:** 2026-10-03
+
+### Die wichtigste Korrektur gegenüber der Spec
+
+Die Spec nennt den Zeitstrahl „die einzige echte Eigenentwicklung". Das stimmt so nicht mehr: Für ziehbare Segmentgrenzen gibt es mit der shadcn-Komponente **Resizable** eine fertige Grundlage, die genau das Verhalten mitbringt, das wir brauchen — nebeneinanderliegende Bereiche, ziehbare Griffe dazwischen, und die Summe bleibt beim Ziehen automatisch konstant. Sie bringt Maus-, Touch- und Tastaturbedienung sowie Mindestgrößen mit.
+
+Damit entfällt der aufwendigste und fehleranfälligste Teil (die Zieh-Mathematik). Eigenentwicklung bleibt nur die dünne Schicht darüber: Umrechnung zwischen Prozent und Minuten, Segmente hinzufügen und entfernen, und der Einstellbereich pro Segment.
+
+**Wichtige Festlegung dazu:** Die **Minutenwerte sind die Wahrheit**, nicht die Prozentwerte der Anzeige. Beim Ziehen wird der Prozentwert in Minuten zurückgerechnet und auf ganze Minuten gerundet; die Rundungsdifferenz bekommt immer das längste Segment, damit die Summe exakt der Einheitsdauer entspricht. Ohne diese Regel würde sich eine 60-Minuten-Einheit beim Herumziehen schleichend auf 59 oder 61 Minuten verschieben.
+
+### Komponentenstruktur
+
+```
+(protected)/units/new                        ← Konfigurationsseite
++-- UnitConfigForm
+    +-- GroupSelect (Dropdown; via ?groupId= vorausgefüllt)
+    +-- GroupSummary (zeigt, was der Generator aus dem Profil zieht:
+    |                 Sportarten, Altersgruppen, Teilnehmer, Dauer, Hallenmaterial)
+    +-- ScopeChoice (Volle Dauer / Nur Teile füllen)
+    +-- DistributionChoice (Klassisch 20/60/20 / Individuell)
+    +-- SegmentTimeline                      ← klappt nur bei "Individuell" auf
+    |   +-- Resizable-Gruppe (shadcn)        ← ziehbare Segmentgrenzen
+    |   |   +-- Segmentfläche je Segment (Name + Minuten)
+    |   +-- SegmentEditor (für das gewählte Segment)
+    |       +-- PhaseSelect (vordefinierte + eigene Phasen)
+    |       +-- Minutenfeld                  ← auch Mobil-Rückfallebene
+    |       +-- FillModeToggle (füllen / frei lassen)
+    |       +-- MultiSelect Sportarten       ← wiederverwendet aus PROJ-3
+    |       +-- MultiSelect Schwierigkeit    ← wiederverwendet aus PROJ-3
+    |       +-- Segment hinzufügen / entfernen / verschieben
+    +-- GenerateButton (während des Laufs gesperrt)
+    +-- UnitGeneratorEmptyState (keine Gruppe / keine Übungen)
+
+(protected)/units/[id]                       ← Stundenverlauf (Ergebnis)
++-- UnitHeader (Name, Gruppe, Gesamtdauer, "Neu generieren")
++-- UnitPlanView
+|   +-- SegmentBlock (je Segment, in Reihenfolge)
+|       +-- UnitItemCard (Übung: Plandauer, geschätzte Dauer, Sportart,
+|       |                 Schwierigkeit, Organisationsform, Material,
+|       |                 Varianten-Hinweis, Musik-Link)
+|       +-- GapNotice (Lücken-Grund + "Lockern" + "Übung anlegen")
+|       +-- DeletedExerciseSlot (Platzhalter "Übung gelöscht")
++-- RegenerateDialog (Warnung bei bereits bearbeiteter Einheit)
+
+Bestehende Seiten, die erweitert werden
++-- Dashboard: Karte "Einheiten-Generator" wird aktiviert
+|               (liegt bereits ausgegraut vor, "Demnächst verfügbar")
++-- Gruppen-Detailseite: Abschnitt "Einheiten" mit UnitList
+                          + Button "Einheit generieren"
+```
+
+### Der Generator als eigenständiger, testbarer Baustein
+
+Das ist die wichtigste Strukturentscheidung des Features. Der Auswahlalgorithmus wird **strikt von der Datenbankanbindung getrennt**:
+
+```
+Datenbank  →  [ Server Action ]  →  Generator (reine Logik)  →  [ Server Action ]  →  Datenbank
+               lädt Kandidaten,      keine Datenbank,            schreibt Einheit
+               Gruppe, Verlauf       keine Zufallsquelle,
+                                     keine Uhrzeit
+```
+
+Der Generator bekommt alles, was er braucht, als Eingabe übergeben und gibt den fertigen Plan samt Lücken-Begründungen zurück. Er greift selbst nirgends auf Datenbank, Systemzeit oder Zufall zu.
+
+**Warum das so wichtig ist:** Die Spec enthält 56 Akzeptanzkriterien, von denen die meisten Auswahlverhalten beschreiben („Übung mit zu wenig Material wird nicht vorgeschlagen"). Nur als reine Logik lassen sich diese Fälle vollständig und schnell automatisiert testen, ohne für jeden Fall eine Datenbank mit Testdaten aufzubauen. Bei einem Algorithmus dieser Komplexität ist das der Unterschied zwischen beherrschbar und unbeherrschbar.
+
+**Zufall wird hineingegeben, nicht erzeugt.** Die Sportart-Rotation und die Auswahl brauchen Zufall. Dieser Zufall kommt als übergebener Startwert („Seed") von außen. Damit gilt: gleicher Startwert, gleiches Ergebnis. Das bringt drei Vorteile — Tests sind reproduzierbar, „Neu generieren" bekommt einfach einen neuen Startwert, und bei einem Fehlerbericht lässt sich ein konkretes Ergebnis exakt nachstellen. Der verwendete Startwert wird deshalb an der Einheit mitgespeichert.
+
+### Datenmodell (in Alltagssprache)
+
+Vier neue Tabellen. Die Spec beschreibt die Felder im Detail; hier geht es um Struktur und Begründung.
+
+**Einheit**
+Gehört einem Nutzer und einer Gruppe. Hält Name, Gesamtdauer, den verwendeten Zufalls-Startwert, eine Markierung „wurde manuell bearbeitet" (für die Warnung beim Neu-Generieren) und Zeitstempel. Die Gesamtdauer wird **in die Einheit kopiert**, nicht aus der Gruppe gelesen — ändert der Nutzer später die Einheitsdauer seiner Gruppe, bleiben bestehende Einheiten unverändert.
+
+**Segment**
+Gehört zu einer Einheit, mehrere pro Einheit, in fester Reihenfolge. Hält Phasenname, Minutenbudget, den Modus („füllen" oder „frei lassen"), die für dieses Segment gewählten Sportarten und Schwierigkeitsgrade und — falls zutreffend — die gespeicherte Begründung, warum es nicht gefüllt werden konnte. Dass dieser Grund gespeichert und nicht nur angezeigt wird, verlangt die Spec ausdrücklich.
+
+**Einheiten-Eintrag**
+Gehört zu einem Segment, mehrere pro Segment, in fester Reihenfolge. Verweist auf eine Übung und optional auf eine Variante und hält die Plandauer. Der **Verweis** ist bewusst: Korrekturen an einer Übung wirken sofort in allen Einheiten. Die **Plandauer** ist bewusst kopiert: Sie darf sich nicht verschieben, wenn der Nutzer später die Schätzdauer der Übung anpasst.
+
+**Übungsverwendung**
+Ein Eintrag je verwendeter Übung: welche Übung, welche Gruppe, welche Einheit, wann. Diese Tabelle ist die Grundlage für die Frische-Regel, für PROJ-10 und für die Sortierung „Zuletzt verwendet" aus PROJ-3.
+
+Warum eine eigene Tabelle und nicht aus den Einheiten errechnet: Die Frage „welche Übungen hat diese Gruppe zuletzt gesehen" ist damit eine einfache, schnelle Abfrage, statt bei jedem Generieren alle Einheiten mit allen Segmenten und Einträgen durchsuchen zu müssen.
+
+### Berechnung der effektiven Variantendaten
+
+Varianten sind laut Spec vollwertige Kandidaten, erben aber Felder, die sie nicht überschreiben. Diese Zusammenführung bekommt eine **einzige gemeinsame Stelle**, die sowohl der Generator als auch später PROJ-7 und die Übungsanzeige nutzen. Sonst wäre die Regel „Variantenmaterial ersetzt die Liste der Hauptübung" an mehreren Orten nachgebaut und würde garantiert auseinanderlaufen — bei einem harten Auswahlkriterium wie Material wäre das ein echter Fehler, nicht nur Unschönheit.
+
+### Datenabruf-Strategie
+
+| Aktion | Methode | Begründung |
+|--------|---------|------------|
+| Gruppen und eigene Phasen für die Konfigurationsseite laden | Server Component | Schnell und geschützt; bestehender Mechanismus aus PROJ-3 und PROJ-5 |
+| Einheit generieren und speichern | Server Action | Der Kandidatenpool (alle Übungen mit Material und Varianten) darf nicht in den Browser geladen werden — das wäre langsam und gäbe Daten unnötig heraus. Außerdem gleiches Muster wie PROJ-3 und PROJ-5 |
+| Gespeicherte Einheit anzeigen | Server Component | Einheit mit Segmenten, Einträgen und den verwiesenen Übungen in einer verschachtelten Abfrage |
+| Einheitenliste auf der Gruppenseite | Server Component | Wenige Einheiten pro Gruppe; kein Nachladen nötig |
+| Zeitstrahl bedienen | Client Component | Reine Interaktion ohne Datenbankbezug; erst beim Generieren geht die Konfiguration an den Server |
+| Neu generieren | Server Action | Gleicher Weg wie Generieren, überschreibt denselben Datensatz |
+
+### Schreiben der Einheit ohne halbe Ergebnisse
+
+Eine Einheit zu speichern heißt, in vier Tabellen zu schreiben. Die Spec verlangt, dass bei einem Fehler **keine halb gespeicherte Einheit** zurückbleibt.
+
+Vorgehen: Der Generator baut das vollständige Ergebnis zunächst im Speicher. Dann wird die Einheit angelegt, danach ihre Segmente, Einträge und Verwendungsnachweise. Scheitert ein Schritt, wird die eben angelegte Einheit wieder gelöscht — die abhängigen Datensätze verschwinden über die Löschweitergabe automatisch mit. Der Nutzer sieht die Fehlermeldung und seine Konfiguration bleibt erhalten.
+
+Das ist bewusst **nicht** die strengste mögliche Lösung (eine Datenbankfunktion, die alles in einem unteilbaren Schritt schreibt). Begründung: Das Projekt schreibt in PROJ-3 und PROJ-5 bereits auf dieselbe Weise in mehrere Tabellen, der Aufräumschritt deckt die realistischen Fehlerfälle ab, und ein Fehlschlag ist hier ohnehin folgenlos — der Nutzer klickt einfach erneut auf „Generieren". Eine Datenbankfunktion wäre zusätzliche Komplexität ohne erkennbaren Gewinn.
+
+### Sicherheitsmodell
+
+- Zugriffsschutz auf allen vier neuen Tabellen: Jeder Nutzer sieht und bearbeitet nur seine eigenen Einheiten
+- Die Gruppenzugehörigkeit wird beim Generieren **serverseitig geprüft** — es genügt nicht, dass die Gruppen-Kennung aus einem Formularfeld kommt
+- Ebenso wird serverseitig geprüft, dass alle ausgewählten Übungen dem Nutzer gehören
+- Prüfung aller Eingaben der Konfigurationsseite auf dem Server: Segmentsumme gleich Einheitsdauer, mindestens eine Sportart je Segment, Segmentdauer mindestens 1 Minute, gültige Phasennamen
+- Auth-Prüfung über das bestehende geschützte Layout
+
+### Wiederverwendung aus PROJ-3 und PROJ-5
+
+Geprüft und bestätigt verwendbar:
+
+| Bestehendes Teil | Verwendung in PROJ-6 |
+|---|---|
+| `MultiSelect` | Sportarten, Schwierigkeitsgrade und Phasennamen je Segment — die Komponente kann vordefinierte Listen, Vorauswahl und eigene Einträge bereits |
+| Eigene Kategorien (`custom_categories`) | Eigene Phasennamen für die Segmentbenennung; Mechanismus existiert |
+| Gruppenabruf mit Halle und Material | Liefert den gesamten Generator-Input in einem Zug |
+| `DeleteConfirmDialog` | Vorlage für den Warndialog beim Neu-Generieren |
+| Konstanten für Sportarten, Altersgruppen, Phasen, Schwierigkeit | Unverändert nutzbar |
+| `date-fns` | Datum im automatischen Einheitennamen — bereits im Projekt |
+
+### Nacharbeit in PROJ-3 (Teil dieses Features)
+
+Die Spec nennt die Variantenmaterial-Semantik als offene Abhängigkeit. Architektonische Einordnung: Das ist **kein Blocker** für den Generator, denn „ersetzen" ist eine Leseregel, die die gemeinsame Zusammenführungsstelle umsetzt. Die Änderung an der Varianten-Eingabe ist eine Bedien- und Datenqualitätsfrage.
+
+Empfehlung: als eigener kleiner Schritt im Rahmen des PROJ-6-Baus erledigen, mit eigenem Commit auf PROJ-3. Zwei Dinge gehören zusammen dorthin:
+1. Variantenmaterial erbt sichtbar von der Hauptübung; erst ein Klick kopiert die Liste in bearbeitbare Felder, ein zweiter setzt auf Erben zurück
+2. Hinweis am Dauer-Feld, dass Umbau-, Aufstell- und Erklärzeit mitzählen
+
+### Abhängigkeiten
+
+Ein neues Paket:
+
+- **`react-resizable-panels`** — ziehbare Segmentgrenzen des Zeitstrahls; kommt über `npx shadcn@latest add resizable` zusammen mit der passenden Komponente ins Projekt und entspricht damit der Projektregel „shadcn/ui zuerst"
+
+Alles andere ist vorhanden: Supabase, Zod, shadcn/ui, Lucide Icons, `date-fns`, Vitest und Playwright.
+
+### Integration
+
+- Neue Seiten liegen unter dem bestehenden geschützten Layout, Auth greift damit automatisch
+- Dashboard: Die vorhandene ausgegraute Karte „Einheiten-Generator" wird aktiviert und verlinkt auf die Konfigurationsseite
+- Gruppen-Detailseite: Neuer Abschnitt „Einheiten" mit Liste und Button „Einheit generieren", der die Gruppe vorausfüllt
+- Kopfnavigation: Neuer Punkt „Einheiten" neben „Übungen" und „Gruppen"
+- Routenbenennung folgt dem bestehenden Muster (englischer Plural für deutsche Fachbegriffe, wie `/exercises` und `/groups`): **`/units`**
+
+### Was dieses Design für PROJ-7 vorbereitet
+
+Die Trennung von Auswahllogik und Datenzugriff zahlt sich direkt aus: PROJ-7 braucht zum Tauschen einer einzelnen Übung genau denselben Kandidatenpool und dieselben Filter, nur für einen einzigen Platz statt für ein ganzes Segment. Die Markierung „wurde manuell bearbeitet" an der Einheit ist bereits vorgesehen, und die Einheit liegt als echter Datensatz vor, auf dem der Editor arbeiten kann.
 
 ## QA Test Results
 _To be added by /qa_
