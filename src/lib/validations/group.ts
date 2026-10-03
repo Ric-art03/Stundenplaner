@@ -43,20 +43,11 @@ export const groupSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich').max(100, 'Maximal 100 Zeichen'),
   sports: z.array(z.string()).min(1, 'Mindestens eine Sportart auswählen'),
   ageGroups: z.array(z.string()).min(1, 'Mindestens eine Altersgruppe auswählen'),
-  participantsMin: z.number().int().min(1).nullable(),
-  participantsMax: z.number().int().min(1).nullable(),
+  participants: z.number().int().min(1, 'Mindestens 1 Teilnehmer').nullable(),
   unitDuration: z.number().int().min(5, 'Mindestens 5 Minuten').max(300, 'Maximal 300 Minuten'),
   venueId: z.string().nullable(),
   schedules: z.array(scheduleSchema),
-}).refine(
-  (data) => {
-    if (data.participantsMin != null && data.participantsMax != null) {
-      return data.participantsMin <= data.participantsMax
-    }
-    return true
-  },
-  { message: 'Minimum muss kleiner oder gleich Maximum sein', path: ['participantsMax'] }
-)
+})
 
 export type VenueFormSchema = z.infer<typeof venueSchema>
 export type GroupFormSchema = z.infer<typeof groupSchema>

@@ -24,8 +24,7 @@ export default async function EditGroupPage({ params }: EditGroupPageProps) {
     name: group.name,
     sports: group.sports,
     ageGroups: group.ageGroups,
-    participantsMin: group.participantsMin,
-    participantsMax: group.participantsMax,
+    participants: group.participants,
     unitDuration: group.unitDuration,
     venueId: group.venueId,
     schedules: group.schedules.map((s) => ({

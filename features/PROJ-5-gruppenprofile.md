@@ -2,7 +2,34 @@
 
 ## Status: Deployed
 **Created:** 2026-10-02
-**Last Updated:** 2026-10-02
+**Last Updated:** 2026-10-03
+
+### Nachträgliche Änderung (2026-10-03): Teilnehmerzahl als eine Zahl
+
+Ursprünglich erfasste das Gruppenprofil **Teilnehmerzahl Min und Max** als Spanne. Beim Vorbereiten des Einheiten-Generators (PROJ-6) zeigte sich, dass das eine Lücke erzeugt: Der Generator muss gegen **genau einen** Wert abgleichen — er prüft, ob eine Übung die Gruppe trägt und ob Material „pro Teilnehmer" in der Halle ausreicht. Bei einer Spanne war unklar, welcher Wert gilt.
+
+Mit echten Testdaten durchgerechnet ergaben die drei denkbaren Lesarten völlig unterschiedliche Ergebnisse — von 3–4 bis 6 verwendbaren Übungen pro Phase. Statt eine davon willkürlich festzuschreiben, entfällt die Spanne.
+
+**Neu:** ein Feld `participants` (optional, ganze Zahl ≥ 1), benannt nach seinem Zweck statt nach einer Statistik:
+
+> **Teilnehmerzahl**
+> Für wie viele Teilnehmer planst du? Material und Aufstellung richten sich nach dieser Zahl. Nimm die üblich anwesende Zahl, eher etwas aufgerundet — nicht die Hallenkapazität und nicht die Anmeldeliste.
+
+Weder „ca." noch „max" als Beschriftung, weil beide in die Irre führen: „max" verleitet zur Hallenkapazität oder Anmeldeliste (und schließt dann zu viele Übungen aus), „ca." verleitet zu einem weichen Mittelwert (und dann fehlt in der Halle Material). Der Erklärtext benennt deshalb den Zweck.
+
+**Migration:** `alter table groups` — `participants_min` entfernt, `participants_max` zu `participants` umbenannt, alter Spannen-Check ersetzt durch `participants is null or participants >= 1`. Die Teilnehmer-Spanne der **Übungen** (PROJ-3) bleibt unverändert, dort ist sie sinnvoll: Eine Übung funktioniert tatsächlich für 8 bis 25 Teilnehmer.
+
+**Betroffene Dateien:** `database.types.ts`, `types/group.ts`, `validations/group.ts` (+ Tests), `actions/groups.ts`, `group-form.tsx`, `group-card.tsx`, `group-detail.tsx`, `groups/[id]/edit/page.tsx`
+
+### Nachträgliche Änderung (2026-10-04): „Trainingszeiten" heißen „Hallenzeiten"
+
+Der Begriff war missverständlich. Gemeint ist nicht die Dauer des Trainings, sondern **der Zeitraum, in dem die Halle zur Verfügung steht** — der regelmäßig länger ist, weil Auf- und Abbau, Umziehen und Ankommen hineinfallen. Die tatsächliche Trainingsdauer steckt getrennt davon in der Einheitsdauer. Umbenannt in Formular, Buttons und Detailansicht.
+
+**Keine Pflichtprüfung, dass die Hallenzeit mindestens so lang ist wie die Einheitsdauer.** Es gibt reale Fälle, in denen sie kürzer ist — die Halle ist diese Woche nur 45 Minuten frei, die Einheit ist auf 60 ausgelegt. Das soll der Übungsleiter festhalten können, nicht verboten bekommen. Eine Plausibilitätsfrage darf das Speichern nicht blockieren; dieselbe Linie gilt bereits für leer gelassene Material-Zeilen. Stattdessen erscheint unter der betroffenen Zeile ein dezenter Hinweis mit beiden Zahlen.
+
+### Nachträgliche Änderung (2026-10-03): Material kann in einer Halle nur einmal vorkommen
+
+Im Hallen-Editor verschwindet ein Material nach der Auswahl aus den Listen der übrigen Zeilen. Sonst ließe sich dasselbe Material mit zwei getrennten Mengen erfassen, und für den Generator wäre unklar, welche gilt. Sind alle bekannten Materialien vergeben, wird „Material hinzufügen" deaktiviert.
 
 ### Implementation Notes (Frontend)
 - Types und Konstanten: `src/lib/types/group.ts` (Group, Venue, GroupSchedule, WEEKDAYS, WEEKDAY_SHORT)
@@ -66,8 +93,7 @@
 | Name | Text | Ja | Bezeichnung der Gruppe (z.B. "Kinderturnen") |
 | Sportart(en) | Multi-Select | Ja | Aus vordefinierter Liste + eigene (shared mit Übungen) |
 | Altersgruppe(n) | Multi-Select | Ja | Aus vordefinierter Liste + eigene (shared mit Übungen) |
-| Teilnehmerzahl Min | Zahl | Nein | Typische minimale Gruppengröße |
-| Teilnehmerzahl Max | Zahl | Nein | Typische maximale Gruppengröße |
+| Teilnehmerzahl | Zahl | Nein | **Eine** Zahl: die Größe, für die der Übungsleiter plant. Siehe „Nachträgliche Änderung" unten |
 | Halle/Ort | Referenz | Nein | Verweis auf eine angelegte Halle |
 | Einheitsdauer | Zahl (Minuten) | Ja | Standard-Dauer einer Trainingseinheit (unabhängig vom Hallenzeitraum) |
 
@@ -115,7 +141,7 @@ Einzelformular (kein Wizard) mit folgenden Abschnitten:
 1. **Name** — Textfeld
 2. **Sportart(en)** — Multi-Select (wie bei Übungen, mit eigenen Einträgen)
 3. **Altersgruppe(n)** — Multi-Select (wie bei Übungen, mit eigenen Einträgen)
-4. **Teilnehmerzahl** — Min/Max (zwei Zahlenfelder)
+4. **Teilnehmerzahl** — ein Zahlenfeld mit Erklärtext (siehe „Nachträgliche Änderung")
 5. **Einheitsdauer** — Zahl in Minuten
 6. **Trainingszeiten** — Wochentag-Dropdown + Beginn/Ende-Uhrzeitfelder, "+"-Button für weitere Termine, Entfernen-Button pro Termin
 7. **Halle/Ort** — Dropdown mit vorhandenen Hallen + "Neue Halle anlegen" (öffnet Dialog)
@@ -188,7 +214,7 @@ Einzelformular (kein Wizard) mit folgenden Abschnitten:
 
 ## Edge Cases
 1. **Leeres Formular absenden:** Nutzer klickt "Speichern" ohne Pflichtfelder → Validierungsfehler für jedes fehlende Feld, Eingabe bleibt erhalten
-2. **Teilnehmerzahl Min > Max:** Validierung verhindert das Speichern und zeigt Fehlermeldung
+2. **Teilnehmerzahl 0 oder negativ:** Validierung erlaubt nur positive ganze Zahlen ≥ 1; leer lassen ist erlaubt (dann entfallen die Teilnehmer- und „pro Teilnehmer"-Materialprüfungen im Generator)
 3. **Trainingszeit Beginn nach Ende:** Validierung verhindert das Speichern (z.B. Beginn 18:00, Ende 16:00)
 4. **Doppelter Gruppenname:** Erlaubt — der Nutzer kann mehrere Gruppen mit dem gleichen Namen haben
 5. **Gruppe ohne Halle:** Erlaubt — Halle/Ort ist optional, der Generator kann trotzdem Übungen vorschlagen (ohne Material-Matching)
@@ -226,6 +252,9 @@ Einzelformular (kein Wizard) mit folgenden Abschnitten:
 | Teilnehmerverwaltung als separates Feature (PROJ-15) | Eigene Entität mit eigenem CRUD und Datenschutz-Anforderungen; Gruppenprofil funktioniert auch mit nur Teilnehmerzahl | 2026-10-02 |
 | Shared Custom Categories mit Übungsdatenbank | Eigene Sportart bei Übung angelegt → erscheint auch bei Gruppenprofile und umgekehrt; konsistentes Matching im Generator | 2026-10-02 |
 | Material an der Halle, nicht am Gruppenprofil | Material ist eine Eigenschaft des Ortes, nicht der Gruppe; vermeidet Doppelpflege wenn Halle von mehreren Gruppen genutzt wird | 2026-10-02 |
+| Teilnehmerzahl als **eine** Zahl statt Min/Max-Spanne | Der Generator muss gegen genau einen Wert abgleichen (Übungs-Obergrenze, Material „pro Teilnehmer"). Eine Spanne ließ offen, welcher Wert gilt — mit echten Testdaten ergaben die denkbaren Lesarten zwischen 3 und 6 verwendbaren Übungen pro Phase. Die Untergrenze hatte ohnehin keine Funktion | 2026-10-03 |
+| Feld nach Zweck benannt, nicht als „ca." oder „max" | „max" verleitet zur Hallenkapazität oder Anmeldeliste und schließt dann zu viele Übungen aus; „ca." verleitet zu einem weichen Mittelwert, und dann fehlt in der Halle Material. Der Erklärtext fragt deshalb „Für wie viele planst du?" | 2026-10-03 |
+| Teilnehmer-Spanne bei Übungen (PROJ-3) bleibt erhalten | Dort ist die Spanne sachlich richtig: Eine Übung funktioniert tatsächlich von 8 bis 25 Teilnehmern. Nur die Gruppe braucht einen einzelnen Planungswert | 2026-10-03 |
 
 ### Technical Decisions
 <!-- Added by /architecture -->

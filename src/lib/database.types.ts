@@ -274,8 +274,7 @@ export type Database = {
           name: string
           sports: Json
           age_groups: Json
-          participants_min: number | null
-          participants_max: number | null
+          participants: number | null
           unit_duration: number
           venue_id: string | null
           created_at: string
@@ -287,8 +286,7 @@ export type Database = {
           name: string
           sports?: Json
           age_groups?: Json
-          participants_min?: number | null
-          participants_max?: number | null
+          participants?: number | null
           unit_duration: number
           venue_id?: string | null
           created_at?: string
@@ -300,8 +298,7 @@ export type Database = {
           name?: string
           sports?: Json
           age_groups?: Json
-          participants_min?: number | null
-          participants_max?: number | null
+          participants?: number | null
           unit_duration?: number
           venue_id?: string | null
           created_at?: string

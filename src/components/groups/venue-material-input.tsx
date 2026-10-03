@@ -26,6 +26,13 @@ export function VenueMaterialInput({ materials, onChange, customMaterials = [] }
     return [...VENUE_MATERIALS, ...customs]
   }, [customMaterials])
 
+  const takenNames = React.useMemo(
+    () => new Set(materials.map((m) => m.name).filter(Boolean)),
+    [materials]
+  )
+
+  const allTaken = allMaterials.every((option) => takenNames.has(option))
+
   function addMaterial() {
     onChange([...materials, { name: '', quantity: 1 }])
   }
@@ -49,7 +56,11 @@ export function VenueMaterialInput({ materials, onChange, customMaterials = [] }
           <div className="flex-1 min-w-0 w-full sm:w-auto">
             <label className="text-xs text-muted-foreground mb-1 block">Material</label>
             <VenueMaterialSelect
-              options={allMaterials}
+              // Bereits vergebene Materialien fallen aus der Liste, damit
+              // dasselbe Material nicht zweimal mit getrennten Mengen entsteht.
+              options={allMaterials.filter(
+                (option) => option === material.name || !takenNames.has(option)
+              )}
               value={material.name}
               onChange={(v) => updateMaterial(index, 'name', v)}
             />
@@ -82,10 +93,22 @@ export function VenueMaterialInput({ materials, onChange, customMaterials = [] }
           </Button>
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={addMaterial}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={addMaterial}
+        disabled={allTaken}
+      >
         <Plus className="mr-2 h-4 w-4" />
         Material hinzufügen
       </Button>
+      {allTaken && (
+        <p className="text-xs text-muted-foreground">
+          Alle bekannten Materialien sind bereits erfasst. Eigene Einträge lassen sich über
+          die Auswahl einer vorhandenen Zeile ergänzen.
+        </p>
+      )}
     </div>
   )
 }

@@ -153,8 +153,7 @@ describe('groupSchema', () => {
     name: 'Kinderturnen',
     sports: ['Turnen'],
     ageGroups: ['Kinder (4–6)'],
-    participantsMin: 8,
-    participantsMax: 20,
+    participants: 18,
     unitDuration: 60,
     venueId: null,
     schedules: [],
@@ -205,52 +204,32 @@ describe('groupSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('fails when participantsMin > participantsMax', () => {
-    const result = groupSchema.safeParse({
-      ...validGroup,
-      participantsMin: 20,
-      participantsMax: 10,
-    })
+  it('fails when participants is zero', () => {
+    const result = groupSchema.safeParse({ ...validGroup, participants: 0 })
     expect(result.success).toBe(false)
     if (!result.success) {
       const paths = result.error.issues.map((i) => i.path.join('.'))
-      expect(paths).toContain('participantsMax')
+      expect(paths).toContain('participants')
     }
   })
 
-  it('passes when participantsMin equals participantsMax', () => {
-    const result = groupSchema.safeParse({
-      ...validGroup,
-      participantsMin: 10,
-      participantsMax: 10,
-    })
+  it('fails when participants is negative', () => {
+    const result = groupSchema.safeParse({ ...validGroup, participants: -5 })
+    expect(result.success).toBe(false)
+  })
+
+  it('fails when participants is not an integer', () => {
+    const result = groupSchema.safeParse({ ...validGroup, participants: 12.5 })
+    expect(result.success).toBe(false)
+  })
+
+  it('passes when participants is exactly 1', () => {
+    const result = groupSchema.safeParse({ ...validGroup, participants: 1 })
     expect(result.success).toBe(true)
   })
 
-  it('passes when only participantsMin is set', () => {
-    const result = groupSchema.safeParse({
-      ...validGroup,
-      participantsMin: 4,
-      participantsMax: null,
-    })
-    expect(result.success).toBe(true)
-  })
-
-  it('passes when only participantsMax is set', () => {
-    const result = groupSchema.safeParse({
-      ...validGroup,
-      participantsMin: null,
-      participantsMax: 20,
-    })
-    expect(result.success).toBe(true)
-  })
-
-  it('passes when both participants are null', () => {
-    const result = groupSchema.safeParse({
-      ...validGroup,
-      participantsMin: null,
-      participantsMax: null,
-    })
+  it('passes when participants is null', () => {
+    const result = groupSchema.safeParse({ ...validGroup, participants: null })
     expect(result.success).toBe(true)
   })
 

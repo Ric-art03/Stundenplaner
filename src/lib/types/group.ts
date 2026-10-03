@@ -62,8 +62,12 @@ export interface Group {
   name: string
   sports: string[]
   ageGroups: string[]
-  participantsMin: number | null
-  participantsMax: number | null
+  /**
+   * Die Zahl, für die der Übungsleiter plant — Material und Aufstellung
+   * richten sich danach. Bewusst eine einzelne Zahl statt einer Spanne:
+   * der Generator muss gegen genau einen Wert abgleichen.
+   */
+  participants: number | null
   unitDuration: number
   venueId: string | null
   venue: Venue | null
@@ -76,8 +80,7 @@ export interface GroupFormData {
   name: string
   sports: string[]
   ageGroups: string[]
-  participantsMin: number | null
-  participantsMax: number | null
+  participants: number | null
   unitDuration: number
   venueId: string | null
   schedules: GroupSchedule[]
@@ -87,8 +90,7 @@ export const EMPTY_GROUP_FORM: GroupFormData = {
   name: '',
   sports: [],
   ageGroups: [],
-  participantsMin: null,
-  participantsMax: null,
+  participants: null,
   unitDuration: 60,
   venueId: null,
   schedules: [],

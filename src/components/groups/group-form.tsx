@@ -214,31 +214,22 @@ export function GroupForm({
 
       {/* Teilnehmerzahl */}
       <div className="space-y-2">
-        <Label>Teilnehmerzahl</Label>
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="text-xs text-muted-foreground mb-1 block">Min</label>
-            <Input
-              type="number"
-              min={1}
-              value={form.participantsMin ?? ''}
-              onChange={(e) => updateField('participantsMin', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="z.B. 8"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="text-xs text-muted-foreground mb-1 block">Max</label>
-            <Input
-              type="number"
-              min={1}
-              value={form.participantsMax ?? ''}
-              onChange={(e) => updateField('participantsMax', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="z.B. 20"
-              className={errors.participantsMax ? 'border-destructive' : ''}
-            />
-          </div>
-        </div>
-        {errors.participantsMax && <p className="text-sm text-destructive">{errors.participantsMax}</p>}
+        <Label htmlFor="participants">Teilnehmerzahl</Label>
+        <Input
+          id="participants"
+          type="number"
+          min={1}
+          value={form.participants ?? ''}
+          onChange={(e) => updateField('participants', e.target.value ? parseInt(e.target.value) : null)}
+          placeholder="z.B. 18"
+          className={errors.participants ? 'border-destructive' : ''}
+        />
+        <p className="text-xs text-muted-foreground">
+          Für wie viele Teilnehmer planst du? Material und Aufstellung richten sich nach dieser
+          Zahl. Nimm die üblich anwesende Zahl, eher etwas aufgerundet — nicht die
+          Hallenkapazität und nicht die Anmeldeliste.
+        </p>
+        {errors.participants && <p className="text-sm text-destructive">{errors.participants}</p>}
       </div>
 
       {/* Einheitsdauer */}
@@ -259,13 +250,19 @@ export function GroupForm({
         {errors.unitDuration && <p className="text-sm text-destructive">{errors.unitDuration}</p>}
       </div>
 
-      {/* Trainingszeiten */}
+      {/* Hallenzeiten */}
       <div className="space-y-2">
-        <Label>Trainingszeiten</Label>
+        <Label>Hallenzeiten</Label>
+        <p className="text-xs text-muted-foreground">
+          Die Zeit, in der dir die Halle zur Verfügung steht. Sie darf länger sein als die
+          Einheitsdauer — Auf- und Abbau, Umziehen und Ankommen zählen hier mit, in der
+          Einheitsdauer nicht.
+        </p>
         <ScheduleInput
           schedules={form.schedules}
           onChange={(s: GroupSchedule[]) => updateField('schedules', s)}
           errors={scheduleErrors}
+          unitDuration={form.unitDuration}
         />
       </div>
 

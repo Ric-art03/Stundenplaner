@@ -24,6 +24,18 @@ interface ScheduleInputProps {
   schedules: GroupSchedule[]
   onChange: (schedules: GroupSchedule[]) => void
   errors?: Record<number, { weekday?: string; startTime?: string; endTime?: string; date?: string }>
+  /** Nur für den Plausibilitätshinweis — blockiert das Speichern nicht. */
+  unitDuration?: number
+}
+
+/** Länge einer Hallenzeit in Minuten, oder null wenn unvollständig. */
+function scheduleMinutes(schedule: GroupSchedule): number | null {
+  if (!schedule.startTime || !schedule.endTime) return null
+  const [startHour, startMinute] = schedule.startTime.split(':').map(Number)
+  const [endHour, endMinute] = schedule.endTime.split(':').map(Number)
+  if ([startHour, startMinute, endHour, endMinute].some(Number.isNaN)) return null
+  const minutes = endHour * 60 + endMinute - (startHour * 60 + startMinute)
+  return minutes > 0 ? minutes : null
 }
 
 function splitTime(time: string): [string, string] {
@@ -37,7 +49,7 @@ function joinTime(hour: string, minute: string): string {
   return `${hour}:${minute}`
 }
 
-export function ScheduleInput({ schedules, onChange, errors }: ScheduleInputProps) {
+export function ScheduleInput({ schedules, onChange, errors, unitDuration }: ScheduleInputProps) {
   function addSchedule(type: ScheduleType) {
     onChange([...schedules, {
       scheduleType: type,
@@ -156,17 +168,28 @@ export function ScheduleInput({ schedules, onChange, errors }: ScheduleInputProp
               )}
             </div>
           </div>
+
+          {(() => {
+            const length = scheduleMinutes(schedule)
+            if (!unitDuration || length === null || length >= unitDuration) return null
+            return (
+              <p className="text-xs text-muted-foreground mt-2">
+                Diese Hallenzeit ist mit {length} Minuten kürzer als die Einheitsdauer von{' '}
+                {unitDuration} Minuten. Das ist erlaubt — prüfe nur, ob es so gemeint ist.
+              </p>
+            )
+          })()}
         </div>
       ))}
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => addSchedule('recurring')}>
           <RefreshCw className="mr-2 h-4 w-4" />
-          Wiederkehrende Trainingszeit hinzufügen
+          Wiederkehrende Hallenzeit hinzufügen
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={() => addSchedule('one_time')}>
           <CalendarDays className="mr-2 h-4 w-4" />
-          Einmalige Trainingszeit hinzufügen
+          Einmalige Hallenzeit hinzufügen
         </Button>
       </div>
     </div>
