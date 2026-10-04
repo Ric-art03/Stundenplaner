@@ -22,6 +22,11 @@ export const segmentConfigSchema = z
     }
   )
 
+export const editorStateSchema = z.object({
+  mode: z.enum(['standard', 'custom']),
+  expandedPosition: z.number().int().min(0).nullable(),
+})
+
 export const unitConfigSchema = z
   .object({
     groupId: z.string().min(1, 'Gruppe auswählen'),
@@ -31,6 +36,7 @@ export const unitConfigSchema = z
       .min(5, 'Mindestens 5 Minuten')
       .max(300, 'Maximal 300 Minuten'),
     segments: z.array(segmentConfigSchema).min(1, 'Mindestens ein Segment'),
+    editorState: editorStateSchema,
   })
   .refine(
     (data) => data.segments.reduce((sum, s) => sum + s.minutes, 0) === data.totalMinutes,

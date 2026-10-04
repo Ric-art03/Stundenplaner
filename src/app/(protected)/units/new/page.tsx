@@ -74,6 +74,7 @@ export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
             customSports={categories.sport ?? []}
             initialGroupId={initialGroupId}
             initialSegments={initialSegments}
+            initialEditorState={source?.editorState}
           />
         )}
       </div>

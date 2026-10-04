@@ -39,10 +39,22 @@ export interface SegmentConfig {
   notes: string
 }
 
+/**
+ * Der reine Bedienstand der Konfigurationsseite. Wird an der Einheit
+ * mitgespeichert, damit „Zurück zum Generator" die Maske genau so öffnet, wie
+ * der Nutzer sie verlassen hat.
+ */
+export interface EditorState {
+  mode: UnitMode
+  /** Position des Segments, dessen Einstellbereich offen war. */
+  expandedPosition: number | null
+}
+
 export interface UnitConfig {
   groupId: string
   totalMinutes: number
   segments: SegmentConfig[]
+  editorState: EditorState
 }
 
 /** Die Übung hinter einem Einheiten-Eintrag, inklusive Variantenauflösung. */
@@ -101,6 +113,8 @@ export interface Unit {
    * „Einheit speichern" nimmt sie in die Übersichten auf.
    */
   saved: boolean
+  /** Bedienstand der Konfigurationsseite, für „Zurück zum Generator". */
+  editorState: EditorState
   /** Hinweis, welche Kriterien auf Wunsch gelockert wurden; null wenn nicht gelockert. */
   relaxedNote: string | null
   segments: UnitSegment[]

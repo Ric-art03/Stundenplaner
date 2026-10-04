@@ -353,6 +353,7 @@ export type Database = {
           manually_edited: boolean
           relaxed_note: string | null
           saved: boolean
+          editor_state: Json | null
           created_at: string
           updated_at: string
         }
@@ -366,6 +367,7 @@ export type Database = {
           manually_edited?: boolean
           relaxed_note?: string | null
           saved?: boolean
+          editor_state?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -379,6 +381,7 @@ export type Database = {
           manually_edited?: boolean
           relaxed_note?: string | null
           saved?: boolean
+          editor_state?: Json | null
           created_at?: string
           updated_at?: string
         }

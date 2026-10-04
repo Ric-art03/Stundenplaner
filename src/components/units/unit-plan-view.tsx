@@ -21,6 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { UnitItemCard } from './unit-item-card'
 import { GapNotice } from './gap-notice'
+import { UnitActionsMenu } from './unit-actions-menu'
 import { regenerateUnit, relaxSegment, saveUnit } from '@/lib/actions/units'
 import type { Unit, UnitSegment } from '@/lib/types/unit'
 
@@ -40,6 +41,13 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
       const result = await regenerateUnit(unit.id)
       if (result.error) {
         toast({ variant: 'destructive', title: 'Fehler', description: result.error })
+        return
+      }
+      // Aus einer gespeicherten Einheit entsteht ein neuer Entwurf daneben —
+      // dann muss der Nutzer auch dorthin.
+      if (result.unitId && result.unitId !== unit.id) {
+        toast({ title: 'Neuer Vorschlag erstellt', description: 'Die gespeicherte Einheit bleibt unverändert.' })
+        router.push(`/units/${result.unitId}`)
         return
       }
       toast({ title: 'Neu generiert' })
@@ -97,6 +105,19 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
     }
   }
 
+  /**
+   * Eine Einheit mit ungefüllter Phase soll nicht im Ordner landen. Bewusst
+   * frei gelassene Abschnitte zählen nicht als Lücke — die sind ja Absicht.
+   */
+  const gapSegmentNames = unit.segments
+    .filter(
+      (segment) =>
+        segment.fillMode === 'generate' &&
+        segment.items.reduce((sum, item) => sum + item.plannedDuration, 0) < segment.minutes
+    )
+    .map((segment) => segment.name)
+  const hasGaps = gapSegmentNames.length > 0
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Kopf */}
@@ -110,7 +131,14 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
               Zurück zum Generator
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold">{unit.name}</h1>
+          <div className="flex items-start justify-between gap-2">
+            <h1 className="min-w-0 text-2xl font-bold">{unit.name}</h1>
+            <UnitActionsMenu
+              unitId={unit.id}
+              unitName={unit.name}
+              redirectAfterDelete="/units"
+            />
+          </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Clock className="h-4 w-4" />
@@ -130,7 +158,7 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
               Gespeichert
             </span>
           ) : (
-            <Button size="sm" onClick={save} disabled={busy !== null}>
+            <Button size="sm" onClick={save} disabled={busy !== null || hasGaps}>
               {busy === 'save' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -140,7 +168,9 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
             </Button>
           )}
 
-          {unit.manuallyEdited ? (
+          {/* Bei einer gespeicherten Einheit entsteht ein neuer Entwurf daneben,
+              es geht also nichts verloren — die Warnung gilt nur für Entwürfe. */}
+          {unit.manuallyEdited && !unit.saved ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" disabled={busy !== null}>
@@ -175,12 +205,26 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
           )}
         </div>
 
-        {!unit.saved && (
-          <p className="text-xs text-muted-foreground">
-            Noch nicht gespeichert — diese Einheit erscheint erst in deinen Übersichten,
-            wenn du sie speicherst. Ein neuer Durchlauf im Generator ersetzt sie.
-          </p>
-        )}
+        {!unit.saved &&
+          (hasGaps ? (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">
+                Noch nicht speicherbar:
+              </span>{' '}
+              {gapSegmentNames.length === 1
+                ? `Das Segment „${gapSegmentNames[0]}" konnte nicht gefüllt werden.`
+                : `Diese Segmente konnten nicht gefüllt werden: ${gapSegmentNames
+                    .map((name) => `„${name}"`)
+                    .join(', ')}.`}{' '}
+              Schließe die Lücken über die Hinweise unten, oder setze den Abschnitt im
+              Generator auf &bdquo;frei lassen&ldquo;, wenn du ihn selbst füllen willst.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Noch nicht gespeichert — diese Einheit erscheint erst in deinen Übersichten,
+              wenn du sie speicherst. Ein neuer Durchlauf im Generator ersetzt sie.
+            </p>
+          ))}
       </div>
 
       {unit.relaxedNote && (

@@ -12,8 +12,10 @@ import type {
   ExerciseVariant,
 } from '@/lib/types/exercise'
 import type {
+  EditorState,
   Unit,
   UnitConfig,
+  UnitMode,
   UnitItem,
   UnitSegment,
   UnitSummary,
@@ -355,6 +357,7 @@ export async function generateUnit(
       total_minutes: config.totalMinutes,
       seed,
       relaxed_note: plan.relaxedNote,
+      editor_state: config.editorState as unknown as Json,
       saved: false,
     })
     .select('id')
@@ -380,9 +383,17 @@ export async function generateUnit(
  * erhalten, nur die Übungsauswahl ist eine andere. Dafür genügt ein neuer
  * Zufalls-Startwert.
  */
+/**
+ * Neu generieren mit derselben Konfiguration.
+ *
+ * Bei einem **Entwurf** wird der Inhalt an Ort und Stelle ersetzt. Bei einer
+ * bereits **gespeicherten** Einheit entsteht stattdessen ein neuer Entwurf
+ * daneben; die gespeicherte Fassung bleibt unangetastet, bis der Nutzer den
+ * neuen Vorschlag seinerseits speichert.
+ */
 export async function regenerateUnit(
   unitId: string
-): Promise<{ success?: boolean; error?: string }> {
+): Promise<{ success?: boolean; unitId?: string; error?: string }> {
   const { supabase, user } = await getAuthUser()
   if (!user) return { error: 'Nicht angemeldet.' }
 
@@ -425,6 +436,40 @@ export async function regenerateUnit(
     relax: false,
   })
 
+  // Eine bereits gespeicherte Einheit wird nicht angefasst: Der neue Vorschlag
+  // entsteht als Entwurf daneben. Erst „Einheit speichern" legt ihn als eigene
+  // Einheit ab — die alte bleibt unverändert im Ordner.
+  if (unit.saved) {
+    await supabase.from('units').delete().eq('user_id', user.id).eq('saved', false)
+
+    const { data: draftRow, error: draftError } = await supabase
+      .from('units')
+      .insert({
+        user_id: user.id,
+        group_id: group.id,
+        name: await buildUnitName(supabase, group.id, group.name),
+        total_minutes: unit.total_minutes,
+        seed,
+        relaxed_note: plan.relaxedNote,
+        editor_state: unit.editor_state,
+        saved: false,
+      })
+      .select('id')
+      .single()
+
+    if (draftError || !draftRow) return { error: GENERIC_ERROR }
+
+    try {
+      await writeUnitContents(supabase, user.id, draftRow.id, group.id, plan)
+    } catch {
+      await supabase.from('units').delete().eq('id', draftRow.id).eq('user_id', user.id)
+      return { error: GENERIC_ERROR }
+    }
+
+    return { success: true, unitId: draftRow.id }
+  }
+
+  // Ein Entwurf wird an Ort und Stelle ersetzt — da ist nichts zu bewahren.
   // Erst wenn der neue Plan vollständig im Speicher steht, wird der alte
   // Inhalt ersetzt. Die Segmente nehmen ihre Einträge über die
   // Löschweitergabe mit.
@@ -447,6 +492,62 @@ export async function regenerateUnit(
 
   if (error) return { error: GENERIC_ERROR }
 
+  return { success: true }
+}
+
+/**
+ * Der Bedienstand aus der Datenbank, abgesichert gegen Altbestand: Einheiten
+ * aus der Zeit vor dieser Spalte tragen nichts und öffnen den Generator mit
+ * dem Zeitverlauf, so wie es vorher auch war.
+ */
+function readEditorState(raw: Json | null): EditorState {
+  const value = raw as { mode?: unknown; expandedPosition?: unknown } | null
+  const mode: UnitMode = value?.mode === 'standard' ? 'standard' : 'custom'
+  const position =
+    typeof value?.expandedPosition === 'number' ? value.expandedPosition : null
+  return { mode, expandedPosition: position }
+}
+
+/** Nutzer vergeben eigene Namen, sobald der automatische nicht mehr passt. */
+export async function renameUnit(
+  unitId: string,
+  name: string
+): Promise<{ success?: boolean; error?: string }> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) return { error: 'Nicht angemeldet.' }
+
+  const trimmed = name.trim()
+  if (trimmed.length === 0) return { error: 'Bitte gib einen Namen ein.' }
+  if (trimmed.length > 200) return { error: 'Maximal 200 Zeichen.' }
+
+  const { error } = await supabase
+    .from('units')
+    .update({ name: trimmed })
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) return { error: 'Einheit konnte nicht umbenannt werden.' }
+  return { success: true }
+}
+
+/**
+ * Löscht eine Einheit. Segmente, Einträge und Verwendungsnachweise
+ * verschwinden über die Löschweitergabe mit; die Übungen selbst bleiben
+ * unberührt, weil die Einheit sie nur verweist.
+ */
+export async function deleteUnit(
+  unitId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) return { error: 'Nicht angemeldet.' }
+
+  const { error } = await supabase
+    .from('units')
+    .delete()
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) return { error: 'Einheit konnte nicht gelöscht werden.' }
   return { success: true }
 }
 
@@ -729,6 +830,7 @@ export async function getUnit(id: string): Promise<Unit | null> {
     seed: unit.seed,
     manuallyEdited: unit.manually_edited,
     saved: unit.saved,
+    editorState: readEditorState(unit.editor_state),
     relaxedNote: unit.relaxed_note,
     segments,
     createdAt: unit.created_at,

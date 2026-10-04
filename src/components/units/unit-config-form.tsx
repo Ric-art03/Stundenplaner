@@ -36,7 +36,7 @@ import {
   setSegmentMinutes,
   sumMinutes,
 } from '@/lib/units/timeline'
-import type { SegmentConfig, UnitMode } from '@/lib/types/unit'
+import type { EditorState, SegmentConfig, UnitMode } from '@/lib/types/unit'
 import type { Group } from '@/lib/types/group'
 
 const ALL_DIFFICULTIES = [...DIFFICULTY_LEVELS] as DifficultyLevel[]
@@ -48,9 +48,10 @@ interface UnitConfigFormProps {
   initialGroupId?: string
   /**
    * Konfiguration einer bestehenden Einheit, wenn der Nutzer über „Zurück zum
-   * Generator" kommt. Öffnet direkt den individuellen Modus mit diesem Stand.
+   * Generator" kommt — mit dem Bedienstand, den er damals verlassen hat.
    */
   initialSegments?: SegmentConfig[]
+  initialEditorState?: EditorState
 }
 
 export function UnitConfigForm({
@@ -59,12 +60,15 @@ export function UnitConfigForm({
   customSports,
   initialGroupId,
   initialSegments,
+  initialEditorState,
 }: UnitConfigFormProps) {
   const router = useRouter()
   const { toast } = useToast()
 
   const [groupId, setGroupId] = React.useState(initialGroupId ?? '')
-  const [mode, setMode] = React.useState<UnitMode>(initialSegments ? 'custom' : 'standard')
+  const [mode, setMode] = React.useState<UnitMode>(
+    initialSegments ? (initialEditorState?.mode ?? 'custom') : 'standard'
+  )
   const [classicSegments, setClassicSegments] = React.useState<SegmentConfig[]>([])
   // Bleibt über den Wechsel zu „Standard" hinweg erhalten, damit der
   // Bearbeitungsstand beim Zurückschalten nicht verloren ist.
@@ -74,7 +78,13 @@ export function UnitConfigForm({
   // Der mitgebrachte Stand darf nur beim ersten Lauf des Effekts überleben —
   // wechselt der Nutzer danach die Gruppe, wird er wie sonst verworfen.
   const pristineInitial = React.useRef(initialSegments != null)
-  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [selectedId, setSelectedId] = React.useState<string | null>(
+    // Der Einstellbereich, der beim Verlassen offen war — über die Position,
+    // weil die Kennungen im Formular bei jedem Laden neu vergeben werden.
+    initialSegments && initialEditorState?.expandedPosition != null
+      ? (initialSegments[initialEditorState.expandedPosition]?.id ?? null)
+      : null
+  )
   const [submitting, setSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
 
@@ -180,7 +190,21 @@ export function UnitConfigForm({
       return
     }
 
-    const config = { groupId: group.id, totalMinutes, segments }
+    const expandedIndex = selectedId
+      ? segments.findIndex((segment) => segment.id === selectedId)
+      : -1
+
+    const config = {
+      groupId: group.id,
+      totalMinutes,
+      segments,
+      editorState: {
+        mode,
+        // findIndex liefert -1, wenn das Segment zwischenzeitlich entfernt
+        // wurde — das wäre keine gültige Position.
+        expandedPosition: expandedIndex >= 0 ? expandedIndex : null,
+      },
+    }
     const parsed = unitConfigSchema.safeParse(config)
 
     if (!parsed.success) {

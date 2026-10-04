@@ -2,9 +2,9 @@
 
 ## Status: In Progress
 **Created:** 2026-10-03
-**Last Updated:** 2026-10-04
+**Last Updated:** 2026-10-05
 **Architected:** 2026-10-03
-**Backend:** 2026-10-04
+**Backend:** 2026-10-04 (überarbeitet 2026-10-05)
 
 ### Implementation Notes (Frontend)
 
@@ -233,6 +233,60 @@ Zu jeder Ursache nennt die Oberfläche, was dagegen hilft. Zwei Feinheiten:
 - `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
 - `npm run test:pruefplan` — 15 Fälle grün, erweitert um die Aufschlüsselung an echten Daten
 
+### Änderungen aus dem zweiten Test — 2026-10-05
+
+Der Nutzer hat das Entwurfsmodell, „Zurück zum Generator" und das Lockern pro Segment durchgespielt: **funktioniert**. Vier weitere Punkte kamen dabei auf.
+
+**1 — „Zurück zum Generator" stellt den Bedienstand wieder her**
+
+Bis dahin lud die Konfigurationsseite zwar den Zeitverlauf der Einheit, öffnete aber immer den individuellen Modus mit zugeklappten Einstellbereichen. Wer mit „Standard" generiert hatte, landete beim Zurückgehen also in einer Maske, die er so nie gesehen hatte.
+
+Die neue Spalte `units.editor_state` trägt den reinen Bedienstand:
+
+```json
+{ "mode": "standard" | "custom", "expandedPosition": 2 }
+```
+
+`expandedPosition` ist die **Position** des Segments, dessen Einstellbereich offen war — nicht dessen Kennung, weil die Kennungen im Formular bei jedem Laden neu vergeben werden. Einheiten aus der Zeit vor dieser Spalte tragen nichts und öffnen wie bisher mit dem Zeitverlauf; `readEditorState` fängt das ab.
+
+Weil der Stand **an der Einheit** hängt und nicht an der Sitzung, funktioniert das auch, wenn der Nutzer gar nicht aus dem Generator kam, sondern etwa über „Meine Einheiten" — genau die Anforderung.
+
+Dabei fiel ein eigener Fehler auf: Die Position kam aus `findIndex`, das bei einem zwischenzeitlich entfernten Segment `-1` liefert. Das Schema lehnt negative Positionen ab, womit das Generieren mit einer unverständlichen Meldung gescheitert wäre. Jetzt wird `-1` zu `null`, und ein Test im neuen `unit.test.ts` hält die Regel fest.
+
+**2 — Einheiten umbenennen und löschen**
+
+Umbenennen gehört **nicht** in PROJ-7: Der Editor dort ändert den Stundenverlauf, der Name ist Beiwerk der Einheit. Die Spec sah ihn ohnehin schon als „später umbenennbar" vor. Umgesetzt als Drei-Punkte-Menü (`unit-actions-menu.tsx`) auf den Karten in jeder Liste und im Kopf der Detailseite.
+
+Beim Bauen zeigte sich, dass es **gar keinen** Weg gab, eine gespeicherte Einheit wieder loszuwerden — der Ordner füllte sich unumkehrbar. Auf Rückfrage mit aufgenommen, mit Bestätigungsdialog wie bei Übungen und Gruppen. Die Übungen bleiben dabei unberührt, weil die Einheit sie nur verweist.
+
+Das Menü liegt **neben** dem Link der Karte statt darin, damit ein Klick darauf nicht die Einheit öffnet.
+
+**3 — „Neu generieren" einer gespeicherten Einheit erzeugt einen Entwurf**
+
+Vorher überschrieb `regenerateUnit` immer denselben Datensatz. Bei einer gespeicherten Einheit war das ein Datenverlust auf Knopfdruck. Jetzt verzweigt die Aktion:
+
+| Ausgangslage | Verhalten |
+|---|---|
+| **Entwurf** | Inhalt wird an Ort und Stelle ersetzt — da ist nichts zu bewahren |
+| **Gespeicherte Einheit** | Bleibt unangetastet. Der neue Vorschlag entsteht als Entwurf daneben, mit demselben Zeitverlauf und demselben Bedienstand. Erst „Einheit speichern" legt ihn als **zusätzliche** Einheit ab |
+
+Die Aktion gibt dafür die Kennung des neuen Entwurfs zurück, damit die Oberfläche dorthin wechseln kann. Die Ein-Entwurf-Regel gilt weiter: Ein vorhandener Entwurf wird dabei ersetzt.
+
+Nebeneffekt, der die Oberfläche vereinfacht: Die Warnung „Deine Änderungen werden überschrieben" ist bei einer gespeicherten Einheit nicht mehr nötig — es geht ja nichts verloren. Sie erscheint nur noch bei einem bearbeiteten Entwurf.
+
+**4 — Kein Speichern, solange eine Phase ungefüllt ist**
+
+„Einheit speichern" ist gesperrt, sobald ein Segment im Modus „füllen" sein Budget nicht erreicht. Bewusst auf „frei lassen" gesetzte Abschnitte zählen **nicht** als Lücke — die sind Absicht, und Edge Case 9 (eine Einheit, in der alle Segmente frei bleiben) bleibt dadurch zulässig.
+
+Der gesperrte Knopf allein wäre eine Sackgasse: Bei kleiner Übungsdatenbank käme der Nutzer nie zum Speichern. Deshalb steht daneben, **welches** Segment die Sperre auslöst und wie er herauskommt — Lücke über die Hinweise schließen, oder den Abschnitt im Generator auf „frei lassen" setzen, wenn er ihn selbst füllen will. Damit ist die Sperre eine Anweisung statt einer Wand.
+
+**Verifikation dieser Runde**
+- `npx tsc --noEmit` — fehlerfrei
+- `npm test` — **230 Tests grün** (18 neue in `src/lib/validations/unit.test.ts` zum Konfigurations-Schema, das die Server-Seite absichert)
+- `npm run build` — erfolgreich
+- `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
+- `npm run test:pruefplan` — 15 Fälle weiterhin grün
+
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Datenbank
 - Requires: PROJ-2 (Benutzerregistrierung & Login) — Nur eingeloggte Nutzer generieren Einheiten
@@ -434,7 +488,7 @@ Nur auf aktiven Klick des Nutzers („Mit gelockerten Kriterien erneut versuchen
 
 - Überschreibt denselben Einheiten-Datensatz — es entstehen keine verwaisten Entwürfe
 - Die Konfiguration (Zeitverlauf, Sportarten, Schwierigkeitsgrade) bleibt erhalten; der Nutzer bekommt eine andere Übungsauswahl, nicht eine andere Struktur
-- Hat der Nutzer die Einheit bereits manuell bearbeitet, erscheint vorher die Warnung „Deine Änderungen an dieser Einheit werden überschrieben."
+- Hat der Nutzer einen **Entwurf** bereits manuell bearbeitet, erscheint vorher die Warnung „Deine Änderungen an dieser Einheit werden überschrieben." Bei einer **gespeicherten** Einheit entfällt die Warnung: Dort entsteht ein neuer Entwurf daneben, die gespeicherte Fassung bleibt unangetastet
 
 ## Datenmodell
 
@@ -554,14 +608,26 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 
 ### Speichern, Anzeigen, Neu generieren
 - [ ] Angenommen der Nutzer klickt auf „Einheit generieren", wenn die Generierung erfolgreich war, dann sieht er den Stundenverlauf als **Entwurf**, der noch nicht in seinen Übersichten erscheint
-- [ ] Angenommen der Nutzer sieht einen Entwurf, wenn er auf „Einheit speichern" klickt, dann erscheint die Einheit in „Meine Einheiten" und auf der Gruppen-Detailseite
-- [ ] Angenommen der Nutzer sieht einen Entwurf, wenn er auf „Zurück zum Generator" klickt, dann ist die Konfigurationsseite mit genau dessen Zeitverlauf und Einstellungen gefüllt und weiter bearbeitbar
+- [ ] Angenommen der Nutzer sieht einen Entwurf ohne Lücke, wenn er auf „Einheit speichern" klickt, dann erscheint die Einheit in „Meine Einheiten" und auf der Gruppen-Detailseite
+- [ ] Angenommen ein Segment im Modus „füllen" konnte nicht vollständig gefüllt werden, wenn der Nutzer den Entwurf ansieht, dann ist „Einheit speichern" gesperrt und es steht dort, welches Segment die Sperre auslöst
+- [ ] Angenommen ein Segment ist bewusst auf „frei lassen" gesetzt, wenn der Nutzer den Entwurf ansieht, dann sperrt das „Einheit speichern" **nicht** — ein leer gelassener Abschnitt ist keine Lücke
+- [ ] Angenommen „Einheit speichern" ist wegen einer Lücke gesperrt, wenn der Nutzer das Segment im Generator auf „frei lassen" stellt oder die Lücke schließt, dann lässt sich die Einheit speichern
+- [ ] Angenommen der Nutzer öffnet das Menü einer Einheit, wenn er „Umbenennen" wählt und einen Namen eingibt, dann trägt die Einheit diesen Namen in allen Übersichten
+- [ ] Angenommen der Nutzer öffnet das Menü einer Einheit, wenn er „Löschen" wählt und bestätigt, dann verschwindet die Einheit samt Segmenten und Einträgen, während seine Übungen erhalten bleiben
+- [ ] Angenommen der Nutzer wählt „Löschen" und bricht ab, dann bleibt die Einheit unverändert
+- [ ] Angenommen der Nutzer sieht eine Einheit, wenn er auf „Zurück zum Generator" klickt, dann ist die Konfigurationsseite mit genau deren Zeitverlauf und Einstellungen gefüllt und weiter bearbeitbar
+- [ ] Angenommen die Einheit wurde im Modus „Standard" erzeugt, wenn der Nutzer zum Generator zurückkehrt, dann steht dort wieder „Standard" und nicht der aufgeklappte Zeitverlauf
+- [ ] Angenommen beim Generieren war der Einstellbereich eines bestimmten Segments offen, wenn der Nutzer zum Generator zurückkehrt, dann ist genau dieser Bereich wieder offen
+- [ ] Angenommen der Nutzer kommt über „Meine Einheiten" statt direkt aus dem Generator, wenn er „Zurück zum Generator" wählt, dann gilt dasselbe — der Bedienstand hängt an der Einheit, nicht an der Sitzung
 - [ ] Angenommen ein Entwurf liegt vor, wenn der Nutzer erneut generiert, dann ersetzt der neue Vorschlag den alten und es sammelt sich kein zweiter Entwurf an
 - [ ] Angenommen eine Einheit wurde **gespeichert**, wenn der Nutzer den Browser schließt und zurückkehrt, dann ist die Einheit noch vorhanden
 - [ ] Angenommen ein Entwurf wurde verworfen, wenn der Nutzer eine neue Einheit generiert, dann zählt der Entwurf nicht für die Frische-Regel
 - [ ] Angenommen eine Einheit wurde generiert, wenn sie gespeichert wird, dann trägt sie automatisch einen Namen aus Gruppenname und Erstelldatum
-- [ ] Angenommen der Nutzer sieht den Stundenverlauf, wenn er auf „Neu generieren" klickt, dann wird dieselbe Einheit mit einer anderen Übungsauswahl überschrieben und die Zeitverlauf-Konfiguration bleibt erhalten
-- [ ] Angenommen der Nutzer hat die Einheit bereits manuell bearbeitet, wenn er auf „Neu generieren" klickt, dann erscheint vorher eine Warnung, dass seine Änderungen überschrieben werden
+- [ ] Angenommen der Nutzer sieht einen **Entwurf**, wenn er auf „Neu generieren" klickt, dann wird dieser Entwurf mit einer anderen Übungsauswahl überschrieben und die Zeitverlauf-Konfiguration bleibt erhalten
+- [ ] Angenommen der Nutzer sieht eine **gespeicherte** Einheit, wenn er auf „Neu generieren" klickt, dann bleibt diese unverändert im Ordner und der neue Vorschlag entsteht als Entwurf daneben
+- [ ] Angenommen aus einer gespeicherten Einheit ist ein neuer Entwurf entstanden, wenn der Nutzer ihn speichert, dann liegt er als **zusätzliche** Einheit im Ordner, nicht als Ersatz
+- [ ] Angenommen der Nutzer hat einen Entwurf bereits manuell bearbeitet, wenn er auf „Neu generieren" klickt, dann erscheint vorher eine Warnung, dass seine Änderungen überschrieben werden
+- [ ] Angenommen eine gespeicherte Einheit wurde manuell bearbeitet, wenn der Nutzer auf „Neu generieren" klickt, dann erscheint **keine** Warnung — es geht nichts verloren, weil ein Entwurf daneben entsteht
 - [ ] Angenommen der Nutzer sieht eine generierte Einheit, wenn er auf eine Übung klickt, dann öffnet sich die Detailseite dieser Übung
 - [ ] Angenommen eine Übung in der Einheit hat Varianten, wenn der Stundenverlauf angezeigt wird, dann ist erkennbar, dass Varianten verfügbar sind
 - [ ] Angenommen der Nutzer hat Einheiten für eine Gruppe generiert, wenn er die Gruppen-Detailseite öffnet, dann sieht er diese Einheiten mit Name, Erstelldatum, Gesamtdauer und Übungsanzahl, neueste zuerst
@@ -726,6 +792,17 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 | Begründet wird mit dem tiefsten Versuch, gefüllt mit dem besten | Beides aus demselben Versuch zu nehmen führte zu der widersprüchlichen Meldung „Auch mit gelockerten Kriterien\" über einer Liste, die genau die gelockerten Kriterien aufzählte | 2026-10-04 |
 | „Übung anlegen\" aus dem Lückenhinweis entfernt | Mitten im Betrachten einer Einheit in den Übungs-Wizard zu springen reißt den Nutzer aus seiner Aufgabe. Das Nachbesetzen einer Lücke übernimmt der Editor aus PROJ-7 an Ort und Stelle | 2026-10-04 |
 | Zurück-Link führt in den Generator statt zur Gruppe | Nach dem Ansehen eines Vorschlags will der Nutzer die Einstellungen nachjustieren, nicht die Gruppe verwalten. Die Gruppe bleibt über die Kopfnavigation erreichbar | 2026-10-04 |
+| Bedienstand der Konfigurationsseite an der Einheit statt in der Sitzung | „Zurück zum Generator\" soll auch greifen, wenn der Nutzer über „Meine Einheiten\" kommt und den Generator in dieser Sitzung nie offen hatte. In `sessionStorage` wäre der Stand dort nicht vorhanden | 2026-10-05 |
+| Bedienstand als eine JSONB-Spalte statt zweier Einzelspalten | Der Editor aus PROJ-7 wird weiteren Bedienstand ablegen wollen. So kommt er ohne erneute Schemaänderung aus | 2026-10-05 |
+| Aufgeklapptes Segment über die Position statt über die Kennung gemerkt | Die Segment-Kennungen im Formular werden bei jedem Laden neu vergeben; eine gespeicherte Kennung ginge beim Zurückkehren ins Leere | 2026-10-05 |
+| Umbenennen gehört zu PROJ-6, nicht zu PROJ-7 | Der Editor in PROJ-7 ändert den Stundenverlauf — Übungen tauschen, Zeiten verschieben, Lücken füllen. Der Name ist Beiwerk der Einheit, und die Spec sah ihn von Anfang an als „später umbenennbar\" vor | 2026-10-05 |
+| Löschen einer Einheit mit ins Menü aufgenommen | Es gab gar keinen Weg, eine gespeicherte Einheit wieder loszuwerden. Ein Ordner, der sich nur füllen kann, ist für wöchentlich genutzte Einheiten nicht haltbar | 2026-10-05 |
+| Das Karten-Menü liegt neben dem Link, nicht darin | Ein Menü innerhalb des Links würde beim Anklicken zugleich die Einheit öffnen | 2026-10-05 |
+| „Neu generieren\" überschreibt nur Entwürfe, nie gespeicherte Einheiten | Eine gespeicherte Einheit auf Knopfdruck zu überschreiben ist Datenverlust ohne Rückweg. Der neue Vorschlag entsteht daneben, und der Nutzer entscheidet, ob er ihn behält | 2026-10-05 |
+| Die Warnung „Änderungen werden überschrieben\" entfällt bei gespeicherten Einheiten | Sie stimmt dort nicht mehr: Es wird nichts überschrieben. Eine Warnung, die nicht zutrifft, trainiert dem Nutzer das Wegklicken an | 2026-10-05 |
+| „Einheit speichern\" ist gesperrt, solange eine Phase ungefüllt blieb | Eine unvollständige Einheit soll nicht im Ordner landen und später in der Halle auffallen | 2026-10-05 |
+| Bewusst frei gelassene Abschnitte sperren das Speichern nicht | „Frei lassen\" ist eine Entscheidung des Nutzers, keine Lücke. Sonst wäre Edge Case 9 — eine Einheit als leeres Gerüst — nicht mehr speicherbar | 2026-10-05 |
+| Die Sperre nennt das betroffene Segment und den Ausweg | Ein grauer Knopf ohne Begründung wäre bei kleiner Übungsdatenbank eine Sackgasse. Mit dem Hinweis, den Abschnitt notfalls auf „frei lassen\" zu setzen, bleibt der Nutzer handlungsfähig | 2026-10-05 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
@@ -976,24 +1053,27 @@ Ihr Inhalt ist die Rohmasse für PROJ-4 (Starter-Datenbank).
 
 ## Übergabe an /qa — was der Backend-Schritt offen lässt
 
-Diese Liste ist der Grund, warum der Status noch nicht „Approved" ist. Sie ist vollständig: alles andere ist entweder automatisiert geprüft (202 Tests) oder im Prüfplan-Durchlauf gegen die echten Daten bestätigt.
+Diese Liste ist der Grund, warum der Status noch nicht „Approved" ist. Sie ist vollständig: alles andere ist entweder automatisiert geprüft (230 Tests) oder im Prüfplan-Durchlauf gegen die echten Daten bestätigt.
 
-### Zuerst: läuft der Schreibweg überhaupt?
+### Was der Nutzer bereits selbst geprüft hat
 
-**Der Generator wurde noch nie gegen die Datenbank ausgeführt.** Die Auswahllogik ist durchgetestet und der Prüfplan lief gegen die echten Übungsdaten — aber beides über die **reine Logik**, nicht über die Server Action. `generateUnit` hat noch nie eine Zeile geschrieben, `getUnit` noch nie eine gelesen.
+In zwei Durchgängen am 2026-10-04 und 2026-10-05 bestätigt und deshalb **nicht** erneut nötig: der Rundweg Schreiben → Lesen → Anzeigen durch die Server Actions, der Entwurfszustand samt „Einheit speichern", „Zurück zum Generator" und das Lockern pro Segment. Aus beiden Durchgängen sind elf Änderungen hervorgegangen, die in den Implementation Notes stehen.
 
-Abgesichert ist, dass die Spaltennamen und Typen stimmen: `src/lib/database.types.ts` wurde gegen das von Supabase erzeugte Schema abgeglichen und ist für alle vier neuen Tabellen deckungsgleich. Der Rundweg Schreiben → Lesen → Anzeigen ist damit wahrscheinlich in Ordnung, aber nicht belegt.
-
-**Erster Schritt in /qa, bevor irgendetwas anderes geprüft wird:** eingeloggt eine Einheit für eine der beiden Gruppen generieren. Geht das durch, ist der Schreibweg belegt und die übrigen Punkte sind Detailarbeit. Geht es nicht durch, erübrigt sich der Rest bis zur Behebung.
-
-### Dann die Fälle, die Hände brauchen
+### Die Fälle, die noch Hände brauchen
 
 | # | Fall | Was zu sehen sein muss |
 |---|---|---|
 | 1 | Einheit generieren über „Standard" | Nutzer landet im Stundenverlauf, Name = Gruppenname + Datum, Hinweis „Noch nicht gespeichert" |
 | 1b | Dort „Einheit speichern" | Einheit erscheint in „Meine Einheiten" und auf der Gruppenseite; der Hinweis weicht einem Haken |
 | 1c | Generieren, **nicht** speichern, erneut generieren | Es liegt danach genau **ein** Entwurf vor, nicht zwei |
-| 1d | „Zurück zum Generator" aus einer Einheit | Zeitverlauf und alle Segment-Einstellungen sind geladen, Modus steht auf „Individuell" |
+| 1d | „Zurück zum Generator" aus einer mit **Standard** erzeugten Einheit | Die Maske steht wieder auf „Standard", nicht auf aufgeklapptem Zeitverlauf |
+| 1e | „Zurück zum Generator" aus einer **individuell** erzeugten Einheit | Zeitverlauf geladen, und der Einstellbereich, der beim Generieren offen war, ist wieder offen |
+| 1f | Dasselbe, aber über „Meine Einheiten" statt direkt aus dem Generator | Gleiches Ergebnis — der Bedienstand hängt an der Einheit, nicht an der Sitzung |
+| 1g | Entwurf mit ungefüllter Phase | „Einheit speichern" ist grau, daneben steht welches Segment die Sperre auslöst und wie man sie löst |
+| 1h | Dasselbe Segment im Generator auf „frei lassen" stellen | „Einheit speichern" ist wieder benutzbar |
+| 1i | **Gespeicherte** Einheit öffnen, „Neu generieren" | Die gespeicherte Einheit bleibt unverändert im Ordner, der Vorschlag erscheint als neuer Entwurf. Erst dessen „Einheit speichern" legt eine **zweite** Einheit ab |
+| 1j | Drei-Punkte-Menü auf einer Karte, „Umbenennen" | Name ändert sich in allen Übersichten; ein Klick auf das Menü öffnet **nicht** die Einheit |
+| 1k | Drei-Punkte-Menü, „Löschen", bestätigen | Einheit weg, Übungen unverändert vorhanden |
 | 2 | Zweite Einheit für dieselbe Gruppe am selben Tag | Name bekommt den Zähler `(2)` |
 | 3 | **Gespeicherte** Einheit, Browser schließen und zurückkehren | Einheit ist noch da, Plandauern unverändert |
 | 4 | „Individuell" mit einem Segment auf „frei lassen" und einer Notiz | Segment bleibt im Ergebnis leer, die Notiz steht an dieser Stelle |
