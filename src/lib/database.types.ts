@@ -342,6 +342,141 @@ export type Database = {
         }
         Relationships: []
       }
+      units: {
+        Row: {
+          id: string
+          user_id: string
+          group_id: string
+          name: string
+          total_minutes: number
+          seed: number
+          manually_edited: boolean
+          relaxed_note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          group_id: string
+          name: string
+          total_minutes: number
+          seed: number
+          manually_edited?: boolean
+          relaxed_note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          group_id?: string
+          name?: string
+          total_minutes?: number
+          seed?: number
+          manually_edited?: boolean
+          relaxed_note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      unit_segments: {
+        Row: {
+          id: string
+          unit_id: string
+          name: string
+          minutes: number
+          fill_mode: string
+          sports: Json
+          primary_sport: string | null
+          difficulties: Json
+          notes: string | null
+          gap_reason: string | null
+          position: number
+        }
+        Insert: {
+          id?: string
+          unit_id: string
+          name: string
+          minutes: number
+          fill_mode: string
+          sports?: Json
+          primary_sport?: string | null
+          difficulties?: Json
+          notes?: string | null
+          gap_reason?: string | null
+          position?: number
+        }
+        Update: {
+          id?: string
+          unit_id?: string
+          name?: string
+          minutes?: number
+          fill_mode?: string
+          sports?: Json
+          primary_sport?: string | null
+          difficulties?: Json
+          notes?: string | null
+          gap_reason?: string | null
+          position?: number
+        }
+        Relationships: []
+      }
+      unit_items: {
+        Row: {
+          id: string
+          segment_id: string
+          exercise_id: string | null
+          variant_id: string | null
+          planned_duration: number
+          position: number
+        }
+        Insert: {
+          id?: string
+          segment_id: string
+          exercise_id?: string | null
+          variant_id?: string | null
+          planned_duration: number
+          position?: number
+        }
+        Update: {
+          id?: string
+          segment_id?: string
+          exercise_id?: string | null
+          variant_id?: string | null
+          planned_duration?: number
+          position?: number
+        }
+        Relationships: []
+      }
+      exercise_usages: {
+        Row: {
+          id: string
+          user_id: string
+          exercise_id: string
+          group_id: string
+          unit_id: string
+          used_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          exercise_id: string
+          group_id: string
+          unit_id: string
+          used_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          exercise_id?: string
+          group_id?: string
+          unit_id?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

@@ -295,11 +295,13 @@ export async function updateExercise(
 
   await Promise.all([
     supabase.from('exercise_materials').delete().eq('exercise_id', id),
-    supabase.from('exercise_variants').delete().eq('exercise_id', id),
     supabase.from('exercise_links').delete().eq('exercise_id', id),
   ])
 
-  await insertRelatedData(supabase, id, data)
+  await Promise.all([
+    insertRelatedData(supabase, id, data, { skipVariants: true }),
+    syncVariants(supabase, id, data.variants),
+  ])
   await saveCustomCategories(supabase, user.id, data)
 
   return { success: true, id }
@@ -343,10 +345,76 @@ export async function getCustomCategories(): Promise<Record<string, string[]>> {
 
 // ---- Helpers ----
 
+function variantRow(exerciseId: string, variant: ExerciseVariant, index: number) {
+  return {
+    exercise_id: exerciseId,
+    title: variant.title,
+    description: variant.description,
+    materials: (variant.materials ?? []) as unknown as Json,
+    participants_min: variant.participantsMin ?? null,
+    participants_max: variant.participantsMax ?? null,
+    duration: variant.duration ?? null,
+    age_groups: (variant.ageGroups ?? []) as Json,
+    organization_forms: (variant.organizationForms ?? []) as Json,
+    sort_order: index,
+  }
+}
+
+/**
+ * Varianten werden beim Bearbeiten an ihrer Kennung fortgeschrieben, nicht
+ * gelöscht und neu angelegt. Einheiten aus PROJ-6 verweisen auf genau diese
+ * Kennung — beim Neuanlegen würde jede Korrektur an der Übung, selbst ein
+ * Tippfehler im Namen, die eingeplante Variante aus allen Einheiten lösen.
+ */
+async function syncVariants(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  exerciseId: string,
+  variants: ExerciseVariant[],
+) {
+  const { data: existing } = await supabase
+    .from('exercise_variants')
+    .select('id')
+    .eq('exercise_id', exerciseId)
+
+  const kept = new Set(variants.map((v) => v.id).filter((id): id is string => Boolean(id)))
+  const removed = ((existing ?? []) as { id: string }[])
+    .map((row) => row.id)
+    .filter((id) => !kept.has(id))
+
+  if (removed.length > 0) {
+    await supabase.from('exercise_variants').delete().in('id', removed)
+  }
+
+  const added = variants
+    .map((variant, index) => ({ variant, index }))
+    .filter((entry) => !entry.variant.id)
+
+  await Promise.all([
+    ...variants
+      .map((variant, index) => ({ variant, index }))
+      .filter((entry) => Boolean(entry.variant.id))
+      .map((entry) =>
+        supabase
+          .from('exercise_variants')
+          .update(variantRow(exerciseId, entry.variant, entry.index))
+          .eq('id', entry.variant.id as string)
+          .eq('exercise_id', exerciseId),
+      ),
+    ...(added.length > 0
+      ? [
+          supabase
+            .from('exercise_variants')
+            .insert(added.map((entry) => variantRow(exerciseId, entry.variant, entry.index))),
+        ]
+      : []),
+  ])
+}
+
 async function insertRelatedData(
   supabase: Awaited<ReturnType<typeof createClient>>,
   exerciseId: string,
   data: ExerciseFormData,
+  options: { skipVariants?: boolean } = {},
 ) {
   const promises: PromiseLike<unknown>[] = []
 
@@ -364,22 +432,12 @@ async function insertRelatedData(
     )
   }
 
-  if (data.variants.length > 0) {
+  if (!options.skipVariants && data.variants.length > 0) {
     promises.push(
-      supabase.from('exercise_variants').insert(
-        data.variants.map((v, i) => ({
-          exercise_id: exerciseId,
-          title: v.title,
-          description: v.description,
-          materials: (v.materials ?? []) as unknown as Json,
-          participants_min: v.participantsMin ?? null,
-          participants_max: v.participantsMax ?? null,
-          duration: v.duration ?? null,
-          age_groups: (v.ageGroups ?? []) as Json,
-          organization_forms: (v.organizationForms ?? []) as Json,
-          sort_order: i,
-        }))
-      ).select()
+      supabase
+        .from('exercise_variants')
+        .insert(data.variants.map((v, i) => variantRow(exerciseId, v, i)))
+        .select()
     )
   }
 

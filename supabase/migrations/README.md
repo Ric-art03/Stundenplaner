@@ -20,6 +20,10 @@ Drei weitere Änderungen wurden seinerzeit direkt im Supabase SQL Editor ausgef�
 
 Ihre Zeitstempel sind geschätzt und dienen nur der richtigen Reihenfolge. Inhaltlich entsprechen sie dem geprüften Ist-Zustand der Datenbank.
 
+## Hinweis zu `20261004140000_create_units_tables.sql`
+
+Die Tabellen für PROJ-6 wurden über die Supabase-Migrationsschnittstelle ausgeführt, nicht über den SQL Editor. Diese Datei und der Verlauf im Supabase-Projekt stimmen deshalb überein — anders als bei den drei rekonstruierten Dateien oben.
+
 ## Für neue Änderungen
 
 Neue Datei nach dem Muster `JJJJMMTTHHMMSS_kurze_beschreibung.sql` anlegen und ausführen. Wird eine Änderung direkt im SQL Editor gemacht, muss sie **zusätzlich** als Datei hier landen — sonst läuft der Verlauf wieder auseinander, genau wie bei den drei oben.

@@ -2,8 +2,18 @@
 
 ## Status: Deployed
 **Created:** 2026-09-28
-**Last Updated:** 2026-10-02
+**Last Updated:** 2026-10-04
 **Deployed:** 2026-10-02
+
+### Fehlerbehebung aus PROJ-6 — 2026-10-04
+
+**Varianten verloren beim Bearbeiten ihre Kennung.** `updateExercise` löschte bisher alle Varianten einer Übung und legte sie anschließend neu an. Dabei bekam jede Variante eine neue Kennung — bei **jeder** Bearbeitung der Übung, auch beim Korrigieren eines Tippfehlers im Namen.
+
+Innerhalb von PROJ-3 fiel das nicht auf, weil nichts auf Varianten verwies. Mit PROJ-6 verweist der Einheiten-Eintrag auf genau diese Kennung: Jede Bearbeitung einer Übung hätte die eingeplante Variante aus allen Einheiten gelöst und die Zusage „Verweis statt Kopie" gebrochen.
+
+`syncVariants` in `src/lib/actions/exercises.ts` schreibt Varianten jetzt an ihrer Kennung fort: vorhandene werden aktualisiert, entfernte gelöscht, neue angelegt. Material und Links bleiben beim Löschen-und-neu-Anlegen, weil nichts auf sie verweist. Behoben im Rahmen von PROJ-6 (siehe dortige Implementation Notes (Backend)).
+
+**Löschwarnung nennt jetzt die betroffenen Einheiten.** Der Lösch-Dialog sagte nur, dass die Aktion nicht rückgängig zu machen ist. Er nennt nun zusätzlich die Namen der Einheiten, in denen die Übung vorkommt, und erklärt, dass dort ein Platzhalter stehen bleibt — in beiden Löschwegen (Übersicht und Detailseite). Umgesetzt mit `src/components/exercises/exercise-usage-warning.tsx`.
 
 ### Implementation Notes (Frontend)
 - Types, Konstanten und Zod-Validierung: `src/lib/types/exercise.ts`, `src/lib/validations/exercise.ts`

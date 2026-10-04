@@ -5,6 +5,7 @@ import { ExerciseToolbar } from '@/components/exercises/exercise-toolbar'
 import { ExerciseListView } from '@/components/exercises/exercise-list-view'
 import { ExerciseCardView } from '@/components/exercises/exercise-card-view'
 import { EmptyState } from '@/components/exercises/empty-state'
+import { ExerciseUsageWarning } from '@/components/exercises/exercise-usage-warning'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import {
@@ -166,6 +167,7 @@ export default function ExercisesPage() {
             <AlertDialogTitle>Übung löschen?</AlertDialogTitle>
             <AlertDialogDescription>
               Möchtest du &quot;{deleteTarget?.name}&quot; wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+              <ExerciseUsageWarning exerciseId={deleteTarget?.id ?? null} active={!!deleteTarget} />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

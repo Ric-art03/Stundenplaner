@@ -2,8 +2,9 @@
 
 ## Status: In Progress
 **Created:** 2026-10-03
-**Last Updated:** 2026-10-03
+**Last Updated:** 2026-10-04
 **Architected:** 2026-10-03
+**Backend:** 2026-10-04
 
 ### Implementation Notes (Frontend)
 
@@ -47,8 +48,8 @@ Statt die Hinweise auf ein späteres Hilfe-Feature zu verschieben, stehen sie an
 - `gap-notice.tsx` nennt den Lückengrund und wiederholt den Sportart-Hinweis
 - `phase-select.tsx` erklärt beim Anlegen einer eigenen Phase, dass es dafür noch keine Übungen gibt
 
-**Noch nicht angebunden**
-`src/lib/actions/units.ts` enthält die endgültigen Signaturen, liefert aber für Lesezugriffe leere Ergebnisse und für Mutationen eine klare Meldung. Die vier Tabellen und der Auswahlalgorithmus entstehen in `/backend`. Die Konfigurationsseite ist dadurch bereits **vollständig** benutzbar (echte Gruppen, echte eigene Phasen, echter Zeitverlauf) — nur das Generieren selbst endet noch mit einem Hinweis.
+**Noch nicht angebunden** _(erledigt am 2026-10-04, siehe Implementation Notes (Backend))_
+`src/lib/actions/units.ts` enthielt zunächst nur die endgültigen Signaturen mit leeren Ergebnissen. Die vier Tabellen und der Auswahlalgorithmus sind seit dem Backend-Schritt angebunden; an den Signaturen und damit an der Oberfläche musste dafür nichts geändert werden.
 
 **Testdaten für die manuelle Prüfung (2026-10-03)**
 40 kuratierte Übungen wurden direkt in die Übungsdatenbank des Nutzers eingefügt, zugeschnitten auf seine beiden realen Gruppenprofile — markiert mit `Testdaten (PROJ-6)` in den Arbeitsnotizen und damit in einem Zug wieder löschbar. Dazu 36 Materialzeilen und 6 Varianten. Bewusst eingebaute Prüffälle: Material das in der jeweiligen Halle fehlt, Material „pro Teilnehmer" in zu großer Menge, Übungen mit zu niedriger Teilnehmer-Obergrenze, Übungen ganz ohne Material, sehr kurze Cool-Down-Übungen (3–5 Min), und drei Varianten die eine ausgeschlossene Hauptübung über abweichendes Material oder abweichende Teilnehmerzahl wieder verfügbar machen. Nachgerechnet ergibt das pro Gruppe und Phase 5–6 verwendbare Übungen bei drei- bis vierfachem Minutenbudget — genug, damit Rotation und Frische-Regel sichtbar werden.
@@ -80,6 +81,97 @@ Nach einer Durchsicht in der Geräte-Emulation bei 375 px wurden folgende Punkte
 - `/units` und `/units/new` leiten nicht eingeloggte Nutzer mit 307 auf `/login`
 - **Nicht automatisiert geprüft:** die Bedienung hinter dem Login (Zeitverlauf ziehen, Segmente bearbeiten, Gruppenauswahl) — dafür fehlen Zugangsdaten, das braucht eine manuelle Durchsicht im Browser
 - **Vorbestehender Mangel, nicht angefasst:** `npm run lint` schlägt fehl. `next lint` ist in Next 16 entfernt, und das Projekt hat noch eine `.eslintrc.json` im Altformat, während ESLint 9 eine `eslint.config.js` erwartet. Das betrifft das ganze Projekt, nicht nur PROJ-6
+
+### Implementation Notes (Backend)
+
+**Vier Tabellen, Migration im Repository**
+`supabase/migrations/20261004140000_create_units_tables.sql` legt `units`, `unit_segments`, `unit_items` und `exercise_usages` an — mit Zugriffsschutz auf allen vier, Indizes auf den Abfragepfaden und dem bestehenden `updated_at`-Auslöser auf `units`. Die Datei ist zugleich ausgeführt und als Migration abgelegt, wie es `supabase/migrations/README.md` verlangt.
+
+Drei Entscheidungen an den Fremdschlüsseln tragen Spec-Verhalten:
+
+| Verweis | Verhalten beim Löschen | Warum |
+|---|---|---|
+| `unit_items.exercise_id` → `exercises` | **SET NULL** | Wird eine Übung gelöscht, bleibt der Eintrag als Platzhalter „Übung gelöscht" stehen. Mit CASCADE würde die Einheit stillschweigend kürzer |
+| `unit_items.variant_id` → `exercise_variants` | **SET NULL** | Verschwindet nur die Variante, fällt der Eintrag auf die Hauptübung zurück statt ganz zu verschwinden |
+| `exercise_usages.*` | CASCADE | Verwendungsnachweise sind reine Herleitung; ohne Übung, Gruppe oder Einheit haben sie keine Aussage |
+
+**Der Generator als reine Logik**
+- `src/lib/units/candidates.ts` — die **eine** Stelle, an der die effektiven Daten einer Variante berechnet werden. `effectiveMaterials` setzt die Regel „Variantenmaterial **ersetzt**" um, `buildCandidates` baut aus Hauptübungen und Varianten einen flachen Pool. Hauptübung und ihre Varianten tragen dieselbe `exerciseId` — darüber schließen sie sich gegenseitig aus, ohne dass der Auswahlcode davon wissen muss
+- `src/lib/units/generator.ts` — der Auswahlalgorithmus. Keine Datenbank, keine Systemzeit, keine eigene Zufallsquelle: der Startwert kommt herein, `createRandom` (mulberry32) macht daraus eine reproduzierbare Folge
+- `src/lib/units/generator.test.ts` — **54 Tests**, `src/lib/units/candidates.test.ts` — **13 Tests**
+
+**Füllregel: die Dauergrenzen entscheiden, wann ein Segment voll ist**
+Die Spec sagt „bis das Minutenbudget etwa erreicht ist" und „maximal ±25 % pro Übung". Beides zusammengenommen ergibt eine exakte Regel, die ohne Schätzwerte auskommt: Eine Übung wird nur aufgenommen, wenn die Summe der **Untergrenzen** (je `ceil(Dauer × 0,75)`) noch ins Budget passt. Gefüllt ist das Segment, sobald die Summe der **Obergrenzen** (je `floor(Dauer × 1,25)`) das Budget erreicht — dann lässt es sich durch Strecken genau ausfüllen.
+
+Damit ergeben sich die Beispiele der Spec von selbst: 12 Minuten Budget und eine auf 10 Minuten geschätzte Übung → eine Übung mit 12 Minuten Plandauer. 36 Minuten und 15-Minuten-Übungen → zwei Übungen mit je 18. 12 Minuten und 3-Minuten-Übungen → vier Übungen mit je 3. Und 4 Minuten Budget bei kürzester Übung 20 Minuten → Lücke, weil schon die Untergrenze nicht passt.
+
+`planDurations` verteilt die Restdifferenz minutenweise und immer dort, wo noch der größte Spielraum ist. Die Summe der Plandauern überschreitet das Budget nie.
+
+**Frische vor Rotation — eine Festlegung, die die Spec offen ließ**
+Die Spec führt Sportart-Rotation als Schritt 1 und die Frische-Regel als Schritt 2 auf. Das liest sich wie eine Rangfolge, ergibt als solche aber das schlechtere Verhalten: Eine kürzlich verwendete Übung der gezogenen Sportart würde eine frische Übung einer anderen gewählten Sportart verdrängen — genau das, was die Frische-Regel verhindern soll.
+
+Umgesetzt ist deshalb: **Frische ordnet zuerst, die gezogene Sportart ordnet innerhalb gleicher Frische.** Die Rotation wirkt damit unverändert, solange frische Übungen da sind, und die Abwechslung über Wochen bleibt das stärkere Versprechen. Die Akzeptanzkriterien zu beiden Regeln bleiben erfüllt.
+
+Zusätzlich: Die gezogene Sportart ist eine **Vorliebe, kein Ausschluss**. Gibt es für sie keine passende Übung, nimmt der Generator eine andere gewählte Sportart, statt eine Lücke zu lassen. Und ein neuer Rotationszyklus beginnt nicht mit derselben Sportart, mit der der vorige endete — bei zwei Sportarten und drei Übungen ergibt das A, B, A statt A, B, B.
+
+**Lockern: nur wo nötig, stufenweise**
+Jedes Segment wird zuerst streng gefüllt. Bleibt dabei eine Lücke und hat der Nutzer auf „Mit gelockerten Kriterien erneut versuchen" geklickt, wird **nur für dieses Segment** zuerst der Schwierigkeitsgrad freigegeben, danach die Sportart-Vorgabe. Eine höhere Stufe gilt nur, wenn sie die Lücke tatsächlich verkleinert — sonst bleibt die strenge Auswahl stehen. Segmente, die streng gefüllt werden konnten, bleiben unberührt.
+
+Material und Altersgruppe bleiben in jeder Stufe hart. `relaxedNote` nennt pro Segment, was gelockert wurde und wie viele Übungen dadurch dazukamen: `„Hauptteil": Schwierigkeitsgrad gelockert — 2 Übungen ergänzt.`
+
+Damit ein zweiter Versuch die Auswahl der folgenden Segmente nicht verschiebt, bekommt jeder Versuch einen eigenen, aus dem Startwert abgeleiteten Zufallsstrom (`seed + Segmentindex × 1013 + Stufe × 7919`).
+
+**Lückengründe in Alltagssprache**
+Der Pool wird in fester Reihenfolge gefiltert — Phase, Altersgruppe, Material, Teilnehmerzahl, Sportart, Schwierigkeitsgrad — und die Stufe, die ihn leert, benennt den Grund. Die harten Kriterien stehen vorn, damit der Hinweis zuerst das nennt, woran Lockern nichts ändern würde. Bleibt der Pool gefüllt und die Lücke trotzdem, unterscheidet der Grund zwischen „alle passenden Übungen sind in dieser Einheit schon eingeplant" und „die restlichen N Minuten sind kürzer als die kürzeste noch passende Übung (M Minuten)". Der Grund wird am Segment **gespeichert**, nicht nur angezeigt.
+
+**Server Actions** (`src/lib/actions/units.ts`)
+
+| Aktion | Was sie tut |
+|---|---|
+| `generateUnit` | Prüft Anmeldung, validiert die Konfiguration mit Zod, holt die Gruppe über `getGroup` (damit ist die Zugehörigkeit serverseitig geprüft), lädt Pool und Frische-Daten, rechnet den Plan im Speicher, legt dann Einheit, Segmente, Einträge und Verwendungsnachweise an |
+| `regenerateUnit` | Liest die gespeicherte Zeitverlauf-Konfiguration zurück, rechnet mit **neuem Startwert** einen neuen Plan und ersetzt den Inhalt desselben Datensatzes. Die Einheit selbst bleibt bei der Frische-Regel außen vor — sonst würde sie sich ihre eigene Auswahl verbieten |
+| `getUnit` | Einheit mit Segmenten, Einträgen und den **verwiesenen** Übungen. Die Variantenauflösung läuft über dieselbe `buildCandidates`-Stelle wie im Generator |
+| `getUnits`, `getUnitsForGroup` | Listen mit Übungsanzahl, neueste zuerst |
+| `getUnitNamesUsingExercise` | Für die Löschwarnung bei einer Übung |
+
+**Schreiben ohne halbe Ergebnisse**
+Wie im Tech Design vorgesehen: Der Plan steht vollständig im Speicher, bevor geschrieben wird. Scheitert ein Schritt beim Anlegen, wird die eben erzeugte Einheit wieder gelöscht und die abhängigen Datensätze verschwinden über die Löschweitergabe mit. Der Nutzer bekommt „Generieren fehlgeschlagen, bitte erneut versuchen." und behält seine Konfiguration.
+
+Beim Neu-Generieren lässt sich das nicht ganz so sauber halten: Dort wird der alte Inhalt ersetzt, und ein Fehlschlag mitten im Schreiben kann eine unvollständige Einheit hinterlassen. Bewusst in Kauf genommen, weil ein erneuter Klick auf „Neu generieren" den Zustand wieder geraderückt und die Alternative — eine Datenbankfunktion — nach demselben Maßstab wie im Tech Design zusätzliche Komplexität ohne erkennbaren Gewinn wäre.
+
+**Serverseitige Prüfungen**
+- Anmeldung bei jeder Aktion
+- Gruppenzugehörigkeit über `getGroup` (filtert auf `user_id`), nicht über das Formularfeld
+- Einheitszugehörigkeit bei `regenerateUnit` über `user_id`
+- `unitConfigSchema`: mindestens ein Segment, Segmentdauer mindestens 1 Minute, mindestens eine Sportart je Segment, Hauptsportart muss unter den Sportarten sein, Summe der Segmente gleich der Einheitsdauer
+- Zusätzlich: die Einheitsdauer muss der des Gruppenprofils entsprechen. Hat der Nutzer sie in einem anderen Tab geändert, kommt ein verständlicher Hinweis statt einer Einheit mit falscher Gesamtdauer
+- Die Übungen stammen ausschließlich aus dem serverseitig geladenen Pool des angemeldeten Nutzers — eine fremde Übungskennung kann gar nicht in eine Einheit geraten
+
+**Name der Einheit**
+`Gruppenname – 4. Okt. 2026`. Bei mehreren Einheiten derselben Gruppe am selben Tag wird ein Zähler angehängt (`… (2)`), damit die Liste unterscheidbar bleibt.
+
+**Eigene Phasen werden beim Generieren gesichert**
+Eine im Zeitverlauf frisch angelegte Phase existierte bisher nur im Formular. Beim Generieren landet sie jetzt in `custom_categories` — gleiches Muster wie bei Übungen und Gruppen. Edge Case 3 bleibt davon unberührt: Das Segment bleibt leer, weil keine Übung dieses Phasen-Tag trägt, und der Grund sagt genau das.
+
+**Nacharbeit in PROJ-3: Varianten brauchen stabile Kennungen**
+Beim Bauen des Einheiten-Eintrags fiel ein Fehler in PROJ-3 auf, der PROJ-6 direkt untergraben hätte: `updateExercise` löschte alle Varianten einer Übung und legte sie neu an. Die Kennungen änderten sich damit bei **jeder** Bearbeitung — auch beim Korrigieren eines Tippfehlers im Namen. Ein `unit_items.variant_id` hätte danach auf nichts mehr gezeigt und die eingeplante Variante wäre über `ON DELETE SET NULL` aus allen Einheiten gefallen. Das widerspricht der Zusage „Verweis statt Kopie".
+
+`syncVariants` in `src/lib/actions/exercises.ts` schreibt Varianten jetzt an ihrer Kennung fort: vorhandene werden aktualisiert, entfernte gelöscht, neue angelegt. Material und Links bleiben beim bisherigen Löschen-und-neu-Anlegen, weil nichts auf sie verweist.
+
+**Löschwarnung mit Namen** (Akzeptanzkriterium aus PROJ-6)
+`src/components/exercises/exercise-usage-warning.tsx` lädt beim Öffnen des Löschdialogs die Namen der betroffenen Einheiten nach und nennt sie: „Diese Übung wird in 2 Einheiten verwendet: … Dort bleibt an ihrer Stelle ein Platzhalter stehen, den du nachbesetzen kannst." Eingebaut in beide Löschwege — Übungsübersicht und Übungs-Detailseite.
+
+**Datenbanktypen**
+`src/lib/database.types.ts` um die vier Tabellen ergänzt. Verschachtelte Abfragen wie `select('*, groups(name)')` sind bewusst **nicht** verwendet: Die Typdatei führt keine Beziehungen, solche Abfragen würden den Typprüfer umgehen. Stattdessen mehrere flache Abfragen, die in JavaScript zusammengesetzt werden — dasselbe Muster wie in PROJ-3 und PROJ-5.
+
+**Verifikation**
+- `npx tsc --noEmit` — fehlerfrei
+- `npm test` — **202 Tests grün** (135 bestehende ohne Regression + 54 Generator + 13 Varianten)
+- `npm run build` — erfolgreich
+- `npm run lint` — 0 Fehler, 4 vorbestehende Warnungen zu `<img>` in PROJ-3-Komponenten (unverändert)
+- Supabase-Sicherheitsprüfung: **keine** Beanstandung an den vier neuen Tabellen. Die vier gemeldeten Warnungen sind vorbestehend und betreffen `handle_new_user`, `update_updated_at` (beide ohne gesetzten `search_path`) und die abgeschaltete Prüfung auf geleakte Passwörter — gehören in `/qa` bzw. `/deploy`, nicht in PROJ-6
+- **Nicht geprüft:** das Lösch- und Weitergabeverhalten der Fremdschlüssel gegen die echte Datenbank. Die Klauseln stehen in der Migration, ein Probelauf hätte aber Löschungen in den echten Daten des Nutzers bedeutet. Gehört in `/qa` über die Oberfläche: eine verwendete Übung löschen und prüfen, dass in der Einheit der Platzhalter „Übung gelöscht" steht
+- **Nicht geprüft:** der Weg durch die Oberfläche hinter dem Login. Dafür fehlen Zugangsdaten
 
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Datenbank
@@ -456,7 +548,7 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 - [ ] **Hilfe- und Tutorial-Feature:** Die App muss dem Nutzer die sinnvolle Nutzung aktiv vermitteln — eine Gruppe nicht mit nur einer Sportart taggen, nicht jede Stunde braucht alle Phasen, und die geschätzte Übungsdauer muss Umbau- und Erklärzeit einschließen. Soll das ein eigenes Feature werden (neue PROJ-ID) oder in bestehende Leerzustände und Hinweise verteilt bleiben?
 - [x] **Hinweis im Übungsformular (PROJ-3):** Erledigt am 2026-10-04 — unter dem Dauer-Feld im Wizard steht jetzt, dass Umbau, Aufstellen und Erklären mitzählen und die Einheiten sonst in der Halle überlaufen.
 - [ ] Soll die Zeitverlauf-Konfiguration später als wiederverwendbare Vorlage gespeichert werden können (etwa „mein Volleyball-Schema")? Aktuell Out of Scope, aber naheliegende Erweiterung
-- [ ] Wie viele Einheiten pro Gruppe werden in der Liste auf der Gruppen-Detailseite angezeigt, bevor ein „Mehr laden" nötig wird?
+- [ ] Wie viele Einheiten pro Gruppe werden in der Liste auf der Gruppen-Detailseite angezeigt, bevor ein „Mehr laden" nötig wird? — Vorerst **alle**, neueste zuerst. Mit einer Einheit pro Woche und Gruppe braucht es Jahre, bis die Liste störend wird; ein Nachladen jetzt zu bauen wäre Aufwand ohne erkennbaren Nutzen. Neu zu entscheiden, sobald PROJ-9 (Kalenderansicht) die Einheiten ohnehin anders darstellt
 - [ ] Sollen Musik-Hinweise („Musik benötigt") im Stundenverlauf besonders hervorgehoben werden, damit der Nutzer vor der Stunde weiß, dass er eine Box braucht?
 - [ ] Ist die Frische-Regel mit „letzten zwei Einheiten" die richtige Tiefe, oder zeigt der echte Einsatz, dass mehr Gedächtnis nötig ist? Bewusst erst nach Praxiserfahrung zu entscheiden
 
@@ -543,6 +635,18 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 | Umsortierung erst beim Loslassen übernehmen, nicht laufend | Eine laufende Übernahme ändert die Segment-Reihenfolge, was den Neuaufbau der Panel-Gruppe auslöst — mitten im Ziehen verliert der Finger dann das Segment. Während des Ziehens wird nur die Zielposition markiert | 2026-10-03 |
 | `touch-action: pan-y` auf der Segmentfläche | Seitwärts-Wischen ist Umsortieren, Hoch-Wischen bleibt Seitenscrollen. Ohne diese Trennung wäre auf dem Handy entweder das Ziehen oder das Scrollen blockiert | 2026-10-03 |
 | Alt + Pfeiltasten als Tastatur-Ersatz für das Ziehen | Mit dem Entfernen der Pfeil-Buttons wäre Umsortieren ohne Maus oder Touch sonst unmöglich geworden | 2026-10-03 |
+| Frische-Regel geht der Sportart-Rotation vor, nicht umgekehrt | Die Spec numeriert Rotation als Schritt 1 und Frische als Schritt 2. Als Rangfolge gelesen würde eine kürzlich verwendete Übung der gezogenen Sportart eine frische Übung einer anderen gewählten Sportart verdrängen — genau das, was die Frische-Regel verhindern soll. Umgekehrt bleiben beide Akzeptanzkriterien erfüllt: die Rotation ordnet innerhalb der frischen Übungen | 2026-10-04 |
+| Die gezogene Sportart ist eine Vorliebe, kein Ausschluss | Gibt es für sie keine passende Übung, nimmt der Generator eine andere gewählte Sportart. Sonst entstünden Lücken, obwohl passende Übungen im Pool liegen — und die Spec verlangt Lücken nur, wenn wirklich nichts passt | 2026-10-04 |
+| Füllgrenze aus den ±25 % abgeleitet statt als eigener Schwellwert | Eine Übung kommt dazu, solange die Summe der Untergrenzen ins Budget passt; voll ist das Segment, sobald die Summe der Obergrenzen es erreicht. Damit braucht „bis das Budget etwa erreicht ist" keinen frei gewählten Toleranzwert und die Beispiele der Spec ergeben sich von selbst | 2026-10-04 |
+| Lockern wirkt pro Segment und nur, wenn es die Lücke verkleinert | Segmente, die streng gefüllt werden konnten, sollen sich nicht verändern, nur weil ein anderes Segment eine Lücke hatte. Eine Stufe, die nichts einbringt, wird verworfen, damit der Hinweis „gelockert" immer etwas bedeutet | 2026-10-04 |
+| Jeder Lockerungsversuch bekommt einen eigenen abgeleiteten Zufallsstrom | Ein zweiter Versuch verbraucht sonst Zufallszahlen und verschiebt die Auswahl aller folgenden Segmente. Mit `seed + Segmentindex × 1013 + Stufe × 7919` bleibt das Ergebnis bei gleichem Startwert identisch | 2026-10-04 |
+| `unit_items.exercise_id` mit ON DELETE SET NULL statt CASCADE | Nur so bleibt beim Löschen einer Übung der Platzhalter „Übung gelöscht" stehen. Mit CASCADE würde die Einheit stillschweigend kürzer, was die Spec ausdrücklich ausschließt | 2026-10-04 |
+| Variantenkennungen werden beim Bearbeiten einer Übung fortgeschrieben (PROJ-3) | `updateExercise` löschte bisher alle Varianten und legte sie neu an. Jede Bearbeitung hätte damit die Verweise aller Einheiten auf ihre Variante gelöst — auch beim Korrigieren eines Tippfehlers | 2026-10-04 |
+| Einheitsname bekommt bei mehreren Einheiten am selben Tag einen Zähler | Name und Datum allein sind nicht eindeutig; in der Liste stünde sonst zweimal dieselbe Zeile und der Nutzer müsste von Hand umbenennen | 2026-10-04 |
+| Keine serverseitige Drosselung des Generierens | Der Button ist während des Laufs gesperrt, und eine doppelt entstandene Einheit lässt sich löschen. Eine Drosselung wäre zusätzlicher Zustand für einen Fall ohne Schaden | 2026-10-04 |
+| Im Browser wird keine verschachtelte Supabase-Abfrage verwendet | `src/lib/database.types.ts` führt keine Beziehungen; `select('*, groups(name)')` würde den Typprüfer umgehen. Mehrere flache Abfragen in JavaScript zusammengesetzt — dasselbe Muster wie PROJ-3 und PROJ-5 | 2026-10-04 |
+| Eigene, im Zeitverlauf angelegte Phasen werden beim Generieren gesichert | Sie existierten nur im Formular und wären beim nächsten Besuch verschwunden. Edge Case 3 bleibt unberührt: das Segment bleibt leer und der Grund sagt genau das | 2026-10-04 |
+| Datenbankabhängige Prüfungen als `*.manual.test.ts` mit eigener Konfiguration | Der Prüfplan braucht Netz und den Dienstschlüssel. Als Teil von `npm test` würde der Standardlauf davon abhängen; über `npm run test:pruefplan` bleibt er reproduzierbar, ohne die Suite zu binden | 2026-10-04 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
@@ -709,9 +813,7 @@ Die Trennung von Auswahllogik und Datenzugriff zahlt sich direkt aus: PROJ-7 bra
 
 ## Prüfplan für die vorbereiteten Testdaten
 
-Die 40 Testübungen in der Datenbank (markiert mit `Testdaten (PROJ-6)`) enthalten absichtlich eingebaute Fälle. **Keiner davon ist bisher geprüft** — der Generator existiert noch nicht. Diese Liste gehört in den QA-Schritt nach `/backend`.
-
-Vorab nur rechnerisch in SQL nachgestellt: 5–6 verwendbare Übungen pro Gruppe und Phase, bei drei- bis vierfachem Minutenbudget. Das sagt nichts über das Verhalten des Algorithmus.
+Die 40 Testübungen in der Datenbank (markiert mit `Testdaten (PROJ-6)`) enthalten absichtlich eingebaute Fälle. Die folgende Liste ist der **Plan**; das Ergebnis des Durchlaufs nach `/backend` steht darunter.
 
 | # | Prüffall | Erwartung | Testdaten |
 |---|---|---|---|
@@ -730,6 +832,64 @@ Vorab nur rechnerisch in SQL nachgestellt: 5–6 verwendbare Übungen pro Gruppe
 | 13 | Frische-Regel | Dritte Einheit meidet Übungen der letzten beiden | Dreimal hintereinander für dieselbe Gruppe generieren |
 | 14 | Dauer-Anpassung ±25 % | Plandauer weicht höchstens um ein Viertel von der Schätzung ab | Alle Übungen |
 | 15 | Lücke mit Begründung | Grund wird in Alltagssprache genannt | Segment mit einer eigenen, nicht vergebenen Phase anlegen |
+
+### Ergebnis des Prüfplans (2026-10-04, nach `/backend`)
+
+Ausgeführt gegen die echten Daten mit `npm run test:pruefplan`. Das Skript dazu liegt in `src/lib/units/pruefplan.manual.test.ts`: Es lädt Gruppen, Hallenmaterial und alle Übungen samt Varianten aus dem Supabase-Projekt, baut daraus den Kandidatenpool und lässt den Generator laufen. Es ist aus `npm test` **ausgeschlossen** (eigene Konfiguration `vitest.manual.config.ts`), weil es Netz und den Dienstschlüssel aus `.env.local` braucht — der Standardlauf bleibt dadurch unabhängig.
+
+Grunddaten des Durchlaufs: **54 Kandidaten** (45 Übungen + 9 Varianten). Davon nach Alter, Material und Teilnehmerzahl verwendbar: **20** für „Vorschulturnen 1" (60 Min, 25 TN, 17 Materialzeilen) und **17** für „Capoeira Erwachsene Samstags" (90 Min, 30 TN, 4 Materialzeilen, Hauptsportart Capoeira).
+
+| # | Prüffall | Ergebnis |
+|---|---|---|
+| 1 | Material fehlt in der Halle | ✅ „Schwungtuch-Wellen", „Partnerakrobatik Grundformen" und „Seilsprung-Intervalle" fallen aus dem Pool |
+| 2 | Material „pro Teilnehmer" übersteigt den Bestand | ✅ „Weichboden-Sprungfest" (1 Weichbodenmatte × 25 TN, Halle hat 4) ausgeschlossen |
+| 3 | Material „insgesamt" übersteigt knapp | ✅ „Bank-Sprungkraft" (6 Bänke, Halle hat 4) ausgeschlossen |
+| 4 | Material trifft die Grenze exakt | ✅ „Reifen-Hausbau" (2 Reifen × 25 = 50, Halle hat genau 50) wird zugelassen |
+| 5 | Teilnehmer-Obergrenze unter der Gruppengröße | ✅ „Bockspringen für Kleine" (max. 12 bei 25 TN) ausgeschlossen |
+| 6 | Übung ohne Material | ✅ 18 Kandidaten ohne Material, keiner scheitert am Material-Kriterium |
+| 7 | Variante rettet über **Material** | ✅ „Weichboden-Sprungfest" aus / Variante „Mit Turnmatten statt Weichböden" durch; „Schwungtuch-Wellen" aus / Variante „Mit Tüchern statt Schwungtuch" durch |
+| 8 | Variante rettet über **Teilnehmerzahl** | ✅ Hauptübung max. 12 aus, Variante „In zwei Gruppen mit Wartestation" max. 25 durch |
+| 9 | Regel A: Variantenmaterial **ersetzt** | ✅ Geprüft, dass kein Material der Hauptübung in der Materialliste der Variante auftaucht |
+| 10 | Sehr kurze Cool-Down-Übungen | ✅ Im Capoeira-Cool-Down stehen „Dehnen Beinrückseite" (5 Min) und „Hüftöffner im Sitzen" (4 Min) neben einer 9-Minuten-Übung. Keine Mindestdauer schließt sie aus |
+| 11 | Sportart-Rotation | ✅ Alle gewählten Sportarten kommen dran, bevor sich eine wiederholt |
+| 12 | Gewichtung der Hauptsportart | ✅ Über fünf Startwerte im Hauptteil: ★★, ·★★, ★★, ★·, ·★★ (★ = Capoeira). Etwa jede zweite bis zwei von drei Übungen aus der Hauptsportart, die übrigen Sportarten verschwinden nicht |
+| 13 | Frische-Regel | ⚠️ Wirkt, stößt aber an die Poolgröße: Einheit 1 → 0 Wiederholungen, Einheit 2 → 1 von 7, Einheit 3 → 3 von 6. Bei 20 verwendbaren Kandidaten über drei Phasen ist das die erwartete Untergrenze — die Regel verschiebt nach hinten, schließt aber bewusst nicht aus, damit keine Lücken entstehen. Mit größerer Datenbank sinkt die Zahl von selbst |
+| 14 | Dauer-Anpassung ±25 % | ✅ Für jeden Eintrag beider Gruppen geprüft. Beispiele: 8 → 9, 16 → 15, 22 → 21, 18 → 20, 14 → 16 |
+| 15 | Lücke mit Begründung | ✅ Segment „Wettkampfspiel" bleibt leer mit „Es gibt noch keine Übung, die der Phase „Wettkampfspiel" zugeordnet ist." |
+
+**Beide Gruppen werden vollständig gefüllt, ohne Lücke.** Zwei Beispiel-Einheiten aus dem Durchlauf:
+
+```
+Capoeira Erwachsene Samstags — 90 Min
+Aufwärmen (18 Min): 18 gefüllt
+  9 Min (geschätzt 8)  Partner-Spiegeln              [Kampfsport, Capoeira]
+  9 Min (geschätzt 9)  Hütchen-Reaktionslauf         [Allgemeinsport, Kampfsport]
+Hauptteil (54 Min): 54 gefüllt
+  15 Min (geschätzt 16) Armada Tritttechnik          [Capoeira, Kampfsport]
+  18 Min (geschätzt 18) Esquiva und Negativa         [Capoeira, Kampfsport]
+  21 Min (geschätzt 22) Kraftzirkel am eigenen Körper [Allgemeinsport, Kampfsport]
+Cool-Down (18 Min): 18 gefüllt
+   5 Min (geschätzt 5)  Dehnen Beinrückseite         [Allgemeinsport]
+   9 Min (geschätzt 8)  Abschlussroda ruhig          [Capoeira]
+   4 Min (geschätzt 4)  Hüftöffner im Sitzen         [Allgemeinsport]
+
+Vorschulturnen 1 — 60 Min
+Aufwärmen (12 Min): 12 gefüllt
+   6 Min (geschätzt 8)  Hütchen-Slalom-Warmlauf      [Turnen, Kinderturnen]
+   6 Min (geschätzt 7)  Tücher-Tanz                  [Tanzen, Vorschulturnen]
+Hauptteil (36 Min): 36 gefüllt
+  16 Min (geschätzt 14) Ballschule Rollen und Fangen [Kinderturnen, Kinderspiele]
+  20 Min (geschätzt 18) Tanz-Choreografie Löwenzahn  [Tanzen, Vorschulturnen]
+Cool-Down (12 Min): 12 gefüllt
+   6 Min (geschätzt 5)  Tücher-Regen                 [Tanzen, Vorschulturnen]
+   6 Min (geschätzt 5)  Igel-Massage mit Ball        [Kinderturnen, Vorschulturnen]
+```
+
+Zusätzlich im selben Durchlauf abgesichert: keine Übung kommt zweimal in einer Einheit vor, die Summe der Plandauern überschreitet kein Segmentbudget, und jeder eingeplante Kandidat erfüllt Alter, Material, Teilnehmerzahl und den Phasennamen des Segments.
+
+**Leistung:** 20 vollständige Einheiten über 54 Kandidaten in **5 ms** zusammen, also unter 1 ms je Einheit. Die Spec-Vorgabe von 2 Sekunden bei 150 Kandidaten liegt damit weit außer Reichweite — der Flaschenhals wird das Laden aus der Datenbank sein, nicht die Auswahl.
+
+**Was der Prüfplan nicht abdeckt** (gehört in `/qa`): der Weg durch die Oberfläche hinter dem Login, das Verhalten beim Löschen einer verwendeten Übung (Platzhalter in der Einheit, Warnung mit Einheitennamen), „Neu generieren", „Mit gelockerten Kriterien erneut versuchen" und die Datentrennung zwischen zwei Konten.
 
 **Nach der Prüfung:** Die Testübungen lassen sich in einem Zug entfernen mit
 `delete from exercises where work_notes = 'Testdaten (PROJ-6)';`

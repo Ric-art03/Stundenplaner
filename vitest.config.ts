@@ -8,7 +8,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    exclude: ['tests/**', 'node_modules/**'],
+    // `*.manual.test.ts` greift auf die echte Datenbank zu und braucht den
+    // Dienstschlüssel aus .env.local. Solche Prüfungen laufen nur auf Abruf
+    // (`npm run test:pruefplan`), damit `npm test` ohne Netz und Zugangsdaten
+    // durchläuft.
+    exclude: ['tests/**', 'node_modules/**', '**/*.manual.test.ts'],
   },
   resolve: {
     alias: {

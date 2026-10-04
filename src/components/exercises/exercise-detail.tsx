@@ -74,6 +74,7 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
             </Link>
           </Button>
           <DeleteConfirmDialog
+            exerciseId={exercise.id}
             exerciseName={exercise.name}
             onConfirm={handleDelete}
             disabled={deleting}
