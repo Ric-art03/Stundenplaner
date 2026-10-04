@@ -170,8 +170,9 @@ Beim Bauen des Einheiten-Eintrags fiel ein Fehler in PROJ-3 auf, der PROJ-6 dire
 - `npm run build` — erfolgreich
 - `npm run lint` — 0 Fehler, 4 vorbestehende Warnungen zu `<img>` in PROJ-3-Komponenten (unverändert)
 - Supabase-Sicherheitsprüfung: **keine** Beanstandung an den vier neuen Tabellen. Die vier gemeldeten Warnungen sind vorbestehend und betreffen `handle_new_user`, `update_updated_at` (beide ohne gesetzten `search_path`) und die abgeschaltete Prüfung auf geleakte Passwörter — gehören in `/qa` bzw. `/deploy`, nicht in PROJ-6
-- **Nicht geprüft:** das Lösch- und Weitergabeverhalten der Fremdschlüssel gegen die echte Datenbank. Die Klauseln stehen in der Migration, ein Probelauf hätte aber Löschungen in den echten Daten des Nutzers bedeutet. Gehört in `/qa` über die Oberfläche: eine verwendete Übung löschen und prüfen, dass in der Einheit der Platzhalter „Übung gelöscht" steht
-- **Nicht geprüft:** der Weg durch die Oberfläche hinter dem Login. Dafür fehlen Zugangsdaten
+- Fremdschlüssel **lesend** aus dem Systemkatalog geprüft (`pg_constraint.confdeltype`), ohne Probelauf mit Löschungen: `unit_items.exercise_id` und `unit_items.variant_id` stehen auf SET NULL, die übrigen zehn Verweise auf CASCADE. Die Platzhalter-Logik ist damit auf Datenbankebene abgesichert — offen bleibt nur ihre Darstellung in der Oberfläche
+- `src/lib/database.types.ts` gegen das von Supabase erzeugte Schema abgeglichen: für alle vier neuen Tabellen deckungsgleich in Spalten, Typen und Pflichtfeldern
+- **Nicht geprüft:** der Weg durch die Oberfläche hinter dem Login, und damit auch der Rundweg Schreiben → Lesen → Anzeigen durch die Server Actions. `generateUnit` hat noch nie eine Zeile geschrieben. Siehe „Übergabe an /qa" am Ende dieser Spec
 
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Datenbank
@@ -894,6 +895,47 @@ Zusätzlich im selben Durchlauf abgesichert: keine Übung kommt zweimal in einer
 **Nach der Prüfung:** Die Testübungen lassen sich in einem Zug entfernen mit
 `delete from exercises where work_notes = 'Testdaten (PROJ-6)';`
 Ihr Inhalt ist die Rohmasse für PROJ-4 (Starter-Datenbank).
+
+## Übergabe an /qa — was der Backend-Schritt offen lässt
+
+Diese Liste ist der Grund, warum der Status noch nicht „Approved" ist. Sie ist vollständig: alles andere ist entweder automatisiert geprüft (202 Tests) oder im Prüfplan-Durchlauf gegen die echten Daten bestätigt.
+
+### Zuerst: läuft der Schreibweg überhaupt?
+
+**Der Generator wurde noch nie gegen die Datenbank ausgeführt.** Die Auswahllogik ist durchgetestet und der Prüfplan lief gegen die echten Übungsdaten — aber beides über die **reine Logik**, nicht über die Server Action. `generateUnit` hat noch nie eine Zeile geschrieben, `getUnit` noch nie eine gelesen.
+
+Abgesichert ist, dass die Spaltennamen und Typen stimmen: `src/lib/database.types.ts` wurde gegen das von Supabase erzeugte Schema abgeglichen und ist für alle vier neuen Tabellen deckungsgleich. Der Rundweg Schreiben → Lesen → Anzeigen ist damit wahrscheinlich in Ordnung, aber nicht belegt.
+
+**Erster Schritt in /qa, bevor irgendetwas anderes geprüft wird:** eingeloggt eine Einheit für eine der beiden Gruppen generieren. Geht das durch, ist der Schreibweg belegt und die übrigen Punkte sind Detailarbeit. Geht es nicht durch, erübrigt sich der Rest bis zur Behebung.
+
+### Dann die Fälle, die Hände brauchen
+
+| # | Fall | Was zu sehen sein muss |
+|---|---|---|
+| 1 | Einheit generieren über „Standard" | Einheit wird gespeichert, Nutzer landet im Stundenverlauf, Name = Gruppenname + Datum |
+| 2 | Zweite Einheit für dieselbe Gruppe am selben Tag | Name bekommt den Zähler `(2)` |
+| 3 | Browser schließen und zurückkehren | Einheit ist noch da, Plandauern unverändert |
+| 4 | „Individuell" mit einem Segment auf „frei lassen" und einer Notiz | Segment bleibt im Ergebnis leer, die Notiz steht an dieser Stelle |
+| 5 | Segment mit einer **neu angelegten eigenen Phase** | Segment bleibt leer mit dem Grund „Es gibt noch keine Übung, die der Phase … zugeordnet ist." Die Phase steht beim **nächsten** Öffnen in der Auswahl (wird beim Generieren gesichert) |
+| 6 | „Neu generieren" | Andere Übungsauswahl, **gleiche** Zeitverlauf-Konfiguration, dieselbe Einheit (keine zweite in der Liste) |
+| 7 | Segment mit Schwierigkeitsgrad nur „Leicht", bis eine Lücke entsteht → „Mit gelockerten Kriterien erneut versuchen" | Lücke wird kleiner, oben steht der Hinweis `„<Segment>": Schwierigkeitsgrad gelockert — N Übungen ergänzt.` |
+| 8 | Eine Übung löschen, die in einer Einheit vorkommt | Löschdialog nennt die **Namen** der betroffenen Einheiten. Danach steht in der Einheit der Platzhalter „Übung gelöscht" und die Einheit ist nicht kürzer geworden |
+| 9 | Eine Übung bearbeiten, die als **Variante** in einer Einheit eingeplant ist (z. B. nur den Namen ändern) | Die Einheit zeigt weiter dieselbe Variante. Das ist der Nachweis für die Varianten-Kennungs-Behebung aus PROJ-3 |
+| 10 | Geschätzte Dauer einer eingeplanten Übung ändern | Plandauer in der bestehenden Einheit bleibt unverändert |
+| 11 | Beschreibung einer eingeplanten Übung ändern | Einheit zeigt die neue Beschreibung (Verweis statt Kopie) |
+| 12 | Zweites Konto anlegen und dessen Einheiten prüfen | Konto B sieht keine Einheit von Konto A |
+| 13 | Nicht eingeloggt `/units`, `/units/new`, `/units/<id>` aufrufen | Weiterleitung auf `/login` |
+
+### Was bereits belegt ist und nicht erneut geprüft werden muss
+
+- **Alle 15 Fälle des Prüfplans** — gegen die echten 40 Testübungen gelaufen, siehe „Ergebnis des Prüfplans". Wiederholbar mit `npm run test:pruefplan`
+- **Die Fremdschlüssel** — am 2026-10-04 lesend aus dem Systemkatalog geprüft (`pg_constraint.confdeltype`), kein Probelauf mit Löschungen nötig: `unit_items.exercise_id` und `unit_items.variant_id` stehen auf **SET NULL**, alle übrigen zehn Verweise auf **CASCADE**. Die Platzhalter-Logik ist damit auf Datenbankebene abgesichert; Fall 8 oben prüft nur noch die Darstellung
+- **Die Datenbanktypen** — gegen das von Supabase erzeugte Schema abgeglichen, für alle vier neuen Tabellen deckungsgleich
+- **Zugriffsschutz auf allen vier Tabellen** — aktiv, Supabase-Sicherheitsprüfung ohne Beanstandung
+
+### Nebenbefund außerhalb von PROJ-6
+
+`src/lib/database.types.ts` führt `profiles.display_name` als `string | null`, in der Datenbank ist die Spalte **NOT NULL**. Ein Altbestand aus PROJ-1, ohne bekannte Auswirkung — Code, der auf `null` prüft, läuft nur in einen toten Zweig. Gehört in `/qa` oder einen Aufräum-Commit auf PROJ-1, nicht in PROJ-6.
 
 ## QA Test Results
 _To be added by /qa_
