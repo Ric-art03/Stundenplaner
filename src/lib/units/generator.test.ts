@@ -3,6 +3,7 @@ import {
   createRandom,
   generateUnitPlan,
   planDurations,
+  planSegment,
   DURATION_TOLERANCE,
   type GeneratorGroup,
   type GeneratorInput,
@@ -126,8 +127,13 @@ describe('Phasen-Kriterium', () => {
       candidates: [candidate({ exerciseId: 'main' })],
     })
     expect(result.segments[0].items).toEqual([])
+    expect(result.segments[0].gapDetail).toMatchObject({
+      kind: 'no-phase',
+      phase: 'Wettkampfspiel',
+      phaseMatches: 0,
+    })
     expect(result.segments[0].gapReason).toBe(
-      'Es gibt noch keine Übung, die der Phase „Wettkampfspiel" zugeordnet ist.'
+      'Deine einzige Übung ist der Phase „Wettkampfspiel" nicht zugeordnet.'
     )
   })
 })
@@ -147,7 +153,8 @@ describe('Sportart-Kriterium', () => {
       candidates: [candidate({ exerciseId: 'f', sports: ['Fußball'] })],
     })
     expect(usedIds(result)).toEqual([])
-    expect(result.segments[0].gapReason).toContain('Sportarten getaggt')
+    expect(result.segments[0].gapDetail).toMatchObject({ kind: 'all-filtered', phaseMatches: 1 })
+    expect(result.segments[0].gapDetail?.blockedBy).toEqual([{ criterion: 'sport', count: 1 }])
   })
 })
 
@@ -159,7 +166,7 @@ describe('Altersgruppen-Kriterium', () => {
       candidates: [candidate({ exerciseId: 'alt', ageGroups: ['Senioren (60+)'] })],
     })
     expect(usedIds(result)).toEqual([])
-    expect(result.segments[0].gapReason).toContain('Altersgruppen deiner Gruppe')
+    expect(result.segments[0].gapDetail?.blockedBy).toEqual([{ criterion: 'age', count: 1 }])
   })
 
   it('genügt eine überlappende Altersgruppe', () => {
@@ -189,7 +196,7 @@ describe('Material-Kriterium', () => {
       ],
     })
     expect(usedIds(result)).toEqual([])
-    expect(result.segments[0].gapReason).toContain('Material in deiner Halle')
+    expect(result.segments[0].gapDetail?.blockedBy).toEqual([{ criterion: 'material', count: 1 }])
   })
 
   it('rechnet „pro Teilnehmer" mit der Teilnehmerzahl der Gruppe', () => {
@@ -289,9 +296,10 @@ describe('Teilnehmer-Kriterium', () => {
       candidates: [candidate({ exerciseId: 'klein', participantsMax: 8 })],
     })
     expect(usedIds(result)).toEqual([])
-    expect(result.segments[0].gapReason).toBe(
-      'Keine Übung der Phase „Hauptteil" ist für 20 Teilnehmer ausgelegt.'
-    )
+    expect(result.segments[0].gapDetail?.blockedBy).toEqual([
+      { criterion: 'participants', count: 1 },
+    ])
+    expect(result.segments[0].gapDetail?.participants).toBe(20)
   })
 
   it('schließt eine Übung mit zu hoher Untergrenze aus', () => {
@@ -745,6 +753,211 @@ describe('Aufbau des Ergebnisses', () => {
       candidates: [],
     })
     expect(result.segments[0].items).toEqual([])
-    expect(result.segments[0].gapReason).toContain('noch keine Übung')
+    expect(result.segments[0].gapDetail).toMatchObject({ kind: 'no-phase', totalCandidates: 0 })
+    expect(result.segments[0].gapReason).toContain('noch keine Übungen angelegt')
+  })
+})
+
+// ---- Vollständige Lückendiagnose ----
+
+describe('Lückendiagnose nennt jede Ursache', () => {
+  it('zählt jedes Kriterium unabhängig, nicht nur das zuerst geprüfte', () => {
+    const result = run({
+      group: group({
+        ageGroups: ['Kinder (4–6)'],
+        participants: 20,
+        venueMaterials: [{ name: 'Hütchen', quantity: 2 }],
+      }),
+      segments: [segment({ sports: ['Turnen'], difficulties: ['Leicht'], minutes: 20 })],
+      candidates: [
+        // Scheitert ausschließlich an der Altersgruppe.
+        candidate({ exerciseId: 'alt', ageGroups: ['Senioren (60+)'], difficulty: 'Leicht' }),
+        // Scheitert am Material und zugleich am Schwierigkeitsgrad.
+        candidate({
+          exerciseId: 'mat',
+          difficulty: 'Schwer',
+          materials: [{ name: 'Hütchen', quantity: 20, mode: 'insgesamt' }],
+        }),
+        // Scheitert an der Teilnehmerzahl und an der Sportart.
+        candidate({
+          exerciseId: 'tn',
+          difficulty: 'Leicht',
+          sports: ['Handball'],
+          participantsMax: 8,
+        }),
+      ],
+    })
+
+    const detail = result.segments[0].gapDetail
+    expect(detail?.kind).toBe('all-filtered')
+    expect(detail?.phaseMatches).toBe(3)
+
+    // Eine Übung kann an mehrerem scheitern — die Zahlen überschneiden sich.
+    const byCriterion = Object.fromEntries(
+      (detail?.blockedBy ?? []).map((entry) => [entry.criterion, entry.count])
+    )
+    expect(byCriterion).toEqual({
+      age: 1,
+      material: 1,
+      participants: 1,
+      sport: 1,
+      difficulty: 1,
+    })
+  })
+
+  it('führt kein Kriterium auf, an dem nichts scheitert', () => {
+    const result = run({
+      segments: [segment({ sports: ['Handball'], minutes: 20 })],
+      candidates: [candidate({ exerciseId: 'e', sports: ['Turnen'] })],
+    })
+    expect(result.segments[0].gapDetail?.blockedBy).toEqual([{ criterion: 'sport', count: 1 }])
+  })
+
+  it('lässt die weichen Kriterien weg, sobald gelockert wurde', () => {
+    const result = run({
+      group: group({ venueMaterials: [{ name: 'Hütchen', quantity: 2 }] }),
+      segments: [segment({ sports: ['Handball'], difficulties: ['Leicht'], minutes: 20 })],
+      candidates: [
+        candidate({
+          exerciseId: 'e',
+          sports: ['Turnen'],
+          difficulty: 'Schwer',
+          materials: [{ name: 'Hütchen', quantity: 20, mode: 'insgesamt' }],
+        }),
+      ],
+      relax: true,
+    })
+
+    const detail = result.segments[0].gapDetail
+    expect(detail?.relaxed).toBe(true)
+    // Nur das harte Kriterium bleibt übrig — Sportart und Schwierigkeitsgrad
+    // sind freigegeben und können nicht mehr der Grund sein.
+    expect(detail?.blockedBy).toEqual([{ criterion: 'material', count: 1 }])
+    expect(result.segments[0].gapReason).toContain('Auch mit gelockerten Kriterien')
+  })
+
+  it('unterscheidet „schon eingeplant" von „zu kurz"', () => {
+    const exhausted = run({
+      segments: [segment({ id: 's1', minutes: 20 }), segment({ id: 's2', minutes: 20 })],
+      candidates: [
+        candidate({ exerciseId: 'a', duration: 10 }),
+        candidate({ exerciseId: 'b', duration: 10 }),
+      ],
+    })
+    expect(exhausted.segments[1].gapDetail).toMatchObject({
+      kind: 'exhausted',
+      usableCandidates: 2,
+    })
+
+    const tooShort = run({
+      segments: [segment({ minutes: 4 })],
+      candidates: [candidate({ exerciseId: 'lang', duration: 20 })],
+    })
+    expect(tooShort.segments[0].gapDetail).toMatchObject({
+      kind: 'too-short',
+      remainingMinutes: 4,
+      shortestDuration: 20,
+    })
+  })
+
+  it('setzt keine Diagnose, wenn das Segment voll wird', () => {
+    const result = run({
+      segments: [segment({ minutes: 12 })],
+      candidates: [candidate({ exerciseId: 'e', duration: 10 })],
+    })
+    expect(result.segments[0].gapDetail).toBeNull()
+    expect(result.segments[0].gapReason).toBeNull()
+  })
+})
+
+// ---- Einzelnes Segment lockern ----
+
+describe('planSegment', () => {
+  it('füllt ein einzelnes Segment nach denselben Regeln', () => {
+    const plan = planSegment({
+      segment: segment({ minutes: 20 }),
+      segmentIndex: 0,
+      group: group(),
+      candidates: [
+        candidate({ exerciseId: 'a', duration: 10 }),
+        candidate({ exerciseId: 'b', duration: 10 }),
+      ],
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 5,
+      relax: false,
+    })
+    expect(plan.items).toHaveLength(2)
+    expect(plan.gapReason).toBeNull()
+  })
+
+  it('übergeht Übungen, die in anderen Segmenten schon stehen', () => {
+    const plan = planSegment({
+      segment: segment({ minutes: 20 }),
+      segmentIndex: 1,
+      group: group(),
+      candidates: [
+        candidate({ exerciseId: 'a', duration: 10 }),
+        candidate({ exerciseId: 'b', duration: 10 }),
+      ],
+      recentExerciseIds: [],
+      blockedExerciseIds: ['a'],
+      seed: 5,
+      relax: false,
+    })
+    expect(plan.items.map((i) => i.exerciseId)).toEqual(['b'])
+    expect(plan.gapDetail?.kind).toBe('exhausted')
+  })
+
+  it('begründet einen erfolglosen Lockerungsversuch, statt stumm zu bleiben', () => {
+    const plan = planSegment({
+      segment: segment({ minutes: 20 }),
+      segmentIndex: 0,
+      group: group({ venueMaterials: [{ name: 'Hütchen', quantity: 2 }] }),
+      candidates: [
+        candidate({
+          exerciseId: 'e',
+          materials: [{ name: 'Hütchen', quantity: 20, mode: 'insgesamt' }],
+        }),
+      ],
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 5,
+      relax: true,
+    })
+    expect(plan.items).toEqual([])
+    expect(plan.relaxLevel).toBe(0)
+    expect(plan.relaxNote).toBe('„Hauptteil": Lockern hat nichts gebracht, die Lücke bleibt.')
+  })
+
+  it('meldet den Erfolg mit Anzahl der ergänzten Übungen', () => {
+    const plan = planSegment({
+      segment: segment({ minutes: 10, difficulties: ['Leicht'] }),
+      segmentIndex: 0,
+      group: group(),
+      candidates: [candidate({ exerciseId: 'schwer', difficulty: 'Schwer' })],
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 5,
+      relax: true,
+    })
+    expect(plan.relaxLevel).toBe(1)
+    expect(plan.relaxNote).toBe('„Hauptteil": Schwierigkeitsgrad gelockert — 1 Übung ergänzt.')
+  })
+
+  it('lässt ein freies Segment unangetastet', () => {
+    const plan = planSegment({
+      segment: segment({ fillMode: 'empty', minutes: 20 }),
+      segmentIndex: 0,
+      group: group(),
+      candidates: [candidate({ exerciseId: 'e' })],
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 5,
+      relax: true,
+    })
+    expect(plan.items).toEqual([])
+    expect(plan.gapReason).toBeNull()
+    expect(plan.relaxNote).toBeNull()
   })
 })

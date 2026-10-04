@@ -174,6 +174,65 @@ Beim Bauen des Einheiten-Eintrags fiel ein Fehler in PROJ-3 auf, der PROJ-6 dire
 - `src/lib/database.types.ts` gegen das von Supabase erzeugte Schema abgeglichen: für alle vier neuen Tabellen deckungsgleich in Spalten, Typen und Pflichtfeldern
 - **Nicht geprüft:** der Weg durch die Oberfläche hinter dem Login, und damit auch der Rundweg Schreiben → Lesen → Anzeigen durch die Server Actions. `generateUnit` hat noch nie eine Zeile geschrieben. Siehe „Übergabe an /qa" am Ende dieser Spec
 
+### Änderungen aus dem ersten echten Test — 2026-10-04
+
+Der Nutzer hat den Generator eingeloggt gegen seine beiden Gruppen laufen lassen. **Der Rundweg funktioniert:** `generateUnit` schreibt, `getUnit` liest, der Stundenverlauf wird samt gespeichertem Lückengrund dargestellt. Aus dem Test ergaben sich sieben Punkte.
+
+| # | Rückmeldung | Umsetzung |
+|---|---|---|
+| 1 | Eigene Phasen aus dem Generator sollen anlegbar und zentral verwaltbar sein | Das Anlegen funktionierte bereits — „Hauptteil 2" stand nach dem Test in `custom_categories`, nach demselben Muster wie eigenes Material. Die **zentrale Verwaltung** gehört zu PROJ-16 und bleibt dort |
+| 2 | Stundenmuster: gespeicherte Komplett-Konfigurationen, ladbar über „Auf Stundenmuster setzen", speicherbar über „Stundenmuster speichern", verwaltbar wie Hallen | **Ausgelagert nach PROJ-17.** In PROJ-6 stand das bereits als Out of Scope und als offene Frage; die Frage ist damit mit Ja beantwortet. Eigene Tabelle, eigene Verwaltungsseite und Buttons an drei Stellen gehören nicht nebenbei in den Backend-Schritt |
+| 3 | Eine generierte Einheit soll erst auf Klick abgelegt werden; dazu ein Weg zurück in den Generator mit denselben Einstellungen | Umgesetzt (siehe unten) |
+| 4 | Der Zurück-Button oben links zur Gruppe soll weg | Ersetzt durch „Zurück zum Generator" |
+| 5 | Lockern soll nur das Segment betreffen, in dem geklickt wurde | Umgesetzt über die neue Aktion `relaxSegment` |
+| 6 | Der Lückengrund war nicht klar genug — jede mögliche Ursache soll kurz benannt werden, auch beim erfolglosen Lockern | Umgesetzt (siehe unten) |
+| 7 | „Übung anlegen" aus dem Lückenhinweis entfernen | Entfernt. Das manuelle Nachbesetzen übernimmt später der Editor aus PROJ-7 |
+
+**Entwurf statt sofortigem Speichern (Punkt 3 und 4)**
+
+Die Spec verlangte bis dahin, dass eine Einheit beim Generieren sofort gespeichert wird. Das ist ersetzt durch einen Entwurfszustand:
+
+- `units.saved` unterscheidet Entwurf von abgelegter Einheit. Die Spalte kam mit Vorgabewert `true` ins Schema und wurde direkt danach auf `false` umgestellt — so galten die bereits bestehenden Einheiten ohne eine einzige beschriebene Zeile als gespeichert
+- „Meine Einheiten" und die Gruppen-Detailseite zeigen nur `saved = true`
+- **Pro Nutzer existiert höchstens ein Entwurf.** Jedes Generieren löscht den vorigen, damit sich verworfene Vorschläge nicht ansammeln
+- Entwürfe zählen **nicht** für die Frische-Regel: Was der Nutzer verworfen hat, soll die Abwechslung der nächsten echten Einheit nicht einschränken
+- „Zurück zum Generator" führt auf `/units/new?from=<id>`. Die Konfigurationsseite lädt den Zeitverlauf dieser Einheit und öffnet direkt den individuellen Modus. Ein Wechsel der Gruppe verwirft den Stand danach wie gewohnt
+
+**Lockern pro Segment (Punkt 5)**
+
+`regenerateUnit` kennt keinen Lockerungs-Parameter mehr; stattdessen gibt es `relaxSegment(segmentId)`. Die Aktion füllt genau ein Segment neu, lässt alle übrigen unberührt — auch solche, die ebenfalls eine Lücke haben — und schreibt den Lockerungshinweis der Einheit segmentweise fort, ohne die Hinweise der anderen Segmente zu verlieren. Übungen aus den übrigen Segmenten bleiben gesperrt, damit keine Dopplung entsteht.
+
+Dafür ist die Segmentplanung als `planSegment` aus dem Generator herausgelöst. Das Generieren einer ganzen Einheit und das nachträgliche Lockern eines Segments laufen seitdem über dieselbe Funktion — die Regeln können nicht auseinanderlaufen.
+
+**Vollständige Lückendiagnose (Punkt 6)**
+
+Vorher nannte der Hinweis nur das **erste** Kriterium, das den Pool geleert hat. Im Test stand damit „Es gibt noch keine Übung, die der Phase ‚Hauptteil 2' zugeordnet ist." — korrekt, aber es blieb offen, was zu tun ist und ob noch mehr im Weg steht.
+
+Jetzt wird jedes Kriterium **unabhängig** gegen die Phasen-Treffer gezählt, statt eine Filterkette beim ersten leeren Zwischenstand abzubrechen. Die neue Struktur `GapDetail` liegt in der Spalte `unit_segments.gap_detail` und trägt: Art der Lücke, Phase, Kandidatenzahl insgesamt, Phasen-Treffer, und je Kriterium die Anzahl der daran scheiternden Übungen. `gap_reason` bleibt als einzeilige Zusammenfassung daneben bestehen — deshalb musste die vorhandene Längenbedingung nicht angefasst werden.
+
+An den echten Daten ergibt das zum Beispiel für ein Segment „Hauptteil", das nur auf Handball eingeschränkt wurde:
+
+```
+28 Übungen tragen die Phase „Hauptteil", aber keine erfüllt alle übrigen Kriterien.
+Daran scheitern sie:
+  15 Übungen an Altersgruppe
+   4 Übungen an Material in deiner Halle
+   9 Übungen an Teilnehmerzahl (25)
+  28 Übungen an gewählte Sportarten
+```
+
+Zu jeder Ursache nennt die Oberfläche, was dagegen hilft. Zwei Feinheiten:
+
+- **Das Lockern wird gar nicht erst angeboten**, wenn die Lücke nachweislich nur an Material oder Altersgruppe liegt — beides bleibt in jeder Stufe hart. Statt eines Knopfes, der nichts tut, steht dort der Grund
+- **Ein erfolgloser Lockerungsversuch wird begründet.** Dabei wurde ein Fehler sichtbar und behoben: Die Diagnose stammte vom strengen Versuch, nicht vom tiefsten. Die Meldung hätte „Auch mit gelockerten Kriterien" über einer Liste gezeigt, die genau die gelockerten Kriterien aufzählt. Jetzt wird mit der besten Auswahl gefüllt und mit dem tiefsten Versuch begründet, sodass nur noch die harten Kriterien erscheinen
+
+**Verifikation dieser Runde**
+- `npx tsc --noEmit` — fehlerfrei
+- `npm test` — **212 Tests grün** (10 neue zur Diagnose und zu `planSegment`, 6 bestehende auf die strukturierte Prüfung umgestellt)
+- `npm run build` — erfolgreich
+- `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
+- `npm run test:pruefplan` — 15 Fälle grün, erweitert um die Aufschlüsselung an echten Daten
+
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Datenbank
 - Requires: PROJ-2 (Benutzerregistrierung & Login) — Nur eingeloggte Nutzer generieren Einheiten
@@ -208,7 +267,7 @@ PROJ-6 brauchte eine eindeutige Semantik für das abweichende Material einer Var
 - **Export als PDF / Drucken** — nicht im MVP
 - **Einheiten teilen** — deferred zu PROJ-12 (Community-Features)
 - **Generieren für mehrere Gruppen gleichzeitig** — kein MVP-Bedarf
-- **Vorlagen / wiederverwendbare Konfigurationen** — nicht im MVP; die Konfiguration wird pro Einheit gespeichert, aber nicht als eigenständige Vorlage verwaltet
+- **Stundenmuster / wiederverwendbare Konfigurationen** — ausgelagert nach **PROJ-17** (Entscheidung vom 2026-10-04). PROJ-6 speichert die Konfiguration pro Einheit und lädt sie über „Zurück zum Generator" wieder, verwaltet sie aber nicht als eigenständige Vorlage
 
 ## Einstiegspunkte
 
@@ -487,12 +546,19 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 ### Lücken und Lockern
 - [ ] Angenommen für ein Segment findet der Generator keine passende Übung, wenn das Ergebnis angezeigt wird, dann sieht der Nutzer, wie viele Minuten ungefüllt blieben und aus welchem Grund in Alltagssprache
 - [ ] Angenommen ein Segment konnte nicht gefüllt werden, wenn der Nutzer auf „Mit gelockerten Kriterien erneut versuchen" klickt, dann werden Schwierigkeitsgrad und Sportart-Vorgabe gelockert, während Material und Altersgruppe hart bleiben
+- [ ] Angenommen mehrere Segmente haben eine Lücke, wenn der Nutzer in **einem** davon lockert, dann wird **nur dieses** Segment neu gefüllt und alle übrigen bleiben unverändert
+- [ ] Angenommen das Lockern bringt in einem Segment nichts, wenn der Nutzer es versucht, dann wird ihm begründet, warum die Lücke bleibt
+- [ ] Angenommen eine Lücke liegt nachweislich nur an Material oder Altersgruppe, wenn das Ergebnis angezeigt wird, dann wird das Lockern gar nicht erst angeboten und der Grund dafür genannt
 - [ ] Angenommen der Nutzer hat die Kriterien gelockert, wenn das Ergebnis angezeigt wird, dann steht im Ergebnis, was gelockert wurde
-- [ ] Angenommen ein Segment konnte nicht gefüllt werden, wenn das Ergebnis angezeigt wird, dann bietet der Hinweis einen Button zum Anlegen einer passenden Übung an
+- [ ] Angenommen ein Segment konnte nicht gefüllt werden, wenn das Ergebnis angezeigt wird, dann nennt der Hinweis **jede** beteiligte Ursache mit Anzahl und sagt zu jeder, was dagegen hilft
 
 ### Speichern, Anzeigen, Neu generieren
-- [ ] Angenommen der Nutzer klickt auf „Einheit generieren", wenn die Generierung erfolgreich war, dann wird die Einheit sofort gespeichert und der Nutzer sieht den Stundenverlauf
-- [ ] Angenommen eine Einheit wurde generiert, wenn der Nutzer den Browser schließt und zurückkehrt, dann ist die Einheit noch vorhanden
+- [ ] Angenommen der Nutzer klickt auf „Einheit generieren", wenn die Generierung erfolgreich war, dann sieht er den Stundenverlauf als **Entwurf**, der noch nicht in seinen Übersichten erscheint
+- [ ] Angenommen der Nutzer sieht einen Entwurf, wenn er auf „Einheit speichern" klickt, dann erscheint die Einheit in „Meine Einheiten" und auf der Gruppen-Detailseite
+- [ ] Angenommen der Nutzer sieht einen Entwurf, wenn er auf „Zurück zum Generator" klickt, dann ist die Konfigurationsseite mit genau dessen Zeitverlauf und Einstellungen gefüllt und weiter bearbeitbar
+- [ ] Angenommen ein Entwurf liegt vor, wenn der Nutzer erneut generiert, dann ersetzt der neue Vorschlag den alten und es sammelt sich kein zweiter Entwurf an
+- [ ] Angenommen eine Einheit wurde **gespeichert**, wenn der Nutzer den Browser schließt und zurückkehrt, dann ist die Einheit noch vorhanden
+- [ ] Angenommen ein Entwurf wurde verworfen, wenn der Nutzer eine neue Einheit generiert, dann zählt der Entwurf nicht für die Frische-Regel
 - [ ] Angenommen eine Einheit wurde generiert, wenn sie gespeichert wird, dann trägt sie automatisch einen Namen aus Gruppenname und Erstelldatum
 - [ ] Angenommen der Nutzer sieht den Stundenverlauf, wenn er auf „Neu generieren" klickt, dann wird dieselbe Einheit mit einer anderen Übungsauswahl überschrieben und die Zeitverlauf-Konfiguration bleibt erhalten
 - [ ] Angenommen der Nutzer hat die Einheit bereits manuell bearbeitet, wenn er auf „Neu generieren" klickt, dann erscheint vorher eine Warnung, dass seine Änderungen überschrieben werden
@@ -548,7 +614,7 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 ## Open Questions
 - [ ] **Hilfe- und Tutorial-Feature:** Die App muss dem Nutzer die sinnvolle Nutzung aktiv vermitteln — eine Gruppe nicht mit nur einer Sportart taggen, nicht jede Stunde braucht alle Phasen, und die geschätzte Übungsdauer muss Umbau- und Erklärzeit einschließen. Soll das ein eigenes Feature werden (neue PROJ-ID) oder in bestehende Leerzustände und Hinweise verteilt bleiben?
 - [x] **Hinweis im Übungsformular (PROJ-3):** Erledigt am 2026-10-04 — unter dem Dauer-Feld im Wizard steht jetzt, dass Umbau, Aufstellen und Erklären mitzählen und die Einheiten sonst in der Halle überlaufen.
-- [ ] Soll die Zeitverlauf-Konfiguration später als wiederverwendbare Vorlage gespeichert werden können (etwa „mein Volleyball-Schema")? Aktuell Out of Scope, aber naheliegende Erweiterung
+- [x] Soll die Zeitverlauf-Konfiguration später als wiederverwendbare Vorlage gespeichert werden können (etwa „mein Volleyball-Schema")? — **Ja**, entschieden am 2026-10-04 nach dem ersten echten Test. Umgesetzt wird das als **PROJ-17 „Stundenmuster"** mit eigener Spec, nicht in PROJ-6
 - [ ] Wie viele Einheiten pro Gruppe werden in der Liste auf der Gruppen-Detailseite angezeigt, bevor ein „Mehr laden" nötig wird? — Vorerst **alle**, neueste zuerst. Mit einer Einheit pro Woche und Gruppe braucht es Jahre, bis die Liste störend wird; ein Nachladen jetzt zu bauen wäre Aufwand ohne erkennbaren Nutzen. Neu zu entscheiden, sobald PROJ-9 (Kalenderansicht) die Einheiten ohnehin anders darstellt
 - [ ] Sollen Musik-Hinweise („Musik benötigt") im Stundenverlauf besonders hervorgehoben werden, damit der Nutzer vor der Stunde weiß, dass er eine Box braucht?
 - [ ] Ist die Frische-Regel mit „letzten zwei Einheiten" die richtige Tiefe, oder zeigt der echte Einsatz, dass mehr Gedächtnis nötig ist? Bewusst erst nach Praxiserfahrung zu entscheiden
@@ -648,6 +714,18 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 | Im Browser wird keine verschachtelte Supabase-Abfrage verwendet | `src/lib/database.types.ts` führt keine Beziehungen; `select('*, groups(name)')` würde den Typprüfer umgehen. Mehrere flache Abfragen in JavaScript zusammengesetzt — dasselbe Muster wie PROJ-3 und PROJ-5 | 2026-10-04 |
 | Eigene, im Zeitverlauf angelegte Phasen werden beim Generieren gesichert | Sie existierten nur im Formular und wären beim nächsten Besuch verschwunden. Edge Case 3 bleibt unberührt: das Segment bleibt leer und der Grund sagt genau das | 2026-10-04 |
 | Datenbankabhängige Prüfungen als `*.manual.test.ts` mit eigener Konfiguration | Der Prüfplan braucht Netz und den Dienstschlüssel. Als Teil von `npm test` würde der Standardlauf davon abhängen; über `npm run test:pruefplan` bleibt er reproduzierbar, ohne die Suite zu binden | 2026-10-04 |
+| Generierte Einheiten sind zunächst Entwürfe | Der Nutzer will erst sehen, was herauskommt, bevor etwas in seinen Übersichten landet. Sofortiges Speichern füllte die Liste mit Vorschlägen, die er gar nicht behalten wollte | 2026-10-04 |
+| Entwürfe liegen in der Datenbank statt im Browser | Der Plan steht ohnehin schon in vier Tabellen. Im Browser gehalten müsste er vollständig hin- und hergeschickt werden, ginge beim Neuladen verloren, und „Zurück zum Generator\", Neu-Generieren und Lockern bräuchten je eigene Wege | 2026-10-04 |
+| Höchstens ein Entwurf je Nutzer, jedes Generieren ersetzt ihn | Ohne diese Regel sammeln sich verworfene Vorschläge als unsichtbare Zeilen an. Mit ihr braucht es weder Aufräumlauf noch Verfallsdatum | 2026-10-04 |
+| Entwürfe zählen nicht für die Frische-Regel | Sonst würde ein verworfener Vorschlag die Übungsauswahl der nächsten echten Einheit einschränken, obwohl die Gruppe ihn nie zu sehen bekam | 2026-10-04 |
+| Lockern wirkt auf genau ein Segment statt auf die ganze Einheit | Der Nutzer klickt in dem Segment, das ihn stört. Dass dabei ein anderes, zufriedenstellendes Segment neu ausgewürfelt wird, ist aus seiner Sicht ein Fehler, kein Dienst | 2026-10-04 |
+| Segmentplanung als `planSegment` aus dem Generator herausgelöst | Das Generieren einer Einheit und das nachträgliche Lockern eines Segments sind dieselbe Aufgabe mit anderem Zuschnitt. Zwei Umsetzungen würden auseinanderlaufen, sobald sich eine Auswahlregel ändert | 2026-10-04 |
+| Lückengründe nennen jedes Kriterium unabhängig statt nur das erste | Eine Filterkette, die beim ersten leeren Zwischenstand abbricht, verschweigt die übrigen Ursachen. Der Nutzer soll sehen, wo überall etwas im Weg steht, damit er gezielt nachbessern kann statt zu raten | 2026-10-04 |
+| Aufschlüsselung als JSONB-Spalte neben dem bestehenden Textgrund | Als Fließtext hätte sie die vorhandene Längenbedingung gesprengt, und die Oberfläche kann strukturierte Daten besser darstellen. Additiv angelegt, sodass die bestehende Spalte und ihre Bedingung unangetastet bleiben | 2026-10-04 |
+| Lockern wird nicht angeboten, wenn es nachweislich nichts bringt | Material und Altersgruppe bleiben in jeder Stufe hart. Ein Knopf, der sicher wirkungslos ist, kostet den Nutzer einen Versuch und Vertrauen; an seiner Stelle steht der Grund | 2026-10-04 |
+| Begründet wird mit dem tiefsten Versuch, gefüllt mit dem besten | Beides aus demselben Versuch zu nehmen führte zu der widersprüchlichen Meldung „Auch mit gelockerten Kriterien\" über einer Liste, die genau die gelockerten Kriterien aufzählte | 2026-10-04 |
+| „Übung anlegen\" aus dem Lückenhinweis entfernt | Mitten im Betrachten einer Einheit in den Übungs-Wizard zu springen reißt den Nutzer aus seiner Aufgabe. Das Nachbesetzen einer Lücke übernimmt der Editor aus PROJ-7 an Ort und Stelle | 2026-10-04 |
+| Zurück-Link führt in den Generator statt zur Gruppe | Nach dem Ansehen eines Vorschlags will der Nutzer die Einstellungen nachjustieren, nicht die Gruppe verwalten. Die Gruppe bleibt über die Kopfnavigation erreichbar | 2026-10-04 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
@@ -912,13 +990,18 @@ Abgesichert ist, dass die Spaltennamen und Typen stimmen: `src/lib/database.type
 
 | # | Fall | Was zu sehen sein muss |
 |---|---|---|
-| 1 | Einheit generieren über „Standard" | Einheit wird gespeichert, Nutzer landet im Stundenverlauf, Name = Gruppenname + Datum |
+| 1 | Einheit generieren über „Standard" | Nutzer landet im Stundenverlauf, Name = Gruppenname + Datum, Hinweis „Noch nicht gespeichert" |
+| 1b | Dort „Einheit speichern" | Einheit erscheint in „Meine Einheiten" und auf der Gruppenseite; der Hinweis weicht einem Haken |
+| 1c | Generieren, **nicht** speichern, erneut generieren | Es liegt danach genau **ein** Entwurf vor, nicht zwei |
+| 1d | „Zurück zum Generator" aus einer Einheit | Zeitverlauf und alle Segment-Einstellungen sind geladen, Modus steht auf „Individuell" |
 | 2 | Zweite Einheit für dieselbe Gruppe am selben Tag | Name bekommt den Zähler `(2)` |
-| 3 | Browser schließen und zurückkehren | Einheit ist noch da, Plandauern unverändert |
+| 3 | **Gespeicherte** Einheit, Browser schließen und zurückkehren | Einheit ist noch da, Plandauern unverändert |
 | 4 | „Individuell" mit einem Segment auf „frei lassen" und einer Notiz | Segment bleibt im Ergebnis leer, die Notiz steht an dieser Stelle |
 | 5 | Segment mit einer **neu angelegten eigenen Phase** | Segment bleibt leer mit dem Grund „Es gibt noch keine Übung, die der Phase … zugeordnet ist." Die Phase steht beim **nächsten** Öffnen in der Auswahl (wird beim Generieren gesichert) |
 | 6 | „Neu generieren" | Andere Übungsauswahl, **gleiche** Zeitverlauf-Konfiguration, dieselbe Einheit (keine zweite in der Liste) |
-| 7 | Segment mit Schwierigkeitsgrad nur „Leicht", bis eine Lücke entsteht → „Mit gelockerten Kriterien erneut versuchen" | Lücke wird kleiner, oben steht der Hinweis `„<Segment>": Schwierigkeitsgrad gelockert — N Übungen ergänzt.` |
+| 7 | Zwei Segmente mit Lücke, in **einem** davon lockern | Nur dieses Segment wird neu gefüllt, das andere bleibt Zeichen für Zeichen gleich |
+| 7b | Segment, dessen Lücke nur an Material oder Alter liegt | Der Lockern-Knopf wird gar nicht angeboten, stattdessen steht dort der Grund |
+| 7c | Lückenhinweis insgesamt | Nennt jede Ursache mit Anzahl und zu jeder, was dagegen hilft. Kein „Übung anlegen"-Knopf mehr |
 | 8 | Eine Übung löschen, die in einer Einheit vorkommt | Löschdialog nennt die **Namen** der betroffenen Einheiten. Danach steht in der Einheit der Platzhalter „Übung gelöscht" und die Einheit ist nicht kürzer geworden |
 | 9 | Eine Übung bearbeiten, die als **Variante** in einer Einheit eingeplant ist (z. B. nur den Namen ändern) | Die Einheit zeigt weiter dieselbe Variante. Das ist der Nachweis für die Varianten-Kennungs-Behebung aus PROJ-3 |
 | 10 | Geschätzte Dauer einer eingeplanten Übung ändern | Plandauer in der bestehenden Einheit bleibt unverändert |

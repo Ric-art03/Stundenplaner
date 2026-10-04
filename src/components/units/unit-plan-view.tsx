@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Clock, Info, Loader2, RefreshCw, Users } from 'lucide-react'
+import { ArrowLeft, Check, Clock, Info, Loader2, RefreshCw, Save, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -21,7 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { UnitItemCard } from './unit-item-card'
 import { GapNotice } from './gap-notice'
-import { regenerateUnit } from '@/lib/actions/units'
+import { regenerateUnit, relaxSegment, saveUnit } from '@/lib/actions/units'
 import type { Unit, UnitSegment } from '@/lib/types/unit'
 
 interface UnitPlanViewProps {
@@ -32,17 +32,17 @@ interface UnitPlanViewProps {
 export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
   const router = useRouter()
   const { toast } = useToast()
-  const [busy, setBusy] = React.useState<'regenerate' | 'relax' | null>(null)
+  const [busy, setBusy] = React.useState<string | null>(null)
 
-  async function run(mode: 'regenerate' | 'relax') {
-    setBusy(mode)
+  async function regenerate() {
+    setBusy('regenerate')
     try {
-      const result = await regenerateUnit(unit.id, mode === 'relax')
+      const result = await regenerateUnit(unit.id)
       if (result.error) {
         toast({ variant: 'destructive', title: 'Fehler', description: result.error })
         return
       }
-      toast({ title: mode === 'relax' ? 'Mit gelockerten Kriterien neu generiert' : 'Neu generiert' })
+      toast({ title: 'Neu generiert' })
       router.refresh()
     } catch {
       toast({
@@ -55,15 +55,59 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
     }
   }
 
+  /** Lockern wirkt nur in dem Segment, in dem der Nutzer geklickt hat. */
+  async function relax(segmentId: string) {
+    setBusy(segmentId)
+    try {
+      const result = await relaxSegment(segmentId)
+      if (result.error) {
+        toast({ variant: 'destructive', title: 'Fehler', description: result.error })
+        return
+      }
+      router.refresh()
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Fehler',
+        description: 'Erneuter Versuch fehlgeschlagen.',
+      })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function save() {
+    setBusy('save')
+    try {
+      const result = await saveUnit(unit.id)
+      if (result.error) {
+        toast({ variant: 'destructive', title: 'Fehler', description: result.error })
+        return
+      }
+      toast({ title: 'Einheit gespeichert' })
+      router.refresh()
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Fehler',
+        description: 'Speichern fehlgeschlagen, bitte erneut versuchen.',
+      })
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Kopf */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="space-y-4">
         <div className="min-w-0">
+          {/* Zurück in den Generator — die Konfiguration dieser Einheit wird
+              dort wieder geladen und lässt sich weiter anpassen. */}
           <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2">
-            <Link href={`/groups/${unit.groupId}`}>
+            <Link href={`/units/new?from=${unit.id}`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {unit.groupName}
+              Zurück zum Generator
             </Link>
           </Button>
           <h1 className="text-2xl font-bold">{unit.name}</h1>
@@ -79,7 +123,23 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
           </div>
         </div>
 
-        <div className="shrink-0">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {unit.saved ? (
+            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Check className="h-4 w-4 text-primary" />
+              Gespeichert
+            </span>
+          ) : (
+            <Button size="sm" onClick={save} disabled={busy !== null}>
+              {busy === 'save' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Einheit speichern
+            </Button>
+          )}
+
           {unit.manuallyEdited ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -99,19 +159,12 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => run('regenerate')}>
-                    Neu generieren
-                  </AlertDialogAction>
+                  <AlertDialogAction onClick={regenerate}>Neu generieren</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => run('regenerate')}
-              disabled={busy !== null}
-            >
+            <Button variant="outline" size="sm" onClick={regenerate} disabled={busy !== null}>
               {busy === 'regenerate' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -121,6 +174,13 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
             </Button>
           )}
         </div>
+
+        {!unit.saved && (
+          <p className="text-xs text-muted-foreground">
+            Noch nicht gespeichert — diese Einheit erscheint erst in deinen Übersichten,
+            wenn du sie speicherst. Ein neuer Durchlauf im Generator ersetzt sie.
+          </p>
+        )}
       </div>
 
       {unit.relaxedNote && (
@@ -139,8 +199,8 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
             key={segment.id}
             segment={segment}
             singleSportGroup={singleSportGroup}
-            relaxing={busy === 'relax'}
-            onRelax={() => run('relax')}
+            relaxing={busy === segment.id}
+            onRelax={() => relax(segment.id)}
           />
         ))}
       </div>
@@ -195,6 +255,7 @@ function SegmentBlock({
               segmentMinutes={segment.minutes}
               filledMinutes={filledMinutes}
               reason={segment.gapReason}
+              detail={segment.gapDetail}
               singleSportGroup={singleSportGroup}
               relaxing={relaxing}
               onRelax={onRelax}

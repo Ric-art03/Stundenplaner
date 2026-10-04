@@ -21,7 +21,13 @@ import type {
   SegmentFillMode,
 } from '@/lib/types/unit'
 import { buildCandidates, type Candidate, type CandidateSource } from '@/lib/units/candidates'
-import { generateUnitPlan, type GeneratedUnit, type GeneratorGroup } from '@/lib/units/generator'
+import {
+  generateUnitPlan,
+  planSegment,
+  type GeneratedUnit,
+  type GapDetail,
+  type GeneratorGroup,
+} from '@/lib/units/generator'
 import { getGroup } from './groups'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
@@ -143,6 +149,9 @@ async function loadRecentExerciseIds(
     .from('units')
     .select('id')
     .eq('group_id', groupId)
+    // Entwürfe zählen nicht: Was der Nutzer verworfen hat, soll die
+    // Abwechslung der nächsten echten Einheit nicht einschränken.
+    .eq('saved', true)
     .order('created_at', { ascending: false })
     .limit(2)
 
@@ -158,6 +167,18 @@ async function loadRecentExerciseIds(
     .in('unit_id', unitIds)
 
   return unique((usageRows ?? []).map((row) => row.exercise_id))
+}
+
+/** Der Generator-Zuschnitt eines Gruppenprofils. */
+function toGeneratorGroup(group: Awaited<ReturnType<typeof getGroup>>): GeneratorGroup {
+  return {
+    ageGroups: group?.ageGroups ?? [],
+    participants: group?.participants ?? null,
+    // null = keine Halle zugewiesen → Material wird nicht geprüft.
+    venueMaterials: group?.venue
+      ? group.venue.materials.map((m) => ({ name: m.name, quantity: m.quantity }))
+      : null,
+  }
 }
 
 // ---- Name der Einheit ----
@@ -231,6 +252,7 @@ async function writeUnitContents(
     difficulties: entry.segment.difficulties as unknown as Json,
     notes: entry.segment.notes || null,
     gap_reason: entry.gapReason,
+    gap_detail: (entry.gapDetail ?? null) as unknown as Json,
     position: entry.position,
   }))
 
@@ -304,13 +326,9 @@ export async function generateUnit(
     }
   }
 
-  const generatorGroup: GeneratorGroup = {
-    ageGroups: group.ageGroups,
-    participants: group.participants,
-    venueMaterials: group.venue
-      ? group.venue.materials.map((m) => ({ name: m.name, quantity: m.quantity }))
-      : null,
-  }
+  // Pro Nutzer existiert höchstens ein Entwurf. Ein neuer Vorschlag ersetzt
+  // den vorigen, damit sich verworfene Einheiten nicht ansammeln.
+  await supabase.from('units').delete().eq('user_id', user.id).eq('saved', false)
 
   const [sources, recentExerciseIds, name] = await Promise.all([
     loadCandidateSources(supabase, user.id),
@@ -320,7 +338,7 @@ export async function generateUnit(
 
   const seed = newSeed()
   const plan = generateUnitPlan({
-    group: generatorGroup,
+    group: toGeneratorGroup(group),
     segments: config.segments,
     candidates: buildCandidates(sources),
     recentExerciseIds,
@@ -337,6 +355,7 @@ export async function generateUnit(
       total_minutes: config.totalMinutes,
       seed,
       relaxed_note: plan.relaxedNote,
+      saved: false,
     })
     .select('id')
     .single()
@@ -362,8 +381,7 @@ export async function generateUnit(
  * Zufalls-Startwert.
  */
 export async function regenerateUnit(
-  unitId: string,
-  relaxCriteria = false
+  unitId: string
 ): Promise<{ success?: boolean; error?: string }> {
   const { supabase, user } = await getAuthUser()
   if (!user) return { error: 'Nicht angemeldet.' }
@@ -391,14 +409,6 @@ export async function regenerateUnit(
   const segments = ((segmentRows ?? []) as SegmentRow[]).map(segmentRowToConfig)
   if (segments.length === 0) return { error: GENERIC_ERROR }
 
-  const generatorGroup: GeneratorGroup = {
-    ageGroups: group.ageGroups,
-    participants: group.participants,
-    venueMaterials: group.venue
-      ? group.venue.materials.map((m) => ({ name: m.name, quantity: m.quantity }))
-      : null,
-  }
-
   const [sources, recentExerciseIds] = await Promise.all([
     loadCandidateSources(supabase, user.id),
     loadRecentExerciseIds(supabase, group.id, unit.id),
@@ -406,12 +416,13 @@ export async function regenerateUnit(
 
   const seed = newSeed()
   const plan = generateUnitPlan({
-    group: generatorGroup,
+    group: toGeneratorGroup(group),
     segments,
     candidates: buildCandidates(sources),
     recentExerciseIds,
     seed,
-    relax: relaxCriteria,
+    // Lockern passiert pro Segment über relaxSegment, nicht beim Neu-Generieren.
+    relax: false,
   })
 
   // Erst wenn der neue Plan vollständig im Speicher steht, wird der alte
@@ -437,6 +448,185 @@ export async function regenerateUnit(
   if (error) return { error: GENERIC_ERROR }
 
   return { success: true }
+}
+
+/**
+ * Nimmt den Entwurf in die Übersichten auf. Bis hierhin war die Einheit nur
+ * ein Vorschlag, den der Nutzer auch verwerfen kann, indem er einfach neu
+ * generiert.
+ */
+export async function saveUnit(
+  unitId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) return { error: 'Nicht angemeldet.' }
+
+  const { error } = await supabase
+    .from('units')
+    .update({ saved: true })
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) return { error: 'Einheit konnte nicht gespeichert werden.' }
+  return { success: true }
+}
+
+/**
+ * Lockert die Kriterien **nur für dieses eine Segment** und füllt es neu.
+ * Alle übrigen Segmente bleiben unangetastet — auch solche, die ebenfalls eine
+ * Lücke haben. Der Nutzer entscheidet pro Segment, wo er nachgeben will.
+ */
+export async function relaxSegment(
+  segmentId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) return { error: 'Nicht angemeldet.' }
+
+  const { data: segmentData, error: segmentError } = await supabase
+    .from('unit_segments')
+    .select('*')
+    .eq('id', segmentId)
+    .single()
+
+  if (segmentError || !segmentData) return { error: 'Segment nicht gefunden.' }
+  const segmentRow = segmentData as SegmentRow
+
+  // Zugehörigkeit über die Einheit prüfen — die Segment-Kennung allein ist
+  // kein Eigentumsnachweis.
+  const { data: unitData, error: unitError } = await supabase
+    .from('units')
+    .select('*')
+    .eq('id', segmentRow.unit_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (unitError || !unitData) return { error: 'Diese Einheit gehört nicht zu deinem Konto.' }
+  const unit = unitData as UnitRow
+
+  const group = await getGroup(unit.group_id)
+  if (!group) return { error: 'Die Gruppe dieser Einheit existiert nicht mehr.' }
+
+  // Alle übrigen Segmente laden, um zu wissen, welche Übungen in dieser
+  // Einheit schon vergeben sind — Dopplungen bleiben auch hier ausgeschlossen.
+  const { data: allSegments } = await supabase
+    .from('unit_segments')
+    .select('id, position')
+    .eq('unit_id', unit.id)
+    .order('position')
+
+  const otherSegmentIds = ((allSegments ?? []) as { id: string; position: number }[])
+    .filter((row) => row.id !== segmentId)
+    .map((row) => row.id)
+
+  const blockedExerciseIds = otherSegmentIds.length > 0
+    ? unique(
+        (((await supabase
+          .from('unit_items')
+          .select('exercise_id')
+          .in('segment_id', otherSegmentIds)).data ?? []) as { exercise_id: string | null }[])
+          .map((row) => row.exercise_id)
+          .filter((id): id is string => id != null)
+      )
+    : []
+
+  const [sources, recentExerciseIds] = await Promise.all([
+    loadCandidateSources(supabase, user.id),
+    loadRecentExerciseIds(supabase, group.id, unit.id),
+  ])
+
+  const plan = planSegment({
+    segment: segmentRowToConfig(segmentRow),
+    segmentIndex: segmentRow.position,
+    group: toGeneratorGroup(group),
+    candidates: buildCandidates(sources),
+    recentExerciseIds,
+    blockedExerciseIds,
+    seed: newSeed(),
+    relax: true,
+  })
+
+  // Nur die Einträge dieses Segments werden ersetzt.
+  await supabase.from('unit_items').delete().eq('segment_id', segmentId)
+
+  if (plan.items.length > 0) {
+    const { error } = await supabase.from('unit_items').insert(
+      plan.items.map((item) => ({
+        segment_id: segmentId,
+        exercise_id: item.exerciseId,
+        variant_id: item.variantId,
+        planned_duration: item.plannedDuration,
+        position: item.position,
+      }))
+    )
+    if (error) return { error: GENERIC_ERROR }
+  }
+
+  await supabase
+    .from('unit_segments')
+    .update({
+      gap_reason: plan.gapReason,
+      gap_detail: (plan.gapDetail ?? null) as unknown as Json,
+    })
+    .eq('id', segmentId)
+
+  await rewriteUsages(supabase, user.id, unit.id, group.id)
+
+  // Den Lockerungshinweis der Einheit auf diesem Segment fortschreiben, ohne
+  // die Hinweise der anderen Segmente zu verlieren. Die Sätze beginnen jeweils
+  // mit dem Segmentnamen in Anführungszeichen und enden auf einem Punkt.
+  const otherNotes = (unit.relaxed_note ?? '')
+    .split(/(?<=\.)\s+(?=„)/)
+    .map((part) => part.trim())
+    .filter((part) => part !== '' && !part.startsWith(`„${segmentRow.name}":`))
+
+  const notes = plan.relaxNote ? [...otherNotes, plan.relaxNote] : otherNotes
+
+  await supabase
+    .from('units')
+    .update({ relaxed_note: notes.length > 0 ? notes.join(' ') : null })
+    .eq('id', unit.id)
+    .eq('user_id', user.id)
+
+  return { success: true }
+}
+
+/** Verwendungsnachweise einer Einheit aus ihrem aktuellen Inhalt neu aufbauen. */
+async function rewriteUsages(
+  supabase: SupabaseClient,
+  userId: string,
+  unitId: string,
+  groupId: string
+): Promise<void> {
+  const { data: segmentRows } = await supabase
+    .from('unit_segments')
+    .select('id')
+    .eq('unit_id', unitId)
+
+  const segmentIds = ((segmentRows ?? []) as { id: string }[]).map((row) => row.id)
+
+  const exerciseIds = segmentIds.length > 0
+    ? unique(
+        (((await supabase
+          .from('unit_items')
+          .select('exercise_id')
+          .in('segment_id', segmentIds)).data ?? []) as { exercise_id: string | null }[])
+          .map((row) => row.exercise_id)
+          .filter((id): id is string => id != null)
+      )
+    : []
+
+  await supabase.from('exercise_usages').delete().eq('unit_id', unitId)
+
+  if (exerciseIds.length > 0) {
+    await supabase.from('exercise_usages').insert(
+      exerciseIds.map((exerciseId) => ({
+        user_id: userId,
+        exercise_id: exerciseId,
+        group_id: groupId,
+        unit_id: unitId,
+      }))
+    )
+  }
 }
 
 // ---- Lesen ----
@@ -524,6 +714,7 @@ export async function getUnit(id: string): Promise<Unit | null> {
   const segments: UnitSegment[] = segmentRows.map((row) => ({
     ...segmentRowToConfig(row),
     gapReason: row.gap_reason,
+    gapDetail: (row.gap_detail as unknown as GapDetail | null) ?? null,
     position: row.position,
     items: (itemsBySegment[row.id] ?? []).map((item) => mapItem(item, candidates, descriptions, variantCounts)),
   }))
@@ -537,6 +728,7 @@ export async function getUnit(id: string): Promise<Unit | null> {
     totalMinutes: unit.total_minutes,
     seed: unit.seed,
     manuallyEdited: unit.manually_edited,
+    saved: unit.saved,
     relaxedNote: unit.relaxed_note,
     segments,
     createdAt: unit.created_at,
@@ -645,6 +837,7 @@ export async function getUnitsForGroup(groupId: string): Promise<UnitSummary[]> 
     .select('*')
     .eq('user_id', user.id)
     .eq('group_id', groupId)
+    .eq('saved', true)
     .order('created_at', { ascending: false })
 
   if (error || !data) return []
@@ -659,6 +852,7 @@ export async function getUnits(): Promise<UnitSummary[]> {
     .from('units')
     .select('*')
     .eq('user_id', user.id)
+    .eq('saved', true)
     .order('created_at', { ascending: false })
 
   if (error || !data) return []

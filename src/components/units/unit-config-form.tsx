@@ -46,6 +46,11 @@ interface UnitConfigFormProps {
   customPhases: string[]
   customSports: string[]
   initialGroupId?: string
+  /**
+   * Konfiguration einer bestehenden Einheit, wenn der Nutzer über „Zurück zum
+   * Generator" kommt. Öffnet direkt den individuellen Modus mit diesem Stand.
+   */
+  initialSegments?: SegmentConfig[]
 }
 
 export function UnitConfigForm({
@@ -53,16 +58,22 @@ export function UnitConfigForm({
   customPhases,
   customSports,
   initialGroupId,
+  initialSegments,
 }: UnitConfigFormProps) {
   const router = useRouter()
   const { toast } = useToast()
 
   const [groupId, setGroupId] = React.useState(initialGroupId ?? '')
-  const [mode, setMode] = React.useState<UnitMode>('standard')
+  const [mode, setMode] = React.useState<UnitMode>(initialSegments ? 'custom' : 'standard')
   const [classicSegments, setClassicSegments] = React.useState<SegmentConfig[]>([])
   // Bleibt über den Wechsel zu „Standard" hinweg erhalten, damit der
   // Bearbeitungsstand beim Zurückschalten nicht verloren ist.
-  const [customSegments, setCustomSegments] = React.useState<SegmentConfig[] | null>(null)
+  const [customSegments, setCustomSegments] = React.useState<SegmentConfig[] | null>(
+    initialSegments ?? null
+  )
+  // Der mitgebrachte Stand darf nur beim ersten Lauf des Effekts überleben —
+  // wechselt der Nutzer danach die Gruppe, wird er wie sonst verworfen.
+  const pristineInitial = React.useRef(initialSegments != null)
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [submitting, setSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
@@ -82,6 +93,14 @@ export function UnitConfigForm({
     setClassicSegments(
       buildClassicSegments(group.unitDuration, group.sports, ALL_DIFFICULTIES, group.primarySport)
     )
+
+    // Beim ersten Lauf mit mitgebrachter Konfiguration bleibt diese stehen;
+    // der Zeitverlauf gehört zur Einheit, aus der der Nutzer zurückkam.
+    if (pristineInitial.current) {
+      pristineInitial.current = false
+      return
+    }
+
     setCustomSegments(null)
     setMode('standard')
     setSelectedId(null)

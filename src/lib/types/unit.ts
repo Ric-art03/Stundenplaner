@@ -1,4 +1,5 @@
 import { DIFFICULTY_LEVELS, PHASES } from './exercise'
+import type { GapDetail } from '@/lib/units/generator'
 import type { DifficultyLevel, ExerciseMaterial } from './exercise'
 
 export { DIFFICULTY_LEVELS, PHASES }
@@ -80,6 +81,8 @@ export interface UnitSegment {
   difficulties: DifficultyLevel[]
   notes: string
   gapReason: string | null
+  /** Aufschlüsselung aller Ursachen, damit der Nutzer gezielt nachbessern kann. */
+  gapDetail: GapDetail | null
   position: number
   items: UnitItem[]
 }
@@ -93,6 +96,11 @@ export interface Unit {
   totalMinutes: number
   seed: number
   manuallyEdited: boolean
+  /**
+   * Eine frisch generierte Einheit ist zunächst nur ein Entwurf. Erst
+   * „Einheit speichern" nimmt sie in die Übersichten auf.
+   */
+  saved: boolean
   /** Hinweis, welche Kriterien auf Wunsch gelockert wurden; null wenn nicht gelockert. */
   relaxedNote: string | null
   segments: UnitSegment[]

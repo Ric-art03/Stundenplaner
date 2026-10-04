@@ -352,6 +352,7 @@ export type Database = {
           seed: number
           manually_edited: boolean
           relaxed_note: string | null
+          saved: boolean
           created_at: string
           updated_at: string
         }
@@ -364,6 +365,7 @@ export type Database = {
           seed: number
           manually_edited?: boolean
           relaxed_note?: string | null
+          saved?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -376,6 +378,7 @@ export type Database = {
           seed?: number
           manually_edited?: boolean
           relaxed_note?: string | null
+          saved?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -393,6 +396,7 @@ export type Database = {
           difficulties: Json
           notes: string | null
           gap_reason: string | null
+          gap_detail: Json | null
           position: number
         }
         Insert: {
@@ -406,6 +410,7 @@ export type Database = {
           difficulties?: Json
           notes?: string | null
           gap_reason?: string | null
+          gap_detail?: Json | null
           position?: number
         }
         Update: {
@@ -419,6 +424,7 @@ export type Database = {
           difficulties?: Json
           notes?: string | null
           gap_reason?: string | null
+          gap_detail?: Json | null
           position?: number
         }
         Relationships: []

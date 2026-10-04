@@ -47,6 +47,7 @@ export interface GeneratedSegment {
   position: number
   items: GeneratedItem[]
   gapReason: string | null
+  gapDetail: GapDetail | null
   relaxLevel: RelaxLevel
 }
 
@@ -163,80 +164,126 @@ export function participantsFit(candidate: Candidate, participants: number | nul
 
 // ---- Pool und Lückengründe ----
 
-type GapCause =
-  | 'phase'
-  | 'age'
-  | 'material'
-  | 'participants'
-  | 'sport'
-  | 'difficulty'
-  | 'exhausted'
-  | 'duration'
+/**
+ * Warum ein Segment leer blieb oder nicht voll wurde. Jede Ursache wird
+ * **einzeln** gezählt, statt nur die erste zu melden: Der Nutzer soll sehen,
+ * an welchen Kriterien es überall hängt, damit er gezielt nachbessern kann.
+ */
+export interface GapDetail {
+  kind: 'no-phase' | 'all-filtered' | 'exhausted' | 'too-short'
+  phase: string
+  /** Kandidaten im gesamten Pool des Nutzers (Übungen plus Varianten). */
+  totalCandidates: number
+  /** Davon mit passendem Phasen-Tag. */
+  phaseMatches: number
+  /**
+   * Je Kriterium, wie viele der Phasen-Treffer daran scheitern. Unabhängig
+   * voneinander gezählt — eine Übung kann an mehreren Kriterien zugleich
+   * scheitern und taucht dann mehrfach auf.
+   */
+  blockedBy: { criterion: GapCriterion; count: number }[]
+  /** Waren die weichen Kriterien bei diesem Versuch bereits gelockert? */
+  relaxed: boolean
+  /** Nur bei 'exhausted' und 'too-short': Kandidaten, die alle Kriterien erfüllen. */
+  usableCandidates?: number
+  /** Nur bei 'too-short'. */
+  remainingMinutes?: number
+  shortestDuration?: number
+  /** Nur bei 'participants' in blockedBy — für die Formulierung. */
+  participants?: number | null
+}
 
-function describeGap(
-  cause: GapCause,
-  segment: SegmentConfig,
-  group: GeneratorGroup,
-  detail: { poolSize?: number; remaining?: number; shortest?: number }
-): string {
-  const phase = `„${segment.name}"`
+export type GapCriterion = 'age' | 'material' | 'participants' | 'sport' | 'difficulty'
 
-  switch (cause) {
-    case 'phase':
-      return `Es gibt noch keine Übung, die der Phase ${phase} zugeordnet ist.`
-    case 'age':
-      return `Keine Übung der Phase ${phase} passt zu den Altersgruppen deiner Gruppe.`
-    case 'material':
-      return `Für keine Übung der Phase ${phase} reicht das Material in deiner Halle.`
-    case 'participants':
-      return `Keine Übung der Phase ${phase} ist für ${group.participants} Teilnehmer ausgelegt.`
-    case 'sport':
-      return `Keine Übung der Phase ${phase} ist mit einer der gewählten Sportarten getaggt.`
-    case 'difficulty':
-      return `Keine Übung der Phase ${phase} hat einen der gewählten Schwierigkeitsgrade.`
+/** Einzeilige Zusammenfassung; die Aufschlüsselung steckt in `GapDetail`. */
+export function summarizeGap(detail: GapDetail): string {
+  const phase = `„${detail.phase}"`
+  const prefix = detail.relaxed ? 'Auch mit gelockerten Kriterien: ' : ''
+
+  switch (detail.kind) {
+    case 'no-phase':
+      if (detail.totalCandidates === 0) {
+        return `${prefix}Du hast noch keine Übungen angelegt, aus denen der Generator schöpfen könnte.`
+      }
+      if (detail.totalCandidates === 1) {
+        return `${prefix}Deine einzige Übung ist der Phase ${phase} nicht zugeordnet.`
+      }
+      return `${prefix}Keine deiner ${detail.totalCandidates} Übungen ist der Phase ${phase} zugeordnet.`
+    case 'all-filtered':
+      return detail.phaseMatches === 1
+        ? `${prefix}Eine Übung trägt die Phase ${phase}, erfüllt aber nicht alle übrigen Kriterien.`
+        : `${prefix}${detail.phaseMatches} Übungen tragen die Phase ${phase}, aber keine erfüllt alle übrigen Kriterien.`
     case 'exhausted':
-      return detail.poolSize === 1
-        ? `Die einzige passende Übung der Phase ${phase} ist in dieser Einheit schon eingeplant.`
-        : `Alle ${detail.poolSize} passenden Übungen der Phase ${phase} sind in dieser Einheit schon eingeplant.`
-    case 'duration':
-      return `Die restlichen ${detail.remaining} Minuten sind kürzer als die kürzeste noch passende Übung (${detail.shortest} Minuten).`
+      return detail.usableCandidates === 1
+        ? `${prefix}Die einzige passende Übung der Phase ${phase} ist in dieser Einheit schon eingeplant.`
+        : `${prefix}Alle ${detail.usableCandidates} passenden Übungen der Phase ${phase} sind in dieser Einheit schon eingeplant.`
+    case 'too-short':
+      return `${prefix}Die restlichen ${detail.remainingMinutes} Minuten sind kürzer als die kürzeste noch passende Übung (${detail.shortestDuration} Minuten).`
   }
 }
 
+interface Criterion {
+  criterion: GapCriterion
+  passes: (candidate: Candidate) => boolean
+}
+
+function criteriaFor(
+  segment: SegmentConfig,
+  group: GeneratorGroup,
+  relaxLevel: RelaxLevel
+): Criterion[] {
+  const checks: Criterion[] = [
+    { criterion: 'age', passes: (c) => matchesAgeGroups(c, group.ageGroups) },
+    { criterion: 'material', passes: (c) => materialsAvailable(c, group) },
+    { criterion: 'participants', passes: (c) => participantsFit(c, group.participants) },
+  ]
+
+  // Weiche Kriterien — fallen beim Lockern stufenweise weg.
+  if (relaxLevel < 2) {
+    checks.push({ criterion: 'sport', passes: (c) => matchesSports(c, segment.sports) })
+  }
+  if (relaxLevel < 1) {
+    checks.push({ criterion: 'difficulty', passes: (c) => matchesDifficulty(c, segment.difficulties) })
+  }
+
+  return checks
+}
+
 /**
- * Filtert den Pool in fester Reihenfolge und merkt sich, welche Stufe ihn
- * geleert hat. Die harten Kriterien stehen vorn, damit der Grund zuerst das
- * nennt, woran Lockern nichts ändern würde.
+ * Baut den Pool und — falls er leer bleibt — die vollständige Begründung.
+ * Anders als eine Filterkette, die beim ersten leeren Zwischenstand abbricht,
+ * wird jedes Kriterium unabhängig gegen die Phasen-Treffer gezählt. Nur so
+ * erfährt der Nutzer alle Ursachen und nicht bloß die zuerst geprüfte.
  */
 function buildPool(
   candidates: Candidate[],
   segment: SegmentConfig,
   group: GeneratorGroup,
   relaxLevel: RelaxLevel
-): { pool: Candidate[]; cause: GapCause | null } {
-  const stages: { cause: GapCause; keep: (candidate: Candidate) => boolean }[] = [
-    { cause: 'phase', keep: (c) => matchesPhase(c, segment.name) },
-    { cause: 'age', keep: (c) => matchesAgeGroups(c, group.ageGroups) },
-    { cause: 'material', keep: (c) => materialsAvailable(c, group) },
-    { cause: 'participants', keep: (c) => participantsFit(c, group.participants) },
-  ]
+): { pool: Candidate[]; detail: GapDetail | null } {
+  const phaseMatches = candidates.filter((c) => matchesPhase(c, segment.name))
+  const checks = criteriaFor(segment, group, relaxLevel)
+  const pool = phaseMatches.filter((c) => checks.every((check) => check.passes(c)))
 
-  // Weiche Kriterien — fallen beim Lockern stufenweise weg.
-  if (relaxLevel < 2) {
-    stages.push({ cause: 'sport', keep: (c) => matchesSports(c, segment.sports) })
-  }
-  if (relaxLevel < 1) {
-    stages.push({ cause: 'difficulty', keep: (c) => matchesDifficulty(c, segment.difficulties) })
-  }
+  if (pool.length > 0) return { pool, detail: null }
 
-  let pool = candidates
-  for (const stage of stages) {
-    const next = pool.filter(stage.keep)
-    if (next.length === 0) return { pool: [], cause: stage.cause }
-    pool = next
+  return {
+    pool: [],
+    detail: {
+      kind: phaseMatches.length === 0 ? 'no-phase' : 'all-filtered',
+      phase: segment.name,
+      totalCandidates: candidates.length,
+      phaseMatches: phaseMatches.length,
+      blockedBy: checks
+        .map((check) => ({
+          criterion: check.criterion,
+          count: phaseMatches.filter((c) => !check.passes(c)).length,
+        }))
+        .filter((entry) => entry.count > 0),
+      relaxed: relaxLevel > 0,
+      participants: group.participants,
+    },
   }
-
-  return { pool, cause: null }
 }
 
 // ---- Dauer-Anpassung ----
@@ -287,6 +334,7 @@ export function planDurations(durations: number[], budget: number): number[] {
 interface Attempt {
   items: GeneratedItem[]
   gapReason: string | null
+  gapDetail: GapDetail | null
   usedExerciseIds: string[]
 }
 
@@ -300,12 +348,13 @@ function fillSegment(
   random: () => number
 ): Attempt {
   const budget = segment.minutes
-  const { pool, cause } = buildPool(candidates, segment, group, relaxLevel)
+  const { pool, detail } = buildPool(candidates, segment, group, relaxLevel)
 
-  if (cause !== null) {
+  if (detail !== null) {
     return {
       items: [],
-      gapReason: describeGap(cause, segment, group, {}),
+      gapReason: summarizeGap(detail),
+      gapDetail: detail,
       usedExerciseIds: [],
     }
   }
@@ -349,8 +398,8 @@ function fillSegment(
   const chosen: Candidate[] = []
   let loTotal = 0
   let hiTotal = 0
-  let lastCause: GapCause = 'exhausted'
-  let lastDetail: { remaining?: number; shortest?: number } = {}
+  let lastKind: 'exhausted' | 'too-short' = 'exhausted'
+  let shortestLeft: number | undefined
 
   for (;;) {
     // Sobald sich das Budget durch Strecken füllen lässt, ist das Segment voll.
@@ -360,17 +409,14 @@ function fillSegment(
     const available = pool.filter((candidate) => !used.has(candidate.exerciseId))
 
     if (available.length === 0) {
-      lastCause = 'exhausted'
+      lastKind = 'exhausted'
       break
     }
 
     const fitting = available.filter((candidate) => loTotal + lowerBound(candidate.duration) <= budget)
     if (fitting.length === 0) {
-      lastCause = 'duration'
-      lastDetail = {
-        remaining: budget - sum(chosen.map((c) => c.duration)),
-        shortest: Math.min(...available.map((candidate) => candidate.duration)),
-      }
+      lastKind = 'too-short'
+      shortestLeft = Math.min(...available.map((candidate) => candidate.duration))
       break
     }
 
@@ -408,17 +454,28 @@ function fillSegment(
   }))
 
   let gapReason: string | null = null
+  let gapDetail: GapDetail | null = null
+
   if (filled < budget) {
-    gapReason = describeGap(lastCause, segment, group, {
-      poolSize: pool.length,
-      remaining: lastDetail.remaining ?? budget - filled,
-      shortest: lastDetail.shortest,
-    })
+    gapDetail = {
+      kind: lastKind,
+      phase: segment.name,
+      totalCandidates: candidates.length,
+      phaseMatches: candidates.filter((c) => matchesPhase(c, segment.name)).length,
+      blockedBy: [],
+      relaxed: relaxLevel > 0,
+      usableCandidates: pool.length,
+      remainingMinutes: budget - filled,
+      shortestDuration: shortestLeft,
+      participants: group.participants,
+    }
+    gapReason = summarizeGap(gapDetail)
   }
 
   return {
     items,
     gapReason,
+    gapDetail,
     usedExerciseIds: chosen.map((candidate) => candidate.exerciseId),
   }
 }
@@ -431,65 +488,140 @@ function relaxLabel(level: RelaxLevel): string {
     : 'Schwierigkeitsgrad und Sportart-Vorgabe gelockert'
 }
 
-export function generateUnitPlan(input: GeneratorInput): GeneratedUnit {
+export interface SegmentPlanInput {
+  segment: SegmentConfig
+  /** Position im Zeitverlauf — geht in den abgeleiteten Startwert ein. */
+  segmentIndex: number
+  group: GeneratorGroup
+  candidates: Candidate[]
+  recentExerciseIds: Iterable<string>
+  /** Übungen, die in anderen Segmenten derselben Einheit schon stehen. */
+  blockedExerciseIds: Iterable<string>
+  seed: number
+  relax: boolean
+}
+
+export interface SegmentPlan {
+  items: GeneratedItem[]
+  gapReason: string | null
+  gapDetail: GapDetail | null
+  relaxLevel: RelaxLevel
+  /** Satz für den Lockerungshinweis; null, wenn nichts gelockert wurde. */
+  relaxNote: string | null
+  usedExerciseIds: string[]
+}
+
+/**
+ * Plant **ein** Segment. Sowohl das Generieren einer ganzen Einheit als auch
+ * das nachträgliche Lockern eines einzelnen Segments laufen hierüber — damit
+ * gelten in beiden Fällen dieselben Regeln.
+ */
+export function planSegment(input: SegmentPlanInput): SegmentPlan {
+  const { segment } = input
+
+  if (segment.fillMode === 'empty') {
+    return {
+      items: [],
+      gapReason: null,
+      gapDetail: null,
+      relaxLevel: 0,
+      relaxNote: null,
+      usedExerciseIds: [],
+    }
+  }
+
   const recent = new Set(input.recentExerciseIds)
+  const blocked = new Set(input.blockedExerciseIds)
+
+  const attemptAt = (level: RelaxLevel) =>
+    fillSegment(
+      segment,
+      input.group,
+      input.candidates,
+      recent,
+      blocked,
+      level,
+      // Eigener Startwert je Segment und Stufe: ein zweiter Versuch
+      // verschiebt damit nicht die Auswahl der folgenden Segmente.
+      createRandom(input.seed + input.segmentIndex * 1013 + level * 7919)
+    )
+
+  const filledOf = (attempt: Attempt) => sum(attempt.items.map((item) => item.plannedDuration))
+
+  const strict = attemptAt(0)
+  let best = strict
+  let bestLevel: RelaxLevel = 0
+  // Der tiefste tatsächlich unternommene Versuch. Bringt Lockern nichts, ist
+  // dessen Diagnose die ehrliche: Sie nennt nur noch die harten Kriterien,
+  // die auch nach dem Freigeben von Sportart und Schwierigkeitsgrad bleiben.
+  let deepest = strict
+
+  if (input.relax) {
+    for (const level of [1, 2] as RelaxLevel[]) {
+      if (filledOf(best) >= segment.minutes) break
+      const attempt = attemptAt(level)
+      deepest = attempt
+      // Eine höhere Stufe gilt nur, wenn sie die Lücke wirklich verkleinert.
+      if (filledOf(attempt) > filledOf(best)) {
+        best = attempt
+        bestLevel = level
+      }
+    }
+  }
+
+  // Gefüllt wird mit der besten Auswahl, begründet wird mit dem tiefsten
+  // Versuch — sonst stünde „auch mit gelockerten Kriterien" über einer Liste,
+  // die genau die gelockerten Kriterien aufzählt.
+  const report = bestLevel === 0 && input.relax ? deepest : best
+
+  let relaxNote: string | null = null
+  if (bestLevel > 0) {
+    const added = best.items.length - strict.items.length
+    const detail = added > 0 ? ` — ${added} ${added === 1 ? 'Übung' : 'Übungen'} ergänzt` : ''
+    relaxNote = `„${segment.name}": ${relaxLabel(bestLevel)}${detail}.`
+  } else if (input.relax && report.gapDetail) {
+    // Auch ein erfolgloser Lockerungsversuch bekommt eine Begründung — sonst
+    // klickt der Nutzer auf den Knopf und sieht nur, dass nichts passiert.
+    relaxNote = `„${segment.name}": Lockern hat nichts gebracht, die Lücke bleibt.`
+  }
+
+  return {
+    items: best.items,
+    gapReason: report.gapReason,
+    gapDetail: report.gapDetail,
+    relaxLevel: bestLevel,
+    relaxNote,
+    usedExerciseIds: best.usedExerciseIds,
+  }
+}
+
+export function generateUnitPlan(input: GeneratorInput): GeneratedUnit {
   const blocked = new Set<string>()
   const segments: GeneratedSegment[] = []
   const notes: string[] = []
 
   input.segments.forEach((segment, index) => {
-    if (segment.fillMode === 'empty') {
-      segments.push({ segment, position: index, items: [], gapReason: null, relaxLevel: 0 })
-      return
-    }
+    const plan = planSegment({
+      segment,
+      segmentIndex: index,
+      group: input.group,
+      candidates: input.candidates,
+      recentExerciseIds: input.recentExerciseIds,
+      blockedExerciseIds: blocked,
+      seed: input.seed,
+      relax: input.relax,
+    })
 
-    const attemptAt = (level: RelaxLevel) =>
-      fillSegment(
-        segment,
-        input.group,
-        input.candidates,
-        recent,
-        blocked,
-        level,
-        // Eigener Startwert je Segment und Stufe: ein zweiter Versuch
-        // verschiebt damit nicht die Auswahl der folgenden Segmente.
-        createRandom(input.seed + index * 1013 + level * 7919)
-      )
-
-    const strict = attemptAt(0)
-    let best = strict
-    let bestLevel: RelaxLevel = 0
-
-    if (input.relax) {
-      const filledOf = (attempt: Attempt) =>
-        sum(attempt.items.map((item) => item.plannedDuration))
-
-      for (const level of [1, 2] as RelaxLevel[]) {
-        if (filledOf(best) >= segment.minutes) break
-        const attempt = attemptAt(level)
-        // Eine höhere Stufe gilt nur, wenn sie die Lücke wirklich verkleinert.
-        if (filledOf(attempt) > filledOf(best)) {
-          best = attempt
-          bestLevel = level
-        }
-      }
-    }
-
-    if (bestLevel > 0) {
-      const added = best.items.length - strict.items.length
-      const detail =
-        added > 0 ? ` — ${added} ${added === 1 ? 'Übung' : 'Übungen'} ergänzt` : ''
-      notes.push(`„${segment.name}": ${relaxLabel(bestLevel)}${detail}.`)
-    }
-
-    for (const id of best.usedExerciseIds) blocked.add(id)
+    if (plan.relaxLevel > 0 && plan.relaxNote) notes.push(plan.relaxNote)
+    for (const id of plan.usedExerciseIds) blocked.add(id)
 
     segments.push({
       segment,
       position: index,
-      items: best.items,
-      gapReason: best.gapReason,
-      relaxLevel: bestLevel,
+      items: plan.items,
+      gapReason: plan.gapReason,
+      gapDetail: plan.gapDetail,
+      relaxLevel: plan.relaxLevel,
     })
   })
 

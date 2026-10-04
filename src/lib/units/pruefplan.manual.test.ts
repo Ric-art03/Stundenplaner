@@ -419,6 +419,38 @@ describe('Prüffall 10–15: Generatorverhalten', () => {
     expect(history).toHaveLength(3)
   })
 
+  it('16 — Aufschlüsselung aller Ursachen an echten Daten', () => {
+    const group = groupByName('Vorschulturnen')
+    const cases: [string, Partial<SegmentConfig>][] = [
+      ['Eigene, unbelegte Phase', { name: 'Hauptteil 2' }],
+      ['Nur eine fremde Sportart', { name: 'Hauptteil', sports: ['Handball'] }],
+      ['Nur Schwierigkeitsgrad Schwer', { name: 'Hauptteil', difficulties: ['Schwer'] }],
+      ['Sehr kurzes Segment', { name: 'Hauptteil', minutes: 3 }],
+    ]
+    const lines: string[] = []
+    for (const [title, overrides] of cases) {
+      const plan = generateUnitPlan({
+        group: group.generator,
+        segments: [{
+          id: 's1', name: 'Hauptteil', minutes: 60, fillMode: 'generate',
+          sports: group.sports, primarySport: null,
+          difficulties: ALL_DIFFICULTIES, notes: '', ...overrides,
+        }],
+        candidates: data.candidates,
+        recentExerciseIds: [],
+        seed: 7,
+        relax: false,
+      })
+      const entry = plan.segments[0]
+      lines.push(title + ':')
+      lines.push('   ' + (entry.gapReason ?? 'keine Lücke'))
+      for (const b of entry.gapDetail?.blockedBy ?? []) {
+        lines.push('     · ' + b.count + ' an ' + b.criterion)
+      }
+    }
+    report('16 — Aufschlüsselung aller Ursachen', lines)
+    expect(lines.length).toBeGreaterThan(0)
+  })
   it('15 — Lücke mit Begründung bei einer unbelegten eigenen Phase', () => {
     const group = groupByName('Vorschulturnen')
     const plan = generateUnitPlan({
