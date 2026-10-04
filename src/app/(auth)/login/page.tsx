@@ -35,6 +35,11 @@ export default function LoginPage() {
         setIsLoading(false)
         return
       }
+      // Vollständiger Seitenwechsel statt router.push, damit die frische
+      // Session serverseitig gelesen wird — so vorgeschrieben in
+      // .claude/rules/frontend.md. Läuft im Event-Handler, nicht im Render;
+      // die Reinheitsregel greift hier daneben.
+      // eslint-disable-next-line react-hooks/immutability
       window.location.href = '/dashboard'
     } catch {
       setError('Verbindungsfehler. Bitte versuche es erneut.')

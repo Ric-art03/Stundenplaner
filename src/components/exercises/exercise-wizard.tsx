@@ -421,6 +421,10 @@ function StepLogistik({ data, errors, update, customMaterials }: StepProps) {
             placeholder="Min."
             className={errors.duration ? 'border-destructive' : ''}
           />
+          <p className="text-xs text-muted-foreground">
+            Umbau, Aufstellen und Erklären zählen mit — nicht nur die reine Bewegungszeit.
+            Sonst laufen deine Einheiten in der Halle regelmäßig über.
+          </p>
           {errors.duration && <p className="text-sm text-destructive">{errors.duration}</p>}
         </div>
         <div className="space-y-2">
@@ -510,6 +514,7 @@ function StepExtras({ data, errors, update }: StepExtrasProps) {
           variants={data.variants}
           onChange={(v) => update('variants', v)}
           variantErrors={variantErrors}
+          mainMaterials={data.materials}
         />
       </div>
       <div className="space-y-2">

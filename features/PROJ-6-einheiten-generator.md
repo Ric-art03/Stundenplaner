@@ -88,8 +88,10 @@ Nach einer Durchsicht in der Geräte-Emulation bei 375 px wurden folgende Punkte
 - Requires: PROJ-5 (Gruppenprofile) — Liefert Sportarten, Altersgruppen, Teilnehmerzahl, Einheitsdauer und Hallenmaterial als Generator-Input
 - Ermöglicht: PROJ-7 (Einheiten-Editor), PROJ-9 (Kalenderansicht), PROJ-10 (Übungsrotation), PROJ-14 (Live-Modus)
 
-### Offene Abhängigkeit in PROJ-3
-PROJ-6 braucht eine eindeutige Semantik für das abweichende Material einer Variante, die in PROJ-3 nur als „nur was anders ist als bei der Hauptübung" beschrieben ist. Festgelegt wird: **Ersetzen** (siehe Produktentscheidungen). Die Komponente `src/components/exercises/variant-input.tsx` muss dafür angepasst werden — standardmäßig erbt die Variante das Material der Hauptübung und zeigt es als Text an; erst ein Klick auf „Material für diese Variante anpassen" kopiert die Liste in bearbeitbare Felder, ein zweiter Button setzt auf Erben zurück.
+### Abhängigkeit in PROJ-3 — erledigt am 2026-10-04
+PROJ-6 brauchte eine eindeutige Semantik für das abweichende Material einer Variante, die in PROJ-3 nur als „nur was anders ist als bei der Hauptübung" beschrieben war. Festgelegt wurde: **Ersetzen** (siehe Produktentscheidungen).
+
+`src/components/exercises/variant-input.tsx` setzt das jetzt um: Die Variante zeigt das geerbte Material der Hauptübung als Text an; ein Klick auf „Material für diese Variante anpassen" kopiert die Liste in bearbeitbare Felder, ein zweiter Button setzt auf Erben zurück. Der Hinweis unter der Liste sagt ausdrücklich, dass sie die Hauptübung **ersetzt** und dass „Kein Material" zu wählen ist, wenn die Variante gar nichts braucht.
 
 ## User Stories
 1. Als Übungsleiter möchte ich für eine meiner Gruppen mit einem Klick eine vollständige, strukturierte Trainingseinheit generieren lassen, damit ich nicht jede Woche von Hand Übungen zusammensuchen muss.
@@ -452,7 +454,7 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 
 ## Open Questions
 - [ ] **Hilfe- und Tutorial-Feature:** Die App muss dem Nutzer die sinnvolle Nutzung aktiv vermitteln — eine Gruppe nicht mit nur einer Sportart taggen, nicht jede Stunde braucht alle Phasen, und die geschätzte Übungsdauer muss Umbau- und Erklärzeit einschließen. Soll das ein eigenes Feature werden (neue PROJ-ID) oder in bestehende Leerzustände und Hinweise verteilt bleiben?
-- [ ] **Hinweis im Übungsformular (PROJ-3):** Das Dauer-Feld sollte einen Hinweis bekommen, dass Umbau-, Aufstell- und Erklärzeit mitzählen. Als kleine Nacharbeit in PROJ-3 oder als Teil von PROJ-6 umsetzen?
+- [x] **Hinweis im Übungsformular (PROJ-3):** Erledigt am 2026-10-04 — unter dem Dauer-Feld im Wizard steht jetzt, dass Umbau, Aufstellen und Erklären mitzählen und die Einheiten sonst in der Halle überlaufen.
 - [ ] Soll die Zeitverlauf-Konfiguration später als wiederverwendbare Vorlage gespeichert werden können (etwa „mein Volleyball-Schema")? Aktuell Out of Scope, aber naheliegende Erweiterung
 - [ ] Wie viele Einheiten pro Gruppe werden in der Liste auf der Gruppen-Detailseite angezeigt, bevor ein „Mehr laden" nötig wird?
 - [ ] Sollen Musik-Hinweise („Musik benötigt") im Stundenverlauf besonders hervorgehoben werden, damit der Nutzer vor der Stunde weiß, dass er eine Box braucht?
@@ -704,6 +706,34 @@ Alles andere ist vorhanden: Supabase, Zod, shadcn/ui, Lucide Icons, `date-fns`, 
 ### Was dieses Design für PROJ-7 vorbereitet
 
 Die Trennung von Auswahllogik und Datenzugriff zahlt sich direkt aus: PROJ-7 braucht zum Tauschen einer einzelnen Übung genau denselben Kandidatenpool und dieselben Filter, nur für einen einzigen Platz statt für ein ganzes Segment. Die Markierung „wurde manuell bearbeitet" an der Einheit ist bereits vorgesehen, und die Einheit liegt als echter Datensatz vor, auf dem der Editor arbeiten kann.
+
+## Prüfplan für die vorbereiteten Testdaten
+
+Die 40 Testübungen in der Datenbank (markiert mit `Testdaten (PROJ-6)`) enthalten absichtlich eingebaute Fälle. **Keiner davon ist bisher geprüft** — der Generator existiert noch nicht. Diese Liste gehört in den QA-Schritt nach `/backend`.
+
+Vorab nur rechnerisch in SQL nachgestellt: 5–6 verwendbare Übungen pro Gruppe und Phase, bei drei- bis vierfachem Minutenbudget. Das sagt nichts über das Verhalten des Algorithmus.
+
+| # | Prüffall | Erwartung | Testdaten |
+|---|---|---|---|
+| 1 | Material fehlt in der Halle | Übung wird **nicht** vorgeschlagen | „Schwungtuch-Wellen" (Vorschulturnen), „Partnerakrobatik Grundformen" und „Seilsprung-Intervalle" (Capoeira) |
+| 2 | Material „pro Teilnehmer" übersteigt den Hallenbestand | Übung wird **nicht** vorgeschlagen | „Weichboden-Sprungfest": 1 Weichbodenmatte × 25 Teilnehmer, Halle hat 4 |
+| 3 | Material „insgesamt" übersteigt den Bestand knapp | Übung wird **nicht** vorgeschlagen | „Bank-Sprungkraft": 6 Bänke, Capoeira-Halle hat 4 |
+| 4 | Material trifft die Grenze exakt | Übung **wird** vorgeschlagen | „Reifen-Hausbau": 2 Reifen × 25 = 50, Halle hat genau 50 |
+| 5 | Teilnehmer-Obergrenze unter der Gruppengröße | Übung wird **nicht** vorgeschlagen | „Bockspringen für Kleine" (max. 12 bei 25 Teilnehmern) |
+| 6 | Übung ohne Material | Wird **immer** vorgeschlagen, auch ohne Halle | 14 der 40 Übungen tragen kein Material |
+| 7 | Variante rettet eine ausgeschlossene Hauptübung über **Material** | Die **Variante** wird Kandidat, die Hauptübung nicht | „Weichboden-Sprungfest" → Variante „Mit Turnmatten statt Weichböden"; „Schwungtuch-Wellen" → Variante „Mit Tüchern statt Schwungtuch" |
+| 8 | Variante rettet über **Teilnehmerzahl** | Die Variante wird Kandidat | „Bockspringen für Kleine" → Variante „In zwei Gruppen mit Wartestation" (max. 25) |
+| 9 | Regel A: Variantenmaterial **ersetzt** | Nur das Material der Variante zählt, nicht zusätzlich das der Hauptübung | Varianten aus Fall 7 |
+| 10 | Sehr kurze Cool-Down-Übungen | Werden eingeplant, keine Mindestdauer schließt sie aus | „Atemübung zum Ausklang" (3 Min), „Schlafende Mäuse" (3 Min), „Hüftöffner im Sitzen" (4 Min) |
+| 11 | Sportart-Rotation | Alle gewählten Sportarten kommen dran, bevor sich eine wiederholt | Beide Gruppen haben je 5 Sportarten |
+| 12 | Gewichtung der Hauptsportart | Etwa jede zweite Übung aus Capoeira | Gruppe „Capoeira Erwachsene Samstags", Hauptsportart gesetzt |
+| 13 | Frische-Regel | Dritte Einheit meidet Übungen der letzten beiden | Dreimal hintereinander für dieselbe Gruppe generieren |
+| 14 | Dauer-Anpassung ±25 % | Plandauer weicht höchstens um ein Viertel von der Schätzung ab | Alle Übungen |
+| 15 | Lücke mit Begründung | Grund wird in Alltagssprache genannt | Segment mit einer eigenen, nicht vergebenen Phase anlegen |
+
+**Nach der Prüfung:** Die Testübungen lassen sich in einem Zug entfernen mit
+`delete from exercises where work_notes = 'Testdaten (PROJ-6)';`
+Ihr Inhalt ist die Rohmasse für PROJ-4 (Starter-Datenbank).
 
 ## QA Test Results
 _To be added by /qa_

@@ -85,7 +85,9 @@ export function UnitConfigForm({
     setCustomSegments(null)
     setMode('standard')
     setSelectedId(null)
-  }, [group?.id, group?.unitDuration])
+    // `group` stammt aus der unveränderlichen groups-Liste und ist damit
+    // referenziell stabil — der Effekt läuft nur bei echtem Gruppenwechsel.
+  }, [group])
 
   const segments = mode === 'custom' ? (customSegments ?? classicSegments) : classicSegments
 
