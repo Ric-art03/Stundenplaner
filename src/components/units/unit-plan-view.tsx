@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast'
 import { UnitItemCard } from './unit-item-card'
 import { GapNotice } from './gap-notice'
 import { UnitActionsMenu } from './unit-actions-menu'
+import { UnitNameDialog } from './unit-name-dialog'
 import { regenerateUnit, relaxSegment, saveUnit } from '@/lib/actions/units'
 import type { Unit, UnitSegment } from '@/lib/types/unit'
 
@@ -34,6 +35,7 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [busy, setBusy] = React.useState<string | null>(null)
+  const [naming, setNaming] = React.useState(false)
 
   async function regenerate() {
     setBusy('regenerate')
@@ -84,14 +86,15 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
     }
   }
 
-  async function save() {
+  async function save(name: string) {
     setBusy('save')
     try {
-      const result = await saveUnit(unit.id)
+      const result = await saveUnit(unit.id, name)
       if (result.error) {
         toast({ variant: 'destructive', title: 'Fehler', description: result.error })
         return
       }
+      setNaming(false)
       toast({ title: 'Einheit gespeichert' })
       router.refresh()
     } catch {
@@ -158,7 +161,7 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
               Gespeichert
             </span>
           ) : (
-            <Button size="sm" onClick={save} disabled={busy !== null || hasGaps}>
+            <Button size="sm" onClick={() => setNaming(true)} disabled={busy !== null || hasGaps}>
               {busy === 'save' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -227,6 +230,16 @@ export function UnitPlanView({ unit, singleSportGroup }: UnitPlanViewProps) {
           ))}
       </div>
 
+      <UnitNameDialog
+        open={naming}
+        onOpenChange={setNaming}
+        title="Einheit speichern"
+        description="Unter diesem Namen findest du die Einheit später wieder. Der Vorschlag aus Gruppe und Datum lässt sich überschreiben."
+        confirmLabel="Speichern"
+        initialName={unit.name}
+        busy={busy === 'save'}
+        onConfirm={save}
+      />
       {unit.relaxedNote && (
         <Alert>
           <Info className="h-4 w-4" />

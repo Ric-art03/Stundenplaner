@@ -508,6 +508,14 @@ function readEditorState(raw: Json | null): EditorState {
   return { mode, expandedPosition: position }
 }
 
+/** Gemeinsame Namensprüfung für Umbenennen und Speichern. */
+function checkUnitName(name: string): { name: string } | { error: string } {
+  const trimmed = name.trim()
+  if (trimmed.length === 0) return { error: 'Bitte gib einen Namen ein.' }
+  if (trimmed.length > 200) return { error: 'Maximal 200 Zeichen.' }
+  return { name: trimmed }
+}
+
 /** Nutzer vergeben eigene Namen, sobald der automatische nicht mehr passt. */
 export async function renameUnit(
   unitId: string,
@@ -516,13 +524,12 @@ export async function renameUnit(
   const { supabase, user } = await getAuthUser()
   if (!user) return { error: 'Nicht angemeldet.' }
 
-  const trimmed = name.trim()
-  if (trimmed.length === 0) return { error: 'Bitte gib einen Namen ein.' }
-  if (trimmed.length > 200) return { error: 'Maximal 200 Zeichen.' }
+  const checked = checkUnitName(name)
+  if ('error' in checked) return { error: checked.error }
 
   const { error } = await supabase
     .from('units')
-    .update({ name: trimmed })
+    .update({ name: checked.name })
     .eq('id', unitId)
     .eq('user_id', user.id)
 
@@ -557,14 +564,20 @@ export async function deleteUnit(
  * generiert.
  */
 export async function saveUnit(
-  unitId: string
+  unitId: string,
+  name: string
 ): Promise<{ success?: boolean; error?: string }> {
   const { supabase, user } = await getAuthUser()
   if (!user) return { error: 'Nicht angemeldet.' }
 
+  // Name und Ablage in einem Schritt: Der Nutzer benennt die Einheit genau
+  // dann, wenn sie in den Ordner wandert — dort braucht er sie wiederzufinden.
+  const checked = checkUnitName(name)
+  if ('error' in checked) return { error: checked.error }
+
   const { error } = await supabase
     .from('units')
-    .update({ saved: true })
+    .update({ name: checked.name, saved: true })
     .eq('id', unitId)
     .eq('user_id', user.id)
 

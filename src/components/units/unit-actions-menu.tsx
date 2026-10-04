@@ -2,24 +2,14 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { deleteUnit, renameUnit } from '@/lib/actions/units'
+import { UnitNameDialog } from './unit-name-dialog'
 
 interface UnitActionsMenuProps {
   unitId: string
@@ -50,19 +41,12 @@ export function UnitActionsMenu({
 
   const [renaming, setRenaming] = React.useState(false)
   const [confirmingDelete, setConfirmingDelete] = React.useState(false)
-  const [draftName, setDraftName] = React.useState(unitName)
   const [busy, setBusy] = React.useState(false)
 
-  function openRename() {
-    setDraftName(unitName)
-    setRenaming(true)
-  }
-
-  async function submitRename(event: React.FormEvent) {
-    event.preventDefault()
+  async function submitRename(name: string) {
     setBusy(true)
     try {
-      const result = await renameUnit(unitId, draftName)
+      const result = await renameUnit(unitId, name)
       if (result.error) {
         toast({ variant: 'destructive', title: 'Fehler', description: result.error })
         return
@@ -110,7 +94,7 @@ export function UnitActionsMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setTimeout(openRename, 0)}>
+          <DropdownMenuItem onSelect={() => setTimeout(() => setRenaming(true), 0)}>
             <Pencil className="mr-2 h-4 w-4" />
             Umbenennen
           </DropdownMenuItem>
@@ -124,45 +108,16 @@ export function UnitActionsMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={renaming} onOpenChange={setRenaming}>
-        <DialogContent>
-          <form onSubmit={submitRename}>
-            <DialogHeader>
-              <DialogTitle>Einheit umbenennen</DialogTitle>
-              <DialogDescription>
-                Der automatische Name aus Gruppe und Datum lässt sich jederzeit durch einen
-                eigenen ersetzen.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-2 py-4">
-              <Label htmlFor="unit-name">Name</Label>
-              <Input
-                id="unit-name"
-                value={draftName}
-                onChange={(event) => setDraftName(event.target.value)}
-                maxLength={200}
-                autoFocus
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setRenaming(false)}
-                disabled={busy}
-              >
-                Abbrechen
-              </Button>
-              <Button type="submit" disabled={busy || draftName.trim() === ''}>
-                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Speichern
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <UnitNameDialog
+        open={renaming}
+        onOpenChange={setRenaming}
+        title="Einheit umbenennen"
+        description="Der automatische Name aus Gruppe und Datum lässt sich jederzeit durch einen eigenen ersetzen."
+        confirmLabel="Speichern"
+        initialName={unitName}
+        busy={busy}
+        onConfirm={submitRename}
+      />
 
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <AlertDialogContent>

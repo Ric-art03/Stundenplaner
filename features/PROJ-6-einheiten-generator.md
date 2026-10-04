@@ -233,6 +233,14 @@ Zu jeder Ursache nennt die Oberfläche, was dagegen hilft. Zwei Feinheiten:
 - `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
 - `npm run test:pruefplan` — 15 Fälle grün, erweitert um die Aufschlüsselung an echten Daten
 
+### Benennen beim Speichern — 2026-10-05
+
+Der Name war bis dahin nur nachträglich über das Drei-Punkte-Menü änderbar. Gefragt wird er jetzt dort, wo er zählt: beim Ablegen in den Ordner. „Einheit speichern" öffnet einen Dialog mit dem automatischen Namen aus Gruppe und Datum **vorausgefüllt und markiert** — bestätigen genügt, überschreiben geht sofort.
+
+`saveUnit` nimmt den Namen deshalb entgegen und setzt Name und Ablage in **einem** Schreibvorgang. Umbenennen und Speichern prüfen den Namen über dieselbe Stelle (`checkUnitName`), damit die Regeln nicht auseinanderlaufen.
+
+Beide Wege stellen dieselbe Frage, deshalb teilen sie sich `unit-name-dialog.tsx`; nur Titel, Beschreibung und Knopfbeschriftung unterscheiden sich. Der Dialog setzt sich beim Öffnen auf den aktuellen Namen zurück — sonst stünde beim zweiten Öffnen noch eine abgebrochene Eingabe im Feld. Genau dieses Zusammenspiel von Zustand und Effekt ist durch sieben Tests abgedeckt, nachdem derselbe Fehlertyp zuvor den Bedienstand gekostet hatte.
+
 ### Fehlerbehebung: „Zurück zum Generator" stellte nichts wieder her — 2026-10-05
 
 Der erste Anlauf des Bedienstands funktionierte nicht. Die Ursache lag **nicht** in den Daten — `units.editor_state` wurde korrekt geschrieben und gelesen —, sondern im Formular.
@@ -636,7 +644,10 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 
 ### Speichern, Anzeigen, Neu generieren
 - [ ] Angenommen der Nutzer klickt auf „Einheit generieren", wenn die Generierung erfolgreich war, dann sieht er den Stundenverlauf als **Entwurf**, der noch nicht in seinen Übersichten erscheint
-- [ ] Angenommen der Nutzer sieht einen Entwurf ohne Lücke, wenn er auf „Einheit speichern" klickt, dann erscheint die Einheit in „Meine Einheiten" und auf der Gruppen-Detailseite
+- [ ] Angenommen der Nutzer sieht einen Entwurf ohne Lücke, wenn er auf „Einheit speichern" klickt, dann erscheint ein Dialog mit dem bisherigen Namen vorausgefüllt
+- [ ] Angenommen der Dialog ist offen, wenn der Nutzer den Namen ändert und bestätigt, dann liegt die Einheit unter diesem Namen in „Meine Einheiten" und auf der Gruppen-Detailseite
+- [ ] Angenommen der Dialog ist offen, wenn der Nutzer nichts ändert und bestätigt, dann gilt der automatische Name aus Gruppe und Datum
+- [ ] Angenommen der Nutzer bricht den Dialog ab, dann bleibt die Einheit ein Entwurf und der verworfene Name steht beim nächsten Öffnen nicht mehr im Feld
 - [ ] Angenommen ein Segment im Modus „füllen" konnte nicht vollständig gefüllt werden, wenn der Nutzer den Entwurf ansieht, dann ist „Einheit speichern" gesperrt und es steht dort, welches Segment die Sperre auslöst
 - [ ] Angenommen ein Segment ist bewusst auf „frei lassen" gesetzt, wenn der Nutzer den Entwurf ansieht, dann sperrt das „Einheit speichern" **nicht** — ein leer gelassener Abschnitt ist keine Lücke
 - [ ] Angenommen „Einheit speichern" ist wegen einer Lücke gesperrt, wenn der Nutzer das Segment im Generator auf „frei lassen" stellt oder die Lücke schließt, dann lässt sich die Einheit speichern
@@ -827,6 +838,7 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 | Komponententests für Zustandslogik im Formular | Die Testsuite deckte bis dahin nur reine Logik ab. Der Fehler saß im Zusammenspiel von Zustand und Effekt und war dort grundsätzlich nicht sichtbar. Der neue Test rendert in StrictMode und fängt genau diesen Fall | 2026-10-05 |
 | Im Modus „Standard" gilt die Verteilung der aktuellen Gruppe, nicht die eingefrorene der Einheit | `generateUnit` prüft serverseitig, dass die Einheitsdauer der des Gruppenprofils entspricht. Alte Werte wiederherzustellen würde das Generieren scheitern lassen, sobald der Nutzer die Dauer seiner Gruppe geändert hat | 2026-10-05 |
 | Umbenennen gehört zu PROJ-6, nicht zu PROJ-7 | Der Editor in PROJ-7 ändert den Stundenverlauf — Übungen tauschen, Zeiten verschieben, Lücken füllen. Der Name ist Beiwerk der Einheit, und die Spec sah ihn von Anfang an als „später umbenennbar\" vor | 2026-10-05 |
+| Der Name wird beim Speichern erfragt, nicht erst nachträglich | Beim Ablegen in den Ordner entscheidet sich, ob der Nutzer die Einheit später wiederfindet. Der automatische Name ist dabei ein Vorschlag, kein Zwang — vorausgefüllt und markiert, sodass Bestätigen genügt | 2026-10-05 |
 | Löschen einer Einheit mit ins Menü aufgenommen | Es gab gar keinen Weg, eine gespeicherte Einheit wieder loszuwerden. Ein Ordner, der sich nur füllen kann, ist für wöchentlich genutzte Einheiten nicht haltbar | 2026-10-05 |
 | Das Karten-Menü liegt neben dem Link, nicht darin | Ein Menü innerhalb des Links würde beim Anklicken zugleich die Einheit öffnen | 2026-10-05 |
 | „Neu generieren\" überschreibt nur Entwürfe, nie gespeicherte Einheiten | Eine gespeicherte Einheit auf Knopfdruck zu überschreiben ist Datenverlust ohne Rückweg. Der neue Vorschlag entsteht daneben, und der Nutzer entscheidet, ob er ihn behält | 2026-10-05 |
