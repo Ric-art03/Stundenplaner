@@ -23,6 +23,7 @@ import {
 import { Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { UnitList } from '@/components/units/unit-list'
+import { GroupUnitsWarning } from './group-units-warning'
 import type { Group } from '@/lib/types/group'
 import type { UnitSummary } from '@/lib/types/unit'
 
@@ -36,6 +37,7 @@ export function GroupDetail({ group, units, onDelete }: GroupDetailProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [deleting, setDeleting] = React.useState(false)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
 
   async function handleDelete() {
     setDeleting(true)
@@ -96,7 +98,7 @@ export function GroupDetail({ group, units, onDelete }: GroupDetailProps) {
               Bearbeiten
             </Link>
           </Button>
-          <AlertDialog>
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" disabled={deleting}>
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -108,6 +110,7 @@ export function GroupDetail({ group, units, onDelete }: GroupDetailProps) {
                 <AlertDialogTitle>Gruppe löschen?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Möchtest du &quot;{group.name}&quot; wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                  <GroupUnitsWarning groupId={group.id} active={deleteOpen} />
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

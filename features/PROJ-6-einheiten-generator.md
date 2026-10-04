@@ -1,6 +1,6 @@
 # PROJ-6: Einheiten-Generator
 
-## Status: In Review
+## Status: In Progress
 **Created:** 2026-10-03
 **Last Updated:** 2026-10-05
 **QA:** 2026-10-05
@@ -233,6 +233,33 @@ Zu jeder Ursache nennt die Oberfläche, was dagegen hilft. Zwei Feinheiten:
 - `npm run build` — erfolgreich
 - `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
 - `npm run test:pruefplan` — 15 Fälle grün, erweitert um die Aufschlüsselung an echten Daten
+
+### Behebung BUG-1: Löschen einer Gruppe warnt vor dem Verlust ihrer Einheiten — 2026-10-05
+
+Die QA fand den einzigen Fehler hoher Schwere: `units.group_id` steht auf ON DELETE CASCADE, das Löschen einer Gruppe nahm also sämtliche Einheiten samt Segmenten, Einträgen und Verwendungsnachweisen mit — und der Dialog sprach nur davon, dass die Aktion nicht rückgängig zu machen sei. Beim Löschen einer **Übung** nennt PROJ-6 die betroffenen Einheiten seit dem Backend-Schritt beim Namen; beim Löschen einer **Gruppe**, wo ungleich mehr auf dem Spiel steht, stand nichts.
+
+**Die Löschweitergabe bleibt, wie sie ist.** Sie ist richtig: Eine Einheit ohne Gruppe hätte keine Grundlage — alle Auswahlkriterien stammen aus dem Gruppenprofil, und `group_id` ist nicht optional. Die Alternativen wären schlechter: `RESTRICT` zwänge den Nutzer, erst jede Einheit einzeln zu löschen, `SET NULL` hinterließe Einheiten ohne Bezugspunkt. Gefehlt hat nicht die Regel, sondern ihre Ankündigung. Eine Schemaänderung war deshalb nicht nötig.
+
+**Umgesetzt** nach demselben Muster wie die Löschwarnung bei Übungen:
+- `getUnitNamesForGroup(groupId)` in `src/lib/actions/units.ts` liefert die Namen der gespeicherten Einheiten einer Gruppe, neueste zuerst
+- `src/components/groups/group-units-warning.tsx` lädt sie **beim Öffnen des Dialogs** nach — nicht beim Rendern der Gruppenliste, wo sie für jede Karte eine Abfrage kosten würden
+- Eingehängt an **beiden** Löschwegen: Gruppenkarte in der Übersicht und Kopf der Gruppen-Detailseite. Die Detailseite brauchte dafür einen gesteuerten Öffnungszustand, weil der Dialog bis dahin ungesteuert war und die Komponente sonst nicht erfährt, wann sie laden soll
+
+Der Hinweis nennt bis zu fünf Namen und fasst den Rest zusammen („und 4 weitere"), unterscheidet Ein- und Mehrzahl und sagt ausdrücklich zu, dass die Übungen erhalten bleiben — die Einheiten verweisen sie nur.
+
+**Entwürfe bleiben außen vor.** Sie werden beim nächsten Generieren ohnehin ersetzt, tauchen in keiner Übersicht auf und wären in der Warnung nur ein Name, den der Nutzer nirgends wiederfindet.
+
+**An den echten Daten geprüft:** Beim Löschen von „Vorschulturnen 1" wären bislang **9 gespeicherte Einheiten** lautlos verschwunden, bei „Capoeira Erwachsene Samstags" drei. Beide nennt der Dialog jetzt.
+
+**Sieben Tests** in `group-units-warning.test.tsx`, bewusst in `React.StrictMode` gerendert: Nicht laden solange der Dialog zu ist, Namen nennen, Ein- und Mehrzahl, Kürzen langer Listen, Zusage zu den Übungen, nichts anzeigen ohne Einheiten, und einen Netzwerkfehler verschlucken statt den Löschdialog zu blockieren. Diese Lade-bei-Öffnen-Logik hat im Projekt schon zweimal Fehler getragen.
+
+**Verifikation**
+- `npx tsc --noEmit` — fehlerfrei
+- `npm test` — **249 Tests grün** (7 neue)
+- `npm run build` — erfolgreich
+- `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
+
+**Noch offen aus der QA:** BUG-2 bis BUG-8 (alle niedrig). BUG-8 — der Nachlauf der E2E-Tests — braucht einen vollständigen Playwright-Browser und sollte vor dem Deployment erledigt werden.
 
 ### Benennen beim Speichern — 2026-10-05
 
@@ -1315,6 +1342,7 @@ Direkt gegen die echten 12 Einheiten geprüft:
 ### Gefundene Fehler
 
 #### BUG-1: Das Löschen einer Gruppe vernichtet alle ihre Einheiten ohne Warnung
+- **Status:** ✅ **Behoben am 2026-10-05** — siehe „Behebung BUG-1" in den Implementation Notes. Erneut zu prüfen im nächsten `/qa`
 - **Schwere:** Hoch
 - **Schritte:**
   1. Gruppen-Detailseite einer Gruppe mit gespeicherten Einheiten öffnen
@@ -1387,9 +1415,9 @@ Speichern ist bei einer Lücke gesperrt, eine gespeicherte Einheit hat also norm
 
 - **Akzeptanzkriterien:** 92 von 94 erfüllt. 1 teilweise (BUG-5, inhaltlich PROJ-7), 1 mit Einschränkung (BUG-6)
 - **Edge Cases:** 12 von 15 bestätigt, 2 nur gelesen, 1 nicht umgesetzt (BUG-3)
-- **Gefundene Fehler:** 8 — 0 kritisch, **1 hoch**, 0 mittel, 7 niedrig
+- **Gefundene Fehler:** 8 — 0 kritisch, 1 hoch (**behoben am 2026-10-05**), 0 mittel, 7 niedrig
 - **Sicherheit:** Datentrennung und Zugriffsschutz bewiesen, keine Secrets im Auslieferungsstand, keine Injection- oder XSS-Einfallstore. Eine Härtungslücke in der Datenbank (BUG-4)
-- **Produktionsreif:** **NEIN** — BUG-1 muss zuerst behoben werden
+- **Produktionsreif:** **NEIN** zum Zeitpunkt der Prüfung — BUG-1 ist seitdem behoben, die Freigabe hängt an einer erneuten Prüfung durch `/qa`
 
 **Empfehlung:** BUG-1 ist ein Einzeiler im Löschdialog der Gruppe plus eine Abfrage der betroffenen Einheiten — dieselbe Mechanik, die beim Löschen einer Übung bereits steht. Danach lohnt der Nachlauf der E2E-Tests (BUG-8), weil die Teststrecke dieser Sitzung erstmals angemeldet prüft und bisher nie gelaufen ist. BUG-2 bis BUG-7 blockieren das Deployment nicht.
 

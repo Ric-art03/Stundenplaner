@@ -26,6 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { WEEKDAY_SHORT } from '@/lib/types/group'
 import type { Group } from '@/lib/types/group'
+import { GroupUnitsWarning } from './group-units-warning'
 
 interface GroupCardProps {
   group: Group
@@ -168,6 +169,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
             <AlertDialogTitle>Gruppe löschen?</AlertDialogTitle>
             <AlertDialogDescription>
               Möchtest du &quot;{group.name}&quot; wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+              <GroupUnitsWarning groupId={group.id} active={deleteOpen} />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

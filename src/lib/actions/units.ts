@@ -975,6 +975,30 @@ export async function getUnits(): Promise<UnitSummary[]> {
 }
 
 /**
+ * Für die Löschwarnung bei einer Gruppe. Eine Gruppe zu löschen nimmt über die
+ * Löschweitergabe **alle ihre Einheiten** mit — das muss im Dialog stehen,
+ * bevor der Nutzer bestätigt.
+ *
+ * Entwürfe bleiben außen vor: Sie sind ohnehin flüchtig und werden beim
+ * nächsten Generieren ersetzt, tauchen in keiner Übersicht auf und wären in
+ * einer Warnung nur ein Name, den der Nutzer nirgends wiederfindet.
+ */
+export async function getUnitNamesForGroup(groupId: string): Promise<string[]> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) return []
+
+  const { data } = await supabase
+    .from('units')
+    .select('name')
+    .eq('user_id', user.id)
+    .eq('group_id', groupId)
+    .eq('saved', true)
+    .order('created_at', { ascending: false })
+
+  return (data ?? []).map((row) => row.name)
+}
+
+/**
  * Für die Löschwarnung bei einer Übung: „Diese Übung wird in 2 Einheiten
  * verwendet: …". Ohne die Namen bleibt die Warnung abstrakt.
  */
