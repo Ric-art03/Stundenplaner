@@ -233,6 +233,34 @@ Zu jeder Ursache nennt die Oberfläche, was dagegen hilft. Zwei Feinheiten:
 - `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
 - `npm run test:pruefplan` — 15 Fälle grün, erweitert um die Aufschlüsselung an echten Daten
 
+### Fehlerbehebung: „Zurück zum Generator" stellte nichts wieder her — 2026-10-05
+
+Der erste Anlauf des Bedienstands funktionierte nicht. Die Ursache lag **nicht** in den Daten — `units.editor_state` wurde korrekt geschrieben und gelesen —, sondern im Formular.
+
+Der Effekt, der beim Gruppenwechsel aufräumt, war von einem **Einmal-Schalter** bewacht:
+
+```ts
+if (pristineInitial.current) {
+  pristineInitial.current = false
+  return
+}
+setCustomSegments(null)
+setMode('standard')
+setSelectedId(null)
+```
+
+React führt Effekte im Entwicklungsmodus doppelt aus (StrictMode). Beim ersten Lauf wurde der Schalter verbraucht, beim zweiten griff er nicht mehr — und der mitgebrachte Stand wurde verworfen. Der Nutzer landete also immer auf „Standard" mit leerem Zeitverlauf. Derselbe Fehler wäre auch außerhalb des Entwicklungsmodus aufgetreten, sobald ein Neurendern ein frisches `group`-Objekt liefert.
+
+Der Kommentar an der Stelle behauptete sogar, der Effekt laufe „nur bei echtem Gruppenwechsel" — genau das stimmte nicht.
+
+**Behoben**, indem nicht mehr gezählt wird, wie oft der Effekt läuft, sondern ob sich die Gruppe tatsächlich geändert hat: Ein `lastGroupId`-Verweis hält die zuletzt wirksame Gruppenkennung; stimmt sie mit der aktuellen überein, wird nichts verworfen. Das ist unabhängig von der Anzahl der Effektläufe und damit auch gegen künftige Neurender-Ursachen unempfindlich.
+
+**Mit einem Test abgesichert**, der den Fehler nachweislich fängt: `src/components/units/unit-config-form.test.tsx` rendert das Formular ausdrücklich in `React.StrictMode`. Gegen den alten Code fallen drei der fünf Tests durch, gegen den neuen keiner — das wurde durch zeitweiliges Zurücksetzen des Fixes überprüft. Es sind die ersten Komponententests des Projekts; die übrigen Testdateien decken reine Logik ab, und genau deshalb konnte dieser Fehler durchrutschen.
+
+**Für Altbestand:** Einheiten, die vor der Spalte `editor_state` entstanden sind, tragen keinen Bedienstand. Sie öffnen in „Individuell" mit ihren tatsächlich gespeicherten Segmenten — das ist die verlässlichere Quelle als eine neu gebaute Vorlage. Alles ab dieser Änderung Generierte stellt den Modus exakt wieder her.
+
+**Bewusst nicht geändert:** Im Modus „Standard" zeigt die Maske die Standardverteilung der **aktuellen** Gruppe, nicht die eingefrorenen Segmente der Einheit. Das ist kein Versehen: `generateUnit` prüft serverseitig, dass die Einheitsdauer der des Gruppenprofils entspricht. Hätte der Nutzer die Dauer seiner Gruppe zwischenzeitlich geändert, würde ein Wiederherstellen der alten Werte das Generieren mit einer Fehlermeldung scheitern lassen.
+
 ### Änderungen aus dem zweiten Test — 2026-10-05
 
 Der Nutzer hat das Entwurfsmodell, „Zurück zum Generator" und das Lockern pro Segment durchgespielt: **funktioniert**. Vier weitere Punkte kamen dabei auf.
@@ -795,6 +823,9 @@ Beim Löschen einer Übung greift die in PROJ-3 vorgesehene Warnung, jetzt mit k
 | Bedienstand der Konfigurationsseite an der Einheit statt in der Sitzung | „Zurück zum Generator\" soll auch greifen, wenn der Nutzer über „Meine Einheiten\" kommt und den Generator in dieser Sitzung nie offen hatte. In `sessionStorage` wäre der Stand dort nicht vorhanden | 2026-10-05 |
 | Bedienstand als eine JSONB-Spalte statt zweier Einzelspalten | Der Editor aus PROJ-7 wird weiteren Bedienstand ablegen wollen. So kommt er ohne erneute Schemaänderung aus | 2026-10-05 |
 | Aufgeklapptes Segment über die Position statt über die Kennung gemerkt | Die Segment-Kennungen im Formular werden bei jedem Laden neu vergeben; eine gespeicherte Kennung ginge beim Zurückkehren ins Leere | 2026-10-05 |
+| Rücksetz-Effekte hängen am tatsächlichen Wechsel, nicht an einem Einmal-Schalter | Ein Schalter, der beim ersten Effektlauf verbraucht wird, versagt beim zweiten. React führt Effekte im Entwicklungsmodus doppelt aus, und jedes Neurendern mit frischen Server-Daten erzeugt neue Objektverweise. Der Vergleich der Gruppenkennung ist dagegen unempfindlich gegen die Anzahl der Läufe | 2026-10-05 |
+| Komponententests für Zustandslogik im Formular | Die Testsuite deckte bis dahin nur reine Logik ab. Der Fehler saß im Zusammenspiel von Zustand und Effekt und war dort grundsätzlich nicht sichtbar. Der neue Test rendert in StrictMode und fängt genau diesen Fall | 2026-10-05 |
+| Im Modus „Standard" gilt die Verteilung der aktuellen Gruppe, nicht die eingefrorene der Einheit | `generateUnit` prüft serverseitig, dass die Einheitsdauer der des Gruppenprofils entspricht. Alte Werte wiederherzustellen würde das Generieren scheitern lassen, sobald der Nutzer die Dauer seiner Gruppe geändert hat | 2026-10-05 |
 | Umbenennen gehört zu PROJ-6, nicht zu PROJ-7 | Der Editor in PROJ-7 ändert den Stundenverlauf — Übungen tauschen, Zeiten verschieben, Lücken füllen. Der Name ist Beiwerk der Einheit, und die Spec sah ihn von Anfang an als „später umbenennbar\" vor | 2026-10-05 |
 | Löschen einer Einheit mit ins Menü aufgenommen | Es gab gar keinen Weg, eine gespeicherte Einheit wieder loszuwerden. Ein Ordner, der sich nur füllen kann, ist für wöchentlich genutzte Einheiten nicht haltbar | 2026-10-05 |
 | Das Karten-Menü liegt neben dem Link, nicht darin | Ein Menü innerhalb des Links würde beim Anklicken zugleich die Einheit öffnen | 2026-10-05 |
@@ -1069,6 +1100,7 @@ In zwei Durchgängen am 2026-10-04 und 2026-10-05 bestätigt und deshalb **nicht
 | 1d | „Zurück zum Generator" aus einer mit **Standard** erzeugten Einheit | Die Maske steht wieder auf „Standard", nicht auf aufgeklapptem Zeitverlauf |
 | 1e | „Zurück zum Generator" aus einer **individuell** erzeugten Einheit | Zeitverlauf geladen, und der Einstellbereich, der beim Generieren offen war, ist wieder offen |
 | 1f | Dasselbe, aber über „Meine Einheiten" statt direkt aus dem Generator | Gleiches Ergebnis — der Bedienstand hängt an der Einheit, nicht an der Sitzung |
+| 1f* | **Wichtig für 1d–1f:** mit einer **neu generierten** Einheit prüfen | Einheiten von vor dem 2026-10-05 tragen keinen Bedienstand und öffnen immer in „Individuell" — das ist kein Fehler |
 | 1g | Entwurf mit ungefüllter Phase | „Einheit speichern" ist grau, daneben steht welches Segment die Sperre auslöst und wie man sie löst |
 | 1h | Dasselbe Segment im Generator auf „frei lassen" stellen | „Einheit speichern" ist wieder benutzbar |
 | 1i | **Gespeicherte** Einheit öffnen, „Neu generieren" | Die gespeicherte Einheit bleibt unverändert im Ordner, der Vorschlag erscheint als neuer Entwurf. Erst dessen „Einheit speichern" legt eine **zweite** Einheit ab |

@@ -75,9 +75,12 @@ export function UnitConfigForm({
   const [customSegments, setCustomSegments] = React.useState<SegmentConfig[] | null>(
     initialSegments ?? null
   )
-  // Der mitgebrachte Stand darf nur beim ersten Lauf des Effekts überleben —
-  // wechselt der Nutzer danach die Gruppe, wird er wie sonst verworfen.
-  const pristineInitial = React.useRef(initialSegments != null)
+  // Die zuletzt wirksame Gruppe. Entscheidend ist der **Wechsel**, nicht wie
+  // oft der Effekt läuft: React führt Effekte im Entwicklungsmodus doppelt aus,
+  // und jedes Neurendern mit frischen Server-Daten erzeugt ein neues
+  // `group`-Objekt. Ein Einmal-Schalter wäre dabei nach dem ersten Lauf
+  // verbraucht und würde den mitgebrachten Stand beim zweiten verwerfen.
+  const lastGroupId = React.useRef<string | null>(initialGroupId ?? null)
   const [selectedId, setSelectedId] = React.useState<string | null>(
     // Der Einstellbereich, der beim Verlassen offen war — über die Position,
     // weil die Kennungen im Formular bei jedem Laden neu vergeben werden.
@@ -98,24 +101,24 @@ export function UnitConfigForm({
       setClassicSegments([])
       setCustomSegments(null)
       setSelectedId(null)
+      lastGroupId.current = null
       return
     }
+
+    // Die Standardvorlage gehört immer zur aktuellen Gruppe.
     setClassicSegments(
       buildClassicSegments(group.unitDuration, group.sports, ALL_DIFFICULTIES, group.primarySport)
     )
 
-    // Beim ersten Lauf mit mitgebrachter Konfiguration bleibt diese stehen;
-    // der Zeitverlauf gehört zur Einheit, aus der der Nutzer zurückkam.
-    if (pristineInitial.current) {
-      pristineInitial.current = false
-      return
-    }
+    // Dieselbe Gruppe wie zuvor: nichts verwerfen. Das deckt den Lauf beim
+    // Mounten mit, womit ein über „Zurück zum Generator" mitgebrachter Stand
+    // erhalten bleibt — auch wenn der Effekt mehrfach läuft.
+    if (lastGroupId.current === group.id) return
 
+    lastGroupId.current = group.id
     setCustomSegments(null)
     setMode('standard')
     setSelectedId(null)
-    // `group` stammt aus der unveränderlichen groups-Liste und ist damit
-    // referenziell stabil — der Effekt läuft nur bei echtem Gruppenwechsel.
   }, [group])
 
   const segments = mode === 'custom' ? (customSegments ?? classicSegments) : classicSegments
