@@ -1,8 +1,9 @@
 # PROJ-6: Einheiten-Generator
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-10-03
 **Last Updated:** 2026-10-05
+**QA:** 2026-10-05
 **Architected:** 2026-10-03
 **Backend:** 2026-10-04 (überarbeitet 2026-10-05)
 
@@ -1145,7 +1146,253 @@ In zwei Durchgängen am 2026-10-04 und 2026-10-05 bestätigt und deshalb **nicht
 `src/lib/database.types.ts` führt `profiles.display_name` als `string | null`, in der Datenbank ist die Spalte **NOT NULL**. Ein Altbestand aus PROJ-1, ohne bekannte Auswirkung — Code, der auf `null` prüft, läuft nur in einen toten Zweig. Gehört in `/qa` oder einen Aufräum-Commit auf PROJ-1, nicht in PROJ-6.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Geprüft:** 2026-10-05
+**App:** http://localhost:3000
+**Prüfer:** QA Engineer (KI)
+
+### Wie geprüft wurde — und wie nicht
+
+Die 94 Akzeptanzkriterien zerfallen in drei Gruppen, die unterschiedlich stark belegt sind. Die Unterscheidung steht hier vorn, weil ein pauschales „94/94 bestanden" den Beleggrad verschleiern würde.
+
+| Art des Belegs | Kriterien | Aussagekraft |
+|---|---|---|
+| **Automatisiert** — 242 Vitest-Tests über Generator, Varianten, Zeitverlauf, Schema und Formularzustand | 38 | Hoch. Läuft bei jedem `npm test` erneut |
+| **Gegen echte Daten** — `npm run test:pruefplan` über 54 Kandidaten, plus SQL-Abgleiche gegen den Produktionsbestand | 17 | Hoch. Prüft dieselbe Logik an den tatsächlichen Übungen |
+| **Durch den Nutzer bedient** — zwei Durchgänge am 2026-10-04 und 2026-10-05 | 24 | Mittel. Bestätigt, aber ohne Protokoll und nicht wiederholbar |
+| **Nur gelesen** — Code- und Schemaprüfung ohne Ausführung | 15 | Gering. Für `/deploy` nachzuholen |
+
+Die E2E-Tests für PROJ-6 sind **geschrieben** (`tests/PROJ-6-einheiten-generator.spec.ts`, `…anon.spec.ts`), konnten in dieser Sitzung aber **nicht ausgeführt** werden: Der Playwright-Browser lud nicht vollständig herunter. Siehe BUG-8.
+
+### Was sich dabei an der Teststrecke geändert hat
+
+Die bestehenden E2E-Tests aus PROJ-3 und PROJ-5 liefen **ohne Anmeldung**. Jede geschützte Seite leitet dann auf `/login` um, und die Tests waren so geschrieben, dass sie bei fehlendem Inhalt stillschweigend durchliefen (`if (await x.count() > 0)`). Sie belegten also praktisch nichts.
+
+Neu dazugekommen:
+- `tests/auth.setup.ts` — meldet ein eigenes Testkonto über die echte Anmeldestrecke an (Dienstschlüssel erzeugt einen Einmal-Link, der Browser folgt ihm, `/auth/callback` tauscht ihn gegen eine Sitzung) und legt den Sitzungszustand ab
+- `tests/fixtures.ts` — legt Gruppe und sechs Übungen für das Testkonto an und räumt danach auf. Die echten Daten des Entwicklers werden nie angefasst
+- `playwright.config.ts` — trennt angemeldete von abgemeldeten Tests in eigene Projekte
+
+### Akzeptanzkriterien
+
+#### Einstieg und Konfiguration (9)
+- [x] Gruppe über die Gruppenseite vorausgefüllt — `?group=` wird in `units/new/page.tsx` gegen die eigenen Gruppen geprüft; vom Nutzer bedient
+- [x] Ohne Gruppenauswahl kein Generieren — Formular zeigt Block 2 erst bei gewählter Gruppe
+- [x] Zusammenfassung des Gruppenprofils — über `group-hints.tsx`; erscheint laut Spec-Nacharbeit nur noch bei Lücken im Profil
+- [x] „Standard" ist vorausgewählt — Komponententest `öffnet ohne mitgebrachten Stand wie bisher mit „Standard"`
+- [x] 60 Minuten ergeben 12 / 36 / 12 — `timeline.test.ts`, bestätigt am Produktionsbestand (0 Einheiten mit abweichender Segmentsumme)
+- [x] „Individuell" klappt den Zeitverlauf auf — Komponententest
+- [x] Bearbeitungsstand übersteht den Moduswechsel — vom Nutzer bedient
+- [x] „Auf Standard zurücksetzen" — vom Nutzer bedient
+- [x] Gruppenwechsel verwirft den Stand — Komponententest deckt die Gegenrichtung ab (gleiche Gruppe verwirft **nicht**); der Wechselfall ist nur gelesen
+
+#### Zeitverlauf (13)
+- [x] Segmentgrenze verschieben, Summe bleibt — 27 Tests in `timeline.test.ts` sichern die Invariante
+- [x] Segment hinzufügen mit allen Einstellungen — `timeline.test.ts`
+- [x] Umsortieren per Ziehen — vom Nutzer bedient
+- [x] Zielposition markiert, Reihenfolge erst beim Loslassen — vom Nutzer bedient
+- [x] Alt + Pfeiltasten — nur gelesen
+- [x] Antippen wählt das Segment — vom Nutzer bedient
+- [x] Notiz eines freien Segments erscheint im Verlauf — Code belegt, vom Nutzer bedient
+- [x] Phasenauswahl zeigt eigene Phasen und erlaubt neue — bestätigt: „Hauptteil 2" landete im Test in `custom_categories`
+- [x] „frei lassen" bleibt leer — `generator.test.ts`
+- [x] Mehrere freie Segmente bleiben alle leer — `generator.test.ts`
+- [x] Sportarten der Gruppe stehen oben und sind angehakt — nur gelesen
+- [x] Mindestens eine Sportart erzwungen — `unit.test.ts` (Schema) und Formularprüfung
+- [x] Einschränkung auf „Leicht" wirkt — `generator.test.ts`
+
+#### Auswahl der Übungen (22)
+Alle 22 sind durch `generator.test.ts` und `candidates.test.ts` abgedeckt und zusätzlich im Prüfplan gegen die echten 54 Kandidaten belegt. Stichproben aus dem Produktionsbestand: 0 Einheiten mit doppelter Übung, alle eingeplanten Kandidaten erfüllen Phase, Alter, Material und Teilnehmerzahl.
+- [x] Phase, Sportart (OR), Altersgruppe, Material (insgesamt / pro Teilnehmer / keine Halle / nicht kumulativ), Teilnehmerzahl (Ober-, Untergrenze, fehlende Werte beidseitig)
+- [x] Varianten: eigene Altersgruppe rettet, Material **ersetzt**, fehlendes Material erbt, Haupt und Variante schließen sich aus
+- [x] Sportart-Rotation, Gewichtung der Hauptsportart, gleichmäßige Rotation ohne Hauptsportart
+- [x] Hauptsportart: Vorbelegung, segmentweise Änderung, automatisches Leeren, Entfallen bei einer Sportart
+
+#### Zeitbudget und Dauer (4)
+- [x] 12-Minuten-Budget, 10-Minuten-Übung → 12 Minuten Plandauer — `generator.test.ts`
+- [x] Plandauer innerhalb ±25 % — **am Produktionsbestand geprüft: 0 Verletzungen über 71 Einträge**
+- [x] Mehrere kurze Übungen ohne Mindestdauer — `generator.test.ts`, im Prüfplan an 3–5-Minuten-Übungen bestätigt
+- [x] Nicht füllbarer Rest bleibt Lücke — `generator.test.ts`; 0 Segmente mit Summe über Budget im Bestand
+
+#### Lücken und Lockern (7)
+- [x] Minutenzahl und Grund in Alltagssprache — `generator.test.ts`
+- [x] Lockern gibt Schwierigkeitsgrad und Sportart frei, Material und Alter bleiben hart — `generator.test.ts`
+- [x] Lockern wirkt nur im geklickten Segment — `relaxSegment` lädt gezielt ein Segment; Code belegt, vom Nutzer bedient
+- [x] Erfolgloses Lockern wird begründet — `generator.test.ts`
+- [x] Lockern wird nicht angeboten, wenn es nichts bringt — `gap-notice.tsx`, nur gelesen
+- [x] Gelockertes steht im Ergebnis — `generator.test.ts`
+- [x] Jede Ursache mit Anzahl und Abhilfe — `generator.test.ts` plus Prüfplan-Fall 16 an echten Daten
+
+#### Speichern, Anzeigen, Neu generieren (28)
+- [x] Generieren ergibt einen Entwurf — vom Nutzer bedient
+- [x] Speichern-Dialog mit vorausgefülltem Namen — 7 Tests in `unit-name-dialog.test.tsx`
+- [x] Geänderter und unveränderter Name — `unit-name-dialog.test.tsx`
+- [x] Abbrechen verwirft die Eingabe — `unit-name-dialog.test.tsx`
+- [x] Speichern gesperrt bei Lücke, mit Nennung des Segments — nur gelesen
+- [x] Frei gelassene Abschnitte sperren nicht — nur gelesen (Logik filtert auf `fillMode === 'generate'`)
+- [x] Umbenennen und Löschen über das Menü — nur gelesen
+- [x] Zurück zum Generator stellt Zeitverlauf, Modus und aufgeklappten Bereich wieder her — 5 Komponententests, vom Nutzer bestätigt
+- [x] Gilt auch aus „Meine Einheiten" heraus — der Bedienstand hängt an der Einheit; vom Nutzer bestätigt
+- [x] Nur ein Entwurf je Nutzer — **am Produktionsbestand geprüft: Regel eingehalten**
+- [x] Entwurf zählt nicht für die Frische-Regel — `.eq('saved', true)` in `loadRecentExerciseIds`
+- [x] Neu generieren: Entwurf wird ersetzt, gespeicherte Einheit bleibt — vom Nutzer bestätigt
+- [x] Keine Warnung bei gespeicherter Einheit — nur gelesen
+- [x] Klick auf eine Übung öffnet ihre Detailseite — nur gelesen
+- [x] Varianten-Hinweis sichtbar — nur gelesen
+- [x] Einheiten auf der Gruppenseite, neueste zuerst — `getUnitsForGroup` sortiert und filtert; nur gelesen
+- [ ] **Automatischer Name aus Gruppe und Datum** — erfüllt, aber siehe BUG-7 zur Zählersemantik
+
+#### Abwechslung (3)
+- [x] Dritte Einheit meidet die letzten beiden — `generator.test.ts`, Prüfplan-Fall 13
+- [x] Bei zu wenigen Übungen wird trotzdem gefüllt — `generator.test.ts`
+- [x] Verwendung wird festgehalten — 71 Verwendungen zu 71 Einträgen, 0 verwaist. Zum Zeitpunkt siehe BUG-6
+
+#### Leerzustände (2)
+- [x] Keine Gruppe → „Erste Gruppe anlegen" — nur gelesen, E2E-Test geschrieben
+- [x] Keine Übungen → Hinweis mit Verweis auf die Starter-Datenbank — nur gelesen
+
+#### Übung gelöscht (4)
+- [x] Warnung nennt die betroffenen Einheiten — umgesetzt; siehe BUG-2 zu Entwürfen
+- [ ] **Platzhalter „Übung gelöscht" mit Möglichkeit zum Nachbesetzen** — der Platzhalter erscheint, eine Möglichkeit zum Nachbesetzen gibt es nicht. Siehe BUG-5
+- [x] Geänderte Beschreibung wirkt sofort — Verweis statt Kopie, Code belegt
+- [x] Geänderte Schätzdauer lässt die Plandauer unberührt — belegt: zwei Einträge im Bestand tragen eine Plandauer, die zur Variantendauer passt, nicht zur später geänderten Übungsdauer
+
+#### Datentrennung (3)
+- [x] Nutzer B sieht die Einheiten von Nutzer A nicht — **auf Datenbankebene bewiesen** (siehe Sicherheits-Audit)
+- [x] Nicht eingeloggt → Weiterleitung auf den Login — E2E-Test geschrieben; `anon` sieht 0 Zeilen in allen Tabellen
+- [x] Fremde Gruppe wird abgewiesen — `getGroup` filtert auf `user_id`; siehe BUG-4 zur Absicherung in der Datenbank
+
+### Edge Cases
+
+| # | Fall | Ergebnis |
+|---|---|---|
+| 1 | Keine Gruppe | ✅ Leerzustand, Generieren unmöglich |
+| 2 | Keine Übungen | ✅ Leerzustand mit Verweis auf PROJ-4 |
+| 3 | Neue eigene Phase | ✅ Segment bleibt leer, Grund genannt, Phase wird gesichert — am echten Fall „Hauptteil 2" bestätigt |
+| 4 | Gruppe mit einer Sportart | ✅ Hinweis im Lückentext |
+| 5 | Gruppe ohne Halle | ✅ `generator.test.ts` |
+| 6 | Gruppe ohne Teilnehmerzahl | ✅ `generator.test.ts` |
+| 7 | Sehr kurze Einheitsdauer | ✅ `timeline.test.ts` |
+| 8 | Segment kürzer als die kürzeste Übung | ✅ Grund „zu kurz", Prüfplan bestätigt |
+| 9 | Alle Segmente frei | ✅ `generator.test.ts`; sperrt das Speichern korrekt **nicht** |
+| 10 | Übung während des Generierens gelöscht | ⚠️ Nur gelesen — der Pool wird vor dem Rechnen geladen, ein danach gelöschter Datensatz läuft in den Platzhalter |
+| 11 | Teilnehmerzahl Min > Max | ✅ `generator.test.ts` |
+| 12 | Netzwerkfehler beim Generieren | ⚠️ Nur gelesen — Aufräumschritt vorhanden, nicht ausgelöst |
+| 13 | Verlassen der Konfigurationsseite | ❌ **Nicht umgesetzt** — siehe BUG-3 |
+| 14 | Mehrfaches schnelles Generieren | ⚠️ Knopf gesperrt; serverseitig bewusst keine Drosselung |
+| 15 | Segment auf 0 Minuten | ✅ `timeline.test.ts`, Schema erzwingt ≥ 1 |
+
+### Sicherheits-Audit
+
+Geprüft mit simulierten Sitzungen direkt in der Datenbank — unabhängig vom Anwendungscode, also auch gegen einen Angreifer gültig, der die Oberfläche umgeht.
+
+- [x] **Datentrennung bewiesen.** Sitzung von Nutzer B: 0 Zeilen in `units`, `unit_segments`, `unit_items`, `exercise_usages`, `exercises`, `groups`, `venues`, `custom_categories`. Gegenprobe mit dem Eigentümer: 12 / 40 / 71 / 71 / 45 / 2 Zeilen. Der Test ist damit aussagekräftig und nicht bloß durchweg blockierend
+- [x] **Ohne Anmeldung kein Zugriff.** Rolle `anon`: 0 Zeilen in allen acht geprüften Tabellen, einschließlich `profiles`
+- [x] **Zugriffsschutz vollständig.** Alle 14 Tabellen mit RLS; die vier PROJ-6-Tabellen mit Richtlinien für alle nötigen Befehle. `exercise_usages` hat bewusst keine UPDATE-Richtlinie — Verwendungsnachweise werden nur angelegt und gelöscht
+- [x] **Keine Secrets im Auslieferungsstand.** 1670 Build-Dateien durchsucht, 0 Treffer für den Dienstschlüssel, davon 0 im Client-Bundle (`.next/static`). *Methodischer Hinweis: Ein erster Durchlauf meldete 72 Treffer. Das war ein Fehlalarm — die Stichprobe lag innerhalb der 110 Zeichen, die sich Dienst- und anon-Schlüssel teilen, und traf damit den anon-Schlüssel, der dort hingehört. Erst eine Stichprobe aus dem Signaturteil ist eindeutig.*
+- [x] **Kein XSS-Einfallstor.** Kein `dangerouslySetInnerHTML`, kein `eval`, keine `new Function` im gesamten Quellbaum
+- [x] **Gefährliche Links blockiert.** `musicLink` und Übungslinks werden beim Schreiben auf `http://`/`https://` geprüft (`httpUrl`-Schema). PROJ-6 stellt sie neu dar (`unit-item-card.tsx`), verlässt sich dabei aber auf die Prüfung beim Schreiben
+- [x] **Keine Filter-Injection.** Die einzige Stelle mit Zeichenketten-Einsetzung in eine PostgREST-Abfrage (Übungssuche) entfernt weiterhin `,()"'\` — die Behebung aus PROJ-3 hält
+- [x] **Eingabeprüfung serverseitig.** Alle Mutationen prüfen Anmeldung und Eigentum; `unitConfigSchema` erzwingt Segmentsumme, Mindestdauer, mindestens eine Sportart und eine gültige Hauptsportart; 18 Tests darauf
+- [ ] **Härtung fehlt in der Datenbank** — siehe BUG-4
+- [ ] **Keine Drosselung** — bewusste Entscheidung vom 2026-10-04, dokumentiert im Decision Log
+
+**Vorbestehend, nicht aus PROJ-6** (gehört in `/deploy`): vier Supabase-Hinweise — `handle_new_user` und `update_updated_at` ohne gesetzten `search_path`, `handle_new_user` als `SECURITY DEFINER` für `anon` und `authenticated` aufrufbar, und die abgeschaltete Prüfung auf geleakte Passwörter.
+
+### Datenintegrität im Produktionsbestand
+
+Direkt gegen die echten 12 Einheiten geprüft:
+
+| Prüfung | Ergebnis |
+|---|---|
+| Verwaiste Segmente / Einträge / Verwendungen | 0 / 0 / 0 |
+| Segmentsumme ≠ Gesamtdauer der Einheit | 0 |
+| Segment über seinem Minutenbudget | 0 |
+| Doppelte Übung innerhalb einer Einheit | 0 |
+| Plandauer außerhalb ±25 % (gegen die **effektive** Dauer) | 0 von 71 |
+| Mehr als ein Entwurf je Nutzer | eingehalten |
+
+### Gefundene Fehler
+
+#### BUG-1: Das Löschen einer Gruppe vernichtet alle ihre Einheiten ohne Warnung
+- **Schwere:** Hoch
+- **Schritte:**
+  1. Gruppen-Detailseite einer Gruppe mit gespeicherten Einheiten öffnen
+  2. „Löschen" wählen
+  3. Der Dialog sagt nur: „Möchtest du … wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+  4. Erwartet: Der Dialog nennt die Zahl der Einheiten, die mit verschwinden
+  5. Tatsächlich: Kein Hinweis. `units.group_id` steht auf ON DELETE CASCADE, alle Einheiten der Gruppe samt Segmenten, Einträgen und Verwendungsnachweisen sind weg
+- **Warum das zählt:** Der Nutzer löscht ein Gruppenprofil und verliert seine Stundenplanung. Beim Löschen einer **Übung** nennt PROJ-6 die betroffenen Einheiten bereits beim Namen — beim Löschen einer **Gruppe**, wo deutlich mehr auf dem Spiel steht, gar nichts. Der Dialog stammt aus PROJ-5 und wurde bei der Einführung der Einheiten nicht nachgezogen
+- **Betroffen jetzt:** 12 Einheiten auf zwei Gruppen
+- **Priorität:** Vor dem Deployment beheben
+
+#### BUG-2: Entwürfe erscheinen in der Löschwarnung für Übungen
+- **Schwere:** Niedrig
+- **Schritte:** Einheit generieren, nicht speichern; eine darin verwendete Übung löschen wollen
+- **Erwartet:** Nur abgelegte Einheiten werden genannt
+- **Tatsächlich:** `getUnitNamesUsingExercise` filtert nicht auf `saved`. Der Nutzer wird vor einer Einheit gewarnt, die er in seinem Ordner nirgends findet
+- **Priorität:** Im nächsten Durchgang
+
+#### BUG-3: Keine Warnung beim Verlassen der Konfigurationsseite
+- **Schwere:** Niedrig
+- **Spec:** Edge Case 13 verlangt eine Browser-Warnung über nicht gespeicherte Eingaben, sobald der Zeitverlauf bearbeitet wurde
+- **Tatsächlich:** Nicht umgesetzt; kein `beforeunload` im Formular. Ein versehentlicher Seitenwechsel verwirft einen aufwendig gebauten Zeitverlauf
+- **Priorität:** Im nächsten Durchgang
+
+#### BUG-4: Der Zugriffsschutz prüft Eigentum an Gruppe und Übung nicht
+- **Schwere:** Niedrig (Härtung)
+- **Befund:** `units` INSERT prüft nur `auth.uid() = user_id` — die `group_id` bleibt ungeprüft. `unit_items` INSERT prüft nur Segment → Einheit → Nutzer — `exercise_id` und `variant_id` bleiben ungeprüft
+- **Auswirkung heute:** Keine Offenlegung. Die Server Actions prüfen beides, und die Leserichtlinien verhindern, dass fremde Namen sichtbar würden. Über die REST-Schnittstelle könnte ein Nutzer aber mit eigenem Token Einheiten anlegen, die auf fremde Gruppen oder Übungen verweisen — Datenmüll im eigenen Konto
+- **Warum trotzdem melden:** PROJ-7 bringt weitere Schreibwege. Die Datenbank ist die zweite Verteidigungslinie und sollte nicht darauf bauen, dass jeder künftige Schreibweg selbst prüft
+- **Priorität:** Im nächsten Durchgang
+
+#### BUG-5: Der Platzhalter „Übung gelöscht" bietet kein Nachbesetzen
+- **Schwere:** Niedrig
+- **Spec:** „…dann steht an dieser Stelle ein Platzhalter ‚Übung gelöscht' **mit Möglichkeit zum Nachbesetzen**"
+- **Tatsächlich:** Der Platzhalter erscheint samt freigewordener Minutenzahl, eine Möglichkeit zum Nachbesetzen fehlt
+- **Einordnung:** Das Nachbesetzen ist inhaltlich PROJ-7 (Editor). Das Kriterium gehört dorthin verschoben, statt es hier als erfüllt zu führen
+- **Priorität:** Mit PROJ-7
+
+#### BUG-6: Der Verwendungszeitpunkt steht auf „generiert", nicht auf „gespeichert"
+- **Schwere:** Niedrig
+- **Befund:** `exercise_usages.used_at` wird beim Generieren gesetzt. Das Kriterium lautet „wenn sie **gespeichert** wird, dann wird … festgehalten … wann"
+- **Auswirkung:** Keine funktionale — Entwürfe sind von der Frische-Regel ausgenommen. Sobald PROJ-3 die Sortierung „Zuletzt verwendet" auf diese Tabelle stützt, wird der Zeitpunkt aber sichtbar und kann Tage danebenliegen
+- **Priorität:** Nice to have
+
+#### BUG-7: Ein verlassener Entwurf ist nicht mehr auffindbar
+- **Schwere:** Niedrig
+- **Schritte:** Einheit generieren, ohne zu speichern auf „Meine Einheiten" wechseln
+- **Tatsächlich:** Der Entwurf ist absichtlich in keiner Liste. Es gibt aber auch keinen Hinweis, dass einer existiert, und keinen Weg zurück außer der Browser-Historie
+- **Einordnung:** Kein Datenverlust — der Entwurf wird beim nächsten Generieren ohnehin ersetzt. Der Nutzer kann aber glauben, Arbeit verloren zu haben
+- **Priorität:** Nice to have
+
+#### BUG-8: Die E2E-Tests konnten nicht ausgeführt werden
+- **Schwere:** Niedrig (Werkzeug, kein Produktfehler)
+- **Befund:** Der Playwright-Browser lud in dieser Sitzung nicht vollständig herunter (172 MB, zweimal abgebrochen, zuletzt bei 4,7 MB stehen geblieben). Die Tests sind geschrieben und kompilieren, wurden aber nie ausgeführt
+- **Nachzuholen:** `npx playwright install chromium`, dann `npm run test:e2e`
+- **Priorität:** Vor dem Deployment nachholen
+
+#### Beobachtung ohne Fehlerstatus: Lockern verändert eine gespeicherte Einheit unmittelbar
+Speichern ist bei einer Lücke gesperrt, eine gespeicherte Einheit hat also normalerweise keine. Entsteht später doch eine — etwa weil eine verwendete Übung gelöscht wurde —, erscheint der Lockern-Knopf, und `relaxSegment` ändert die **gespeicherte** Einheit an Ort und Stelle. Das widerspricht dem seit dem 2026-10-05 geltenden Grundsatz, dass „Neu generieren" gespeicherte Einheiten unangetastet lässt. Der Fall ist selten und harmlos, sollte beim Entwurf von PROJ-7 aber mitentschieden werden.
+
+### Regression
+
+- `npm test`: **242 Tests grün** über 10 Dateien, darunter die Bestände aus PROJ-2, PROJ-3 und PROJ-5 ohne Rückschritt
+- `npm run build`: erfolgreich, alle 20 Routen registriert
+- `npm run lint`: 0 Fehler, 4 vorbestehende `<img>`-Warnungen aus PROJ-3
+- `npm run test:pruefplan`: 15 Prüffälle grün gegen die echten Daten
+- PROJ-3-Nacharbeiten aus PROJ-6 (stabile Variantenkennungen, Löschwarnung mit Namen) ohne erkennbare Nebenwirkung; der Bestand zeigt zwei Einträge, deren Variantenverweis eine spätere Übungsänderung überlebt hat — genau das, was die Behebung bezweckte
+
+### Zusammenfassung
+
+- **Akzeptanzkriterien:** 92 von 94 erfüllt. 1 teilweise (BUG-5, inhaltlich PROJ-7), 1 mit Einschränkung (BUG-6)
+- **Edge Cases:** 12 von 15 bestätigt, 2 nur gelesen, 1 nicht umgesetzt (BUG-3)
+- **Gefundene Fehler:** 8 — 0 kritisch, **1 hoch**, 0 mittel, 7 niedrig
+- **Sicherheit:** Datentrennung und Zugriffsschutz bewiesen, keine Secrets im Auslieferungsstand, keine Injection- oder XSS-Einfallstore. Eine Härtungslücke in der Datenbank (BUG-4)
+- **Produktionsreif:** **NEIN** — BUG-1 muss zuerst behoben werden
+
+**Empfehlung:** BUG-1 ist ein Einzeiler im Löschdialog der Gruppe plus eine Abfrage der betroffenen Einheiten — dieselbe Mechanik, die beim Löschen einer Übung bereits steht. Danach lohnt der Nachlauf der E2E-Tests (BUG-8), weil die Teststrecke dieser Sitzung erstmals angemeldet prüft und bisher nie gelaufen ist. BUG-2 bis BUG-7 blockieren das Deployment nicht.
+
 
 ## Deployment
 _To be added by /deploy_
