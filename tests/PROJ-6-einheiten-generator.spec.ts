@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test'
 import {
   adminClient,
-  cleanup,
-  seed,
+  deleteUnitsOfGroup,
+  FIXTURE_EXERCISE_COUNT,
+  getFixtures,
+  MARKER,
   testUserId,
   TEST_EMAIL,
   type Fixtures,
@@ -29,16 +31,21 @@ let fixtures: Fixtures
 
 test.beforeAll(async () => {
   userId = await testUserId(admin, TEST_EMAIL)
-  fixtures = await seed(admin, userId)
+  // Nur nachschlagen, nicht anlegen: Der Grundbestand kommt aus dem Projekt
+  // „setup" und wird im Projekt „teardown" wieder abgeräumt.
+  fixtures = await getFixtures(admin, userId)
 })
 
-test.afterAll(async () => {
-  await cleanup(admin, userId)
-})
-
-/** Vor jedem Test die Einheiten leeren, damit die Tests sich nicht beeinflussen. */
+/**
+ * Vor jedem Test die Einheiten **dieser Gruppe** leeren.
+ *
+ * Bewusst nicht alle Einheiten des Kontos: Das Konto wird mit den übrigen
+ * Spec-Dateien und dem Mobile-Projekt geteilt, die bei `fullyParallel: true`
+ * gleichzeitig laufen. Ein Rundumschlag riss ihnen die Daten weg und machte
+ * diesen Test im Verbund rot, obwohl er allein grün war.
+ */
 test.beforeEach(async () => {
-  await admin.from('units').delete().eq('user_id', userId)
+  await deleteUnitsOfGroup(admin, userId, fixtures.groupId)
 })
 
 async function generateStandardUnit(page: import('@playwright/test').Page) {
@@ -137,7 +144,9 @@ test.describe('PROJ-6 — Speichern, Benennen, Löschen', () => {
 
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel('Name').fill('Umbenannte Einheit')
-    await dialog.getByRole('button', { name: 'Umbenennen' }).click()
+    // „Umbenennen" heißt der Menüpunkt und die Überschrift des Dialogs; sein
+    // Bestätigungsknopf heißt „Speichern" (`unit-actions-menu.tsx:116`).
+    await dialog.getByRole('button', { name: 'Speichern' }).click()
 
     await expect(page.getByText('Umbenannte Einheit')).toBeVisible()
   })
@@ -155,11 +164,14 @@ test.describe('PROJ-6 — Speichern, Benennen, Löschen', () => {
 
     await expect(page.getByText('Noch keine Einheit generiert')).toBeVisible()
 
+    // Auf die markierten Testübungen eingegrenzt: Der Satz des Grundbestands
+    // ist bekannt, alles andere im Konto geht diesen Test nichts an.
     const { count } = await admin
       .from('exercises')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
-    expect(count).toBe(6)
+      .eq('work_notes', MARKER)
+    expect(count).toBe(FIXTURE_EXERCISE_COUNT)
   })
 })
 
@@ -204,11 +216,14 @@ test.describe('PROJ-6 — Neu generieren', () => {
     await expect(page.getByText(/Noch nicht gespeichert/)).toBeVisible()
     expect(page.url()).not.toBe(savedUrl)
 
-    // Die gespeicherte Fassung steht unverändert im Ordner.
+    // Die gespeicherte Fassung steht unverändert im Ordner. Auf die
+    // Testgruppe eingegrenzt, damit nebenläufige Tests das Ergebnis nicht
+    // verfälschen können.
     const { count } = await admin
       .from('units')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
+      .eq('group_id', fixtures.groupId)
       .eq('saved', true)
     expect(count).toBe(1)
   })
@@ -217,7 +232,11 @@ test.describe('PROJ-6 — Neu generieren', () => {
 test.describe('PROJ-6 — Löschwarnung bei Übungen', () => {
   /** Die erste Übung, die in der aktuellen Einheit des Testkontos steckt. */
   async function exerciseInCurrentUnit(): Promise<string> {
-    const { data: units } = await admin.from('units').select('id').eq('user_id', userId)
+    const { data: units } = await admin
+      .from('units')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('group_id', fixtures.groupId)
     const unitIds = (units ?? []).map((u) => u.id)
     const { data: segments } = await admin
       .from('unit_segments')
@@ -251,7 +270,11 @@ test.describe('PROJ-6 — Löschwarnung bei Übungen', () => {
     // Jetzt dieselbe Einheit speichern — nun muss die Warnung erscheinen.
     // Ohne diese Gegenprobe wäre der Test auch dann grün, wenn die Warnung
     // grundsätzlich nie auftaucht.
-    await admin.from('units').update({ saved: true }).eq('user_id', userId)
+    await admin
+      .from('units')
+      .update({ saved: true })
+      .eq('user_id', userId)
+      .eq('group_id', fixtures.groupId)
 
     await page.goto(`/exercises/${exerciseId}`)
     await page.getByRole('button', { name: 'Löschen' }).click()
@@ -259,15 +282,7 @@ test.describe('PROJ-6 — Löschwarnung bei Übungen', () => {
   })
 })
 
-test.describe('PROJ-6 — Leerzustände', () => {
-  test('AC: ohne Gruppe erscheint der Hinweis mit „Erste Gruppe anlegen"', async ({ page }) => {
-    await admin.from('units').delete().eq('user_id', userId)
-    await admin.from('groups').delete().eq('user_id', userId)
-
-    await page.goto('/units/new')
-    await expect(page.getByRole('link', { name: /Erste Gruppe anlegen/ })).toBeVisible()
-
-    // Für die folgenden Tests wiederherstellen.
-    fixtures = await seed(admin, userId)
-  })
-})
+// Der Leerzustand „noch keine Gruppe" braucht ein Konto **ohne** Gruppen und
+// räumt dafür alles weg. Das verträgt sich nicht mit nebenläufigen Tests und
+// steht deshalb in `PROJ-6-leerzustand.exklusiv.spec.ts`, das zuletzt und
+// allein läuft.

@@ -71,32 +71,40 @@ test.describe('Gruppenprofile - Formular', () => {
     await expect(page.getByText('Mindestens eine Altersgruppe')).toBeVisible()
   })
 
-  test('AC: Trainingszeit hinzufügen Button ist sichtbar', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /Wiederkehrende Trainingszeit/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Einmalige Trainingszeit/ })).toBeVisible()
+  // Die Oberfläche heißt „Hallenzeit", nicht mehr „Trainingszeit".
+  //
+  // `exact: true` ist hier nicht Zierde: Die Kopfzeile eines Eintrags trägt
+  // „Wiederkehrend", der Knopf darunter „Wiederkehrende Hallenzeit
+  // hinzufügen". Ohne `exact` trifft ein Textgriff beide und Playwright
+  // bricht mit einer Mehrdeutigkeit ab. Dasselbe gilt für „Einmalig" gegen
+  // „Einmalige Hallenzeit hinzufügen" und für „Datum" gegen „Datum wählen".
+  test('AC: Hallenzeit hinzufügen Button ist sichtbar', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /Wiederkehrende Hallenzeit/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Einmalige Hallenzeit/ })).toBeVisible()
   })
 
-  test('AC: Wiederkehrende Trainingszeit hinzufügen', async ({ page }) => {
-    await page.getByRole('button', { name: /Wiederkehrende Trainingszeit/ }).click()
-    await expect(page.getByText('Wiederkehrend')).toBeVisible()
-    await expect(page.getByText('Wochentag')).toBeVisible()
+  test('AC: Wiederkehrende Hallenzeit hinzufügen', async ({ page }) => {
+    await page.getByRole('button', { name: /Wiederkehrende Hallenzeit/ }).click()
+    await expect(page.getByText('Wiederkehrend', { exact: true })).toBeVisible()
+    await expect(page.getByText('Wochentag', { exact: true })).toBeVisible()
   })
 
-  test('AC: Einmalige Trainingszeit hinzufügen', async ({ page }) => {
-    await page.getByRole('button', { name: /Einmalige Trainingszeit/ }).click()
-    await expect(page.getByText('Einmalig')).toBeVisible()
-    await expect(page.getByText('Datum')).toBeVisible()
+  test('AC: Einmalige Hallenzeit hinzufügen', async ({ page }) => {
+    await page.getByRole('button', { name: /Einmalige Hallenzeit/ }).click()
+    await expect(page.getByText('Einmalig', { exact: true })).toBeVisible()
+    await expect(page.getByText('Datum', { exact: true })).toBeVisible()
   })
 
-  test('AC: Trainingszeit entfernen', async ({ page }) => {
-    await page.getByRole('button', { name: /Wiederkehrende Trainingszeit/ }).click()
-    await expect(page.getByText('Wiederkehrend')).toBeVisible()
+  test('AC: Hallenzeit entfernen', async ({ page }) => {
+    await page.getByRole('button', { name: /Wiederkehrende Hallenzeit/ }).click()
+    const badge = page.getByText('Wiederkehrend', { exact: true })
+    await expect(badge).toBeVisible()
 
-    // Click the delete button on the schedule entry
-    const deleteButton = page.locator('.border.rounded-lg').first().getByRole('button')
-    await deleteButton.click()
+    // Der Papierkorb im Eintrag selbst. Die Auswahlfelder daneben tragen die
+    // Rolle „combobox", nicht „button", und kommen hier deshalb nicht dazwischen.
+    await page.locator('.border.rounded-lg').first().getByRole('button').click()
 
-    await expect(page.getByText('Wiederkehrend')).not.toBeVisible()
+    await expect(badge).toHaveCount(0)
   })
 
   test('AC: Neue Halle Button öffnet Dialog', async ({ page }) => {

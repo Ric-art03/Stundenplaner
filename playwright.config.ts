@@ -19,6 +19,22 @@ const channel = process.env.PLAYWRIGHT_CHANNEL
 const browser = channel ? { channel } : {}
 
 /**
+ * Für Geräteprofile, die von sich aus **WebKit** verlangen (`iPhone 13` setzt
+ * `defaultBrowserType: 'webkit'`).
+ *
+ * Ein `channel` allein genügt dort nicht: Playwright wählt den Browser weiter
+ * über `defaultBrowserType`, sucht also WebKit und bricht ab, wenn es nicht
+ * installiert ist („Executable doesn't exist at …\webkit-2248"). Der
+ * Browsertyp muss deshalb mitgezogen werden.
+ *
+ * Der Ersatzweg prüft die Mobilbreite damit in einem Chromium-Motor statt in
+ * WebKit — weniger aussagekräftig als echtes Safari, aber ungleich besser als
+ * 36 Tests, die stillschweigend gar nicht laufen. Ohne die Variable bleibt es
+ * bei WebKit.
+ */
+const mobileBrowser = channel ? { channel, browserName: 'chromium' as const } : {}
+
+/**
  * Eigener Port, falls auf 3000 schon ein Entwicklungsserver läuft. Der würde
  * sonst weiterverwendet und übersetzte jede Route beim ersten Aufruf neu —
  * ein Durchlauf dauert damit ein Vielfaches.
@@ -45,8 +61,18 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    // Meldet einen Testnutzer an und legt den Sitzungszustand ab.
-    { name: 'setup', testMatch: /auth\.setup\.ts/, use: { ...browser } },
+    // Meldet den Testnutzer an, legt den Sitzungszustand ab und baut den
+    // Grundbestand des Testkontos auf. Beides einmal je Durchlauf, bevor
+    // irgendein Test läuft; aufgeräumt wird danach im Projekt „teardown".
+    {
+      name: 'setup',
+      testMatch: /(auth|data)\.setup\.ts/,
+      teardown: 'teardown',
+      use: { ...browser },
+    },
+
+    // Entfernt den Grundbestand, nachdem alle Tests durch sind.
+    { name: 'teardown', testMatch: /data\.teardown\.ts/ },
 
     // Tests ohne Anmeldung — prüfen die Weiterleitung auf den Login.
     {
@@ -59,7 +85,7 @@ export default defineConfig({
     // geschützte Seiten auf /login umleiten.
     {
       name: 'chromium',
-      testIgnore: /.*\.anon\.spec\.ts/,
+      testIgnore: [/.*\.anon\.spec\.ts/, /.*\.exklusiv\.spec\.ts/],
       use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
     },
@@ -67,11 +93,29 @@ export default defineConfig({
     // PROJ-6-Tests legen Einheiten an und löschen sie wieder — liefen sie
     // zugleich in zwei Projekten gegen dasselbe Testkonto, würden sie sich
     // gegenseitig die Daten wegräumen.
+    //
+    // `...mobileBrowser` steht **nach** dem Gerät und zieht beim Ersatzweg
+    // auch den Browsertyp mit — sonst sucht Playwright weiter WebKit und
+    // dieses Projekt fällt vollständig aus, samt der Prüfung auf Mobilbreite.
     {
       name: 'Mobile Safari',
-      testIgnore: [/.*\.anon\.spec\.ts/, /PROJ-6-einheiten-generator\.spec\.ts/],
-      use: { ...devices['iPhone 13'], storageState: STORAGE_STATE },
+      testIgnore: [
+        /.*\.anon\.spec\.ts/,
+        /.*\.exklusiv\.spec\.ts/,
+        /PROJ-6-einheiten-generator\.spec\.ts/,
+      ],
+      use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
+    },
+
+    // Tests, die den Bestand des Testkontos leerräumen und deshalb niemanden
+    // neben sich dulden. Über `dependencies` laufen sie garantiert erst,
+    // wenn alle übrigen Projekte durch sind.
+    {
+      name: 'exklusiv',
+      testMatch: /.*\.exklusiv\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
+      dependencies: ['chromium', 'Mobile Safari', 'abgemeldet'],
     },
   ],
   // Produktionsbuild statt Entwicklungsserver: Letzterer übersetzt jede Route

@@ -22,14 +22,24 @@ test.describe('Übungsdatenbank - Übersichtsseite', () => {
   })
 
   test('AC: Ansichts-Toggle wechselt zwischen Listen- und Kartenansicht', async ({ page }) => {
-    const cardButton = page.getByRole('button', { name: 'Kartenansicht' })
-    await cardButton.click()
-    // After clicking, card view should be active
-    await expect(cardButton).toHaveAttribute('data-state', 'active')
+    // Geprüft wird, was der Nutzer sieht, nicht ein Attribut am Knopf: Die
+    // Umschalter sind zwei gewöhnliche Knöpfe und tragen kein `data-state`
+    // (das stammte aus einer früheren Tabs-Fassung). Listenansicht und
+    // Kartenansicht unterscheiden sich im Behälter — Liste trennt die Zeilen
+    // mit `divide-y`, die Karten stehen in einem Raster.
+    const list = page.locator('div.divide-y')
+    const cards = page.locator('div.grid.grid-cols-1')
 
-    const listButton = page.getByRole('button', { name: 'Listenansicht' })
-    await listButton.click()
-    await expect(listButton).toHaveAttribute('data-state', 'active')
+    // Voreinstellung ist die Liste. Das Warten hier deckt zugleich das
+    // Nachladen der Übungen ab.
+    await expect(list).toBeVisible()
+
+    await page.getByRole('button', { name: 'Kartenansicht' }).click()
+    await expect(cards).toBeVisible()
+    await expect(list).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Listenansicht' }).click()
+    await expect(list).toBeVisible()
   })
 
   test('AC: Suchfeld filtert Übungen nach Name/Beschreibung', async ({ page }) => {
@@ -41,20 +51,31 @@ test.describe('Übungsdatenbank - Übersichtsseite', () => {
   })
 
   test('AC: Filter-Button öffnet Filter-Sheet', async ({ page }) => {
-    const filterButton = page.getByRole('button', { name: /Filter/ })
-    await filterButton.click()
-    // Filter sheet should contain filter sections
-    await expect(page.getByText('Sportart')).toBeVisible()
-    await expect(page.getByText('Altersgruppe')).toBeVisible()
-    await expect(page.getByText('Phase')).toBeVisible()
+    await page.getByRole('button', { name: /Filter/ }).click()
+
+    // `exact: true` ist nötig: Neben jeder Überschrift steht der Platzhalter
+    // ihres Auswahlfelds — „Sportart" gegen „Alle Sportarten", „Phase" gegen
+    // „Alle Phasen". Ohne `exact` trifft ein Textgriff beide und Playwright
+    // bricht mit einer Mehrdeutigkeit ab.
+    await expect(page.getByText('Sportart', { exact: true })).toBeVisible()
+    await expect(page.getByText('Altersgruppe', { exact: true })).toBeVisible()
+    await expect(page.getByText('Phase', { exact: true })).toBeVisible()
   })
 
-  test('AC: Empty State bei leerer Datenbank', async ({ page }) => {
-    // This test is only valid when no exercises exist
-    // Check for either exercises or empty state
-    const hasExercises = await page.locator('[class*="divide-y"]').count() > 0
-    const hasEmptyState = await page.getByText('Noch keine Übungen vorhanden').count() > 0
-    expect(hasExercises || hasEmptyState).toBe(true)
+  test('AC: Übersicht zeigt die Übungen des Kontos', async ({ page }) => {
+    // Vorher stand hier eine Prüfung „Liste **oder** Leerzustand", die beides
+    // mit `.count()` abfragte. `.count()` wartet nicht: Die Seite lädt ihre
+    // Übungen erst nach dem Rendern und zeigt bis dahin Platzhalter, also war
+    // beides null und die Prüfung schlug fehl. Davon abgesehen war sie eine
+    // Tautologie — eines von beidem trifft immer zu.
+    //
+    // Geprüft wird jetzt der Fall, der hier auch herstellbar ist: Das
+    // Testkonto hat einen Grundbestand (`data.setup.ts`), also muss die Liste
+    // ihn zeigen. Den echten Leerzustand prüft
+    // `PROJ-6-leerzustand.exklusiv.spec.ts` an einem leergeräumten Konto.
+    await expect(page.locator('div.divide-y')).toBeVisible()
+    await expect(page.getByRole('link', { name: /E2E Aufwärmen/ }).first()).toBeVisible()
+    await expect(page.getByText('Noch keine Übungen vorhanden')).toHaveCount(0)
   })
 })
 
@@ -74,12 +95,15 @@ test.describe('Übungsdatenbank - Wizard', () => {
     await expect(page.getByText('Name ist erforderlich')).toBeVisible()
   })
 
+  // Auf die Überschrift greifen, nicht auf den Text: „Einordnung" steht auch
+  // in der Fortschrittsanzeige über dem Formular. Ein Textgriff trifft beide
+  // und Playwright bricht mit einer Mehrdeutigkeit ab.
   test('AC: Schritt 1 → Schritt 2 mit gültigen Daten', async ({ page }) => {
     await page.goto('/exercises/new')
     await page.getByLabel('Name *').fill('Test-Übung')
     await page.getByLabel('Beschreibung *').fill('Eine Testbeschreibung für die Übung.')
     await page.getByRole('button', { name: 'Weiter' }).click()
-    await expect(page.getByText('Einordnung')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Einordnung' })).toBeVisible()
   })
 
   test('AC: Zeichenzähler zeigt aktuelle Länge', async ({ page }) => {
@@ -94,10 +118,10 @@ test.describe('Übungsdatenbank - Wizard', () => {
     await page.getByLabel('Name *').fill('Test')
     await page.getByLabel('Beschreibung *').fill('Test Beschreibung')
     await page.getByRole('button', { name: 'Weiter' }).click()
-    await expect(page.getByText('Einordnung')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Einordnung' })).toBeVisible()
     // Go back
     await page.getByRole('button', { name: 'Zurück' }).click()
-    await expect(page.getByText('Basis-Informationen')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Basis-Informationen' })).toBeVisible()
     // Data should be preserved
     await expect(page.getByLabel('Name *')).toHaveValue('Test')
   })

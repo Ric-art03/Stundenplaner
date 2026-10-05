@@ -13,7 +13,11 @@ import path from 'node:path'
  * Alles hängt am Testkonto, nie an den echten Daten des Entwicklers.
  */
 
-const MARKER = 'E2E-Testdaten (PROJ-6)'
+/** Markierung an jeder angelegten Übung — so bleibt Aufräumen zielgenau. */
+export const MARKER = 'E2E-Testdaten (PROJ-6)'
+
+/** Anzahl der Übungen, die `seed` anlegt: je zwei für drei Phasen. */
+export const FIXTURE_EXERCISE_COUNT = 6
 
 /** Eigenes Konto, damit Tests nie die echten Daten des Entwicklers anfassen. */
 export const TEST_EMAIL = 'humpert263+test1@gmail.com'
@@ -48,14 +52,49 @@ export interface Fixtures {
 }
 
 /**
+ * Fester Name statt `Date.now()`: Der Grundbestand wird einmal zentral
+ * angelegt (`data.setup.ts`) und von allen Spec-Dateien **gefunden**, nicht
+ * jeweils neu erzeugt. Ohne festen Namen könnte ihn niemand nachschlagen.
+ */
+export const FIXTURE_GROUP_NAME = 'E2E Testgruppe'
+
+/**
+ * Schlägt den Grundbestand nach, den `data.setup.ts` angelegt hat.
+ *
+ * Bewusst lesend: Legte jede Spec-Datei ihren eigenen Bestand an, würde sie
+ * dabei den der anderen wegräumen — genau der Fehler, der die Suite vorher
+ * unzuverlässig gemacht hat.
+ */
+export async function getFixtures(admin: SupabaseClient, userId: string): Promise<Fixtures> {
+  const { data, error } = await admin
+    .from('groups')
+    .select('id, name')
+    .eq('user_id', userId)
+    .eq('name', FIXTURE_GROUP_NAME)
+    .maybeSingle()
+
+  if (error) throw new Error(`Grundbestand lesen: ${error.message}`)
+  if (!data) {
+    throw new Error(
+      `Die Testgruppe „${FIXTURE_GROUP_NAME}" fehlt. Läuft das Projekt „setup" mit? ` +
+        'Es legt den Grundbestand an (tests/data.setup.ts).'
+    )
+  }
+
+  return { groupId: data.id, groupName: data.name }
+}
+
+/**
  * Eine Gruppe ohne Halle (damit das Material-Kriterium entfällt) und je zwei
  * Übungen pro Phase — genug, damit der Generator alle drei Segmente einer
  * Standard-Einheit lückenlos füllen kann.
+ *
+ * Läuft **einmal** je Durchlauf, im Projekt „setup".
  */
 export async function seed(admin: SupabaseClient, userId: string): Promise<Fixtures> {
   await cleanup(admin, userId)
 
-  const groupName = `E2E Testgruppe ${Date.now()}`
+  const groupName = FIXTURE_GROUP_NAME
   const { data: group, error: groupError } = await admin
     .from('groups')
     .insert({
@@ -102,10 +141,29 @@ export async function seed(admin: SupabaseClient, userId: string): Promise<Fixtu
   return { groupId: group.id, groupName }
 }
 
-/** Entfernt alles, was `seed` angelegt hat — auch nach einem Abbruch. */
+/**
+ * Entfernt alles, was `seed` angelegt hat — auch nach einem Abbruch.
+ *
+ * Läuft **einmal** je Durchlauf, im Projekt „teardown". Mitten im Durchlauf
+ * aufgerufen würde dieser Rundumschlag den nebenläufig laufenden Tests die
+ * Daten wegziehen; genau das war die Ursache der unzuverlässigen Suite.
+ */
 export async function cleanup(admin: SupabaseClient, userId: string): Promise<void> {
   // Einheiten zuerst: Sie verweisen auf Gruppe und Übungen.
   await admin.from('units').delete().eq('user_id', userId)
   await admin.from('exercises').delete().eq('user_id', userId).eq('work_notes', MARKER)
-  await admin.from('groups').delete().eq('user_id', userId).like('name', 'E2E Testgruppe%')
+  await admin.from('groups').delete().eq('user_id', userId).like('name', `${FIXTURE_GROUP_NAME}%`)
+}
+
+/**
+ * Löscht nur die Einheiten **einer** Gruppe. Das braucht jeder Test, der mit
+ * einem bekannten Stand anfangen will, ohne den übrigen Tests ins Gehege zu
+ * kommen.
+ */
+export async function deleteUnitsOfGroup(
+  admin: SupabaseClient,
+  userId: string,
+  groupId: string
+): Promise<void> {
+  await admin.from('units').delete().eq('user_id', userId).eq('group_id', groupId)
 }

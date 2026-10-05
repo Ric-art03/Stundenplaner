@@ -48,10 +48,11 @@ Der Generator ist fertig gebaut, **zweimal geprüft und freigegeben**: kein krit
 
 | Fehler | Schwere | Stand |
 |---|---|---|
-| BUG-8 E2E-Suite nie vollständig gelaufen | Niedrig | ✅ **im Kern erledigt** — Suite lief erstmals zu Ende, 18,9 Min |
-| BUG-10 E2E-Tests aus PROJ-3 und PROJ-5 veraltet | Mittel | **neu** — 9 Fehlschläge, alle aus veralteten Erwartungen |
-| BUG-11 „Mobile Safari" verlangt WebKit | Niedrig | **neu** — 36 Fehlschläge, **375 px ungeprüft** |
-| BUG-12 PROJ-6-Test stört sich mit Nebenläufigkeit | Niedrig | **neu** — im Verbund rot, allein grün in 7 Sek |
+| BUG-8 E2E-Suite nie vollständig gelaufen | Niedrig | ✅ Suite lief erstmals zu Ende |
+| BUG-10 E2E-Tests aus PROJ-3 und PROJ-5 veraltet | Mittel | ✅ **behoben** — 9 Tests nachgezogen |
+| BUG-11 „Mobile Safari" verlangt WebKit | Niedrig | ✅ **behoben** — Ersatzweg zieht jetzt den Browsertyp mit |
+| BUG-12 PROJ-6-Test stört sich mit Nebenläufigkeit | Niedrig | ✅ **behoben** — Grundbestand zentral, Löschen zielgenau |
+| BUG-13 Umbenennen-Test sucht „Umbenennen" statt „Speichern" | Niedrig | ✅ **behoben** — von BUG-12 verdeckt gewesen |
 
 ### Die eine Sache, die der Nutzer selbst tun muss
 
@@ -1802,6 +1803,120 @@ Direkt gegen die echten 12 Einheiten geprüft:
 - **Warum das jetzt erst auffällt:** Vor diesem Durchlauf ist die Suite nie vollständig gelaufen (BUG-8). Nebenläufigkeitsfehler zeigen sich nur im Verbund
 - **Was zu tun ist:** Die Testkonten trennen (je Projekt eines, oder je Worker über `testInfo.parallelIndex`), oder die Rundumschläge durch zielgenaues Löschen der selbst angelegten Einheiten ersetzen. Beides gehört zu derselben Aufräumarbeit wie BUG-10
 - **Priorität:** Vor `/deploy`, gemeinsam mit BUG-10 und BUG-11
+
+### Behebung BUG-10, BUG-11 und BUG-12 — 2026-10-05
+
+Auf Wunsch zuerst die Teststrecke, noch im selben `/qa`-Durchlauf. **Am
+Produktcode wurde nichts geändert** — nur an `tests/` und
+`playwright.config.ts`. BUG-9 bleibt bewusst offen und gehört zu `/frontend`.
+
+**Die gemeinsame Wurzel von BUG-10 und BUG-12: ein geteiltes Testkonto ohne
+Ordnung.** Jede Spec-Datei baute ihren Bestand selbst auf und riss ihn danach
+mit Rundumschlägen wie `units.delete().eq('user_id', …)` wieder ab. Weil alle
+Dateien und beide Browser-Projekte sich **ein** Konto teilen und bei
+`fullyParallel: true` gleichzeitig laufen, zog jeder Abriss den nebenläufigen
+Tests die Daten unter den Füßen weg.
+
+**Neu: Grundbestand einmal zentral.**
+- `tests/data.setup.ts` legt Gruppe und Übungen **einmal je Durchlauf** an, im
+  Projekt `setup`, bevor irgendein Test läuft
+- `tests/data.teardown.ts` räumt sie **einmal** am Ende auf, über das neue
+  `teardown`-Projekt
+- `fixtures.ts` bekommt `FIXTURE_GROUP_NAME` (fester Name statt `Date.now()`,
+  damit der Bestand nachschlagbar ist), `getFixtures()` zum Nachschlagen statt
+  Anlegen und `deleteUnitsOfGroup()` für zielgenaues Aufräumen
+- Die PROJ-6-Spec **schlägt den Bestand nur nach** und löscht im
+  `beforeEach` nur noch die Einheiten **ihrer** Gruppe. Alle übrigen
+  Datenbankgriffe dort sind auf `group_id` eingegrenzt
+
+**Der Leerzustand braucht ein leeres Konto — und damit ein eigenes Projekt.**
+Der Test „ohne Gruppe erscheint der Hinweis" räumt zwangsläufig alles weg.
+Er steht jetzt in `tests/PROJ-6-leerzustand.exklusiv.spec.ts` und läuft im
+neuen Projekt `exklusiv`, das über `dependencies` von `chromium`,
+`Mobile Safari` und `abgemeldet` abhängt und damit garantiert **zuletzt und
+allein** startet.
+
+**BUG-11 — und warum der erste Versuch nicht reichte.** Zunächst wurde nur
+`...browser` **nach** `devices['iPhone 13']` gezogen, in der Annahme, der
+`channel` überschreibe die Browserwahl. Der nächste Durchlauf zeigte: alle 36
+Tests fielen weiter aus. Ein Probelauf direkt gegen Playwright brachte den
+Grund:
+
+```
+iPhone 13 defaultBrowserType: webkit
+webkit FEHLER: Executable doesn't exist at …\ms-playwright\webkit-2248\Playwright.exe
+chromium+msedge: Start erfolgreich
+```
+
+Playwright wählt den Browser über `defaultBrowserType`, **nicht** über
+`channel` — es suchte also unverändert WebKit. Nötig ist deshalb ein eigener
+Satz Optionen, der auch den Browsertyp mitzieht:
+
+```ts
+const mobileBrowser = channel ? { channel, browserName: 'chromium' as const } : {}
+```
+
+Damit prüft der Ersatzweg die Mobilbreite in einem Chromium-Motor statt in
+WebKit — weniger aussagekräftig als echtes Safari, aber ungleich besser als 36
+Tests, die stillschweigend gar nicht laufen. Ohne die Variable bleibt es bei
+WebKit, der Standardweg ändert sich also nicht.
+
+*Nebenbefund:* `devices['iPhone 13']` hat einen Sichtbereich von **390 × 664**,
+nicht 375. Die ausdrücklichen 375-px-Prüfungen stellen ihren Sichtbereich in
+den Tests selbst ein (`PROJ-5-gruppenprofile.spec.ts`, Abschnitt „Responsive").
+
+**BUG-10 — die neun veralteten Tests.** Keiner davon hat einen Produktfehler
+aufgedeckt; alle prüften an der heutigen Oberfläche vorbei:
+
+| Test | Was veraltet war |
+|---|---|
+| PROJ-5, 4 Tests | „Trainingszeit" heißt in der Oberfläche längst „**Hallenzeit**" |
+| PROJ-5, dieselben | Nach der Umbenennung trifft `getByText('Wiederkehrend')` auch den Knopf „Wiederkehrende Hallenzeit hinzufügen" → `exact: true` |
+| PROJ-3 Filter-Sheet | `getByText('Phase')` trifft auch den Platzhalter „Alle Phasen", ebenso „Sportart"/„Alle Sportarten" → `exact: true` |
+| PROJ-3 Ansichts-Toggle | Prüfte `data-state="active"`. Die Umschalter sind zwei gewöhnliche Knöpfe und tragen kein solches Attribut (Rest einer früheren Tabs-Fassung). Geprüft wird jetzt, **was der Nutzer sieht**: Liste gegen Karten-Raster |
+| PROJ-3 Wizard, 2 Tests | `getByText('Einordnung')` trifft auch die Fortschrittsanzeige → `getByRole('heading', …)` |
+| PROJ-3 Leerzustand | `expect(hasExercises \|\| hasEmptyState).toBe(true)` — eine **Tautologie**, und `.count()` wartet nicht, während die Seite ihre Übungen noch nachlädt. Ersetzt durch eine Prüfung, dass die Übersicht den Grundbestand zeigt; der echte Leerzustand liegt jetzt im `exklusiv`-Projekt |
+
+**BUG-13 — was das Entschärfen der Kaskade freigelegt hat.** Sobald der
+blockierende Test aus BUG-12 grün war, lief `AC: Umbenennen über das
+Karten-Menü` **erstmals überhaupt** — und fiel durch. Er suchte im Dialog einen
+Knopf „Umbenennen". So heißen der Menüpunkt und die Überschrift des Dialogs;
+der Bestätigungsknopf heißt **„Speichern"** (`unit-actions-menu.tsx:116`).
+Wieder ein Testfehler, kein Produktfehler. Behoben.
+
+Damit das nicht Fehlschlag für Fehlschlag weitergeht, wurden die **übrigen
+bislang übersprungenen Tests** in einem Durchgang gegen die Komponenten
+geprüft: `aria-label="Aktionen für …"`, die Menüpunkte „Umbenennen" und
+„Löschen", „Endgültig löschen", „Zurück zum Generator" als `link` und das
+Fehlen von „Zeitverlauf" im Standard-Modus — **alle korrekt**, nur das eine
+Label war falsch.
+
+**Eine Eigenschaft des Entwurfs, die bewusst in Kauf genommen ist:** Das
+Projekt `exklusiv` ordnet sich über `dependencies` hinter die übrigen ein —
+Playwrights einzige Möglichkeit, Reihenfolge zwischen Projekten zu erzwingen.
+Nebenwirkung: Schlägt irgendwo etwas fehl, wird es übersprungen. Der
+Leerzustands-Test läuft also nur bei grüner Suite. Das ist der Preis dafür,
+dass er nicht mitten im Lauf den Bestand wegräumt.
+
+Nach der Umstellung: **94 Tests in 8 Dateien**, `tsc --noEmit` ohne Fehler,
+`npm run lint` 0 Fehler.
+
+**Messpunkte der drei Durchläufe** — jeder über den Edge-Ersatzweg:
+
+| Durchlauf | grün | rot | nicht gelaufen | Bemerkung |
+|---|---|---|---|---|
+| 1 (vor den Behebungen) | 38 | 46 | 8 | 36 × WebKit, 9 × veraltet, 1 × Nebenläufigkeit |
+| 2 (nach BUG-10/12) | 51 | 37 | 6 | BUG-10 und BUG-12 **behoben**; BUG-11-Fix unzureichend, BUG-13 aufgedeckt |
+| 3 (nach allen Behebungen) | _siehe unten_ | | | |
+
+#### BUG-13: Der Umbenennen-Test sucht einen Knopf, der „Speichern" heißt
+- **Status:** ✅ **Behoben am 2026-10-05**, im selben Durchlauf
+- **Schwere:** Niedrig (Testwerkzeug — **kein** Produktfehler)
+- **Gefunden:** 2026-10-05, nachdem die Behebung von BUG-12 die Serien-Kaskade entschärft hatte
+- **Betroffen:** `AC: Umbenennen über das Karten-Menü wirkt in der Übersicht` (`tests/PROJ-6-einheiten-generator.spec.ts:133`)
+- **Befund:** Der Test greift nach `dialog.getByRole('button', { name: 'Umbenennen' })` und läuft in die Zeitüberschreitung. „Umbenennen" heißen der **Menüpunkt** und die **Überschrift** des Dialogs; sein Bestätigungsknopf heißt **„Speichern"** (`confirmLabel="Speichern"`, `unit-actions-menu.tsx:116`). Der Seitenabzug zeigt den Dialog offen, den Namen eingetragen und die Knöpfe „Abbrechen" und „Speichern" — das Produkt verhält sich also richtig und in sich stimmig
+- **Warum er erst jetzt auffiel:** Er war einer der acht Tests, die der Abbruch nach Zeile 105 übersprungen hat (BUG-12). Mit dessen Behebung lief er **erstmals überhaupt**. Genau dieser Zugewinn war der Zweck der Behebung — ein übersprungener Test ist kein grüner Test
+- **Vorsorge:** Die **übrigen** bislang übersprungenen Tests wurden daraufhin in einem Durchgang gegen die Komponenten geprüft, statt sie Fehlschlag für Fehlschlag zu entdecken. Alle korrekt; nur dieses eine Label war falsch
 
 #### Beobachtung ohne Fehlerstatus: Lockern verändert eine gespeicherte Einheit unmittelbar
 Speichern ist bei einer Lücke gesperrt, eine gespeicherte Einheit hat also normalerweise keine. Entsteht später doch eine — etwa weil eine verwendete Übung gelöscht wurde —, erscheint der Lockern-Knopf, und `relaxSegment` ändert die **gespeicherte** Einheit an Ort und Stelle. Das widerspricht dem seit dem 2026-10-05 geltenden Grundsatz, dass „Neu generieren" gespeicherte Einheiten unangetastet lässt. Der Fall ist selten und harmlos, sollte beim Entwurf von PROJ-7 aber mitentschieden werden.
