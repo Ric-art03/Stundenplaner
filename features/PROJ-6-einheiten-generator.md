@@ -24,9 +24,9 @@ nichts auf:
 
 | Offen | Wo es hingehört |
 |---|---|
-| **BUG-9** — Lockern wird in einer Sackgasse angeboten, ein Einzeiler in `gap-notice.tsx` | `/frontend` |
-| **BUG-16** — ein Speichern ohne getroffene Zeile meldet Erfolg | `/backend` |
-| Vier vorbestehende Supabase-Hinweise | `/deploy` |
+| ~~**BUG-9**~~ — Lockern in der Sackgasse | ✅ behoben in `/deploy` |
+| **BUG-16** — ein Speichern ohne getroffene Zeile meldet Erfolg | `/backend`, **offen** |
+| ~~Vier vorbestehende Supabase-Hinweise~~ | ✅ drei behoben in `/deploy`; der vierte (geleakte Passwörter) ist eine Dashboard-Einstellung |
 | Prüfung in **echtem WebKit** — dafür fehlt die Ordner-Ausnahme im Virenschutz, und die muss in **Avast** stehen, nicht im Windows-Sicherheitscenter (siehe unten) | Nutzer, einmalig |
 
 Die Suite läuft bis dahin über den Edge-Ersatzweg und prüft dabei **auch die
@@ -59,7 +59,7 @@ Alle drei Änderungen betreffen ausschließlich `tests/` und `playwright.config.
 | BUG-5 Platzhalter ohne Nachbesetzen | Niedrig | offen — gehört inhaltlich zu PROJ-7 |
 | BUG-6 Verwendungszeitpunkt steht auf „generiert" | Niedrig | offen |
 | BUG-7 Verlassener Entwurf nicht mehr auffindbar | Niedrig | offen |
-| BUG-9 Lockern wird in einer Sackgasse angeboten | Niedrig | **neu** — eine Zeile in `gap-notice.tsx` |
+| BUG-9 Lockern wird in einer Sackgasse angeboten | Niedrig | ✅ **behoben am 2026-10-05** in `/deploy` — `no-phase` gibt jetzt `false` |
 | BUG-16 Ein Speichern ohne getroffene Zeile meldet Erfolg | Niedrig | **neu** — `units.ts:578`, gehört zu `/backend` |
 
 **An der Teststrecke** — blockiert die Freigabe nicht, aber `/deploy`:
@@ -1784,6 +1784,7 @@ Direkt gegen die echten 12 Einheiten geprüft:
 - **Priorität:** Vor dem Deployment nachholen
 
 #### BUG-9: Lockern wird angeboten, wo es nachweislich nicht helfen kann
+- **Status:** ✅ **Behoben am 2026-10-05** im Zuge von `/deploy`. In `relaxCanHelp` gibt `no-phase` jetzt `false`; der Nutzer bekommt statt des folgenlosen Knopfes den Satz, dass Lockern hier nichts bringt, **und** den Rat, der Phase Übungen zuzuordnen. Der Befund im Generator wurde vor der Behebung am Code nachgeprüft: `buildPool` filtert in `generator.ts:264-266` zuerst auf die Phase, `criteriaFor` greift erst danach — ein leerer Phasen-Treffer bleibt auf jeder Lockerungsstufe leer
 - **Schwere:** Niedrig
 - **Gefunden:** 2026-10-05, zweiter Durchlauf (Code-Beweis, nicht bedient)
 - **Schritte:** Ein Segment auf eine **neu angelegte eigene Phase** stellen, für die es noch keine Übung gibt, und generieren
@@ -2082,4 +2083,108 @@ Speichern ist bei einer Lücke gesperrt, eine gespeicherte Einheit hat also norm
 
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://stundenplaner-self.vercel.app
+- **Deployed:** 2026-10-05
+- **Tag:** `v1.5.0-PROJ-6`
+- **Weg:** Push auf `main`, Vercel liefert automatisch aus (Projekt hängt seit PROJ-1 am GitHub-Repo)
+
+### Vorprüfung
+
+| Punkt | Ergebnis |
+|---|---|
+| `npm run build` | ✅ 20 Routen |
+| `npm run lint` | ✅ 0 Fehler, 4 vorbestehende `<img>`-Warnungen aus PROJ-3 |
+| `npm test` | ✅ 249 Tests in 11 Dateien |
+| `npm run test:e2e` | ✅ 94 Tests, 0 Fehlschläge (Edge-Ersatzweg) |
+| QA-Freigabe, 0 kritisch/hoch | ✅ |
+| Secrets im Repo | ✅ nur `.env.example` und `.env.local.example`; `.env*.local` ist ignoriert |
+| Env-Variablen | ✅ die App braucht drei: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` |
+
+> **`SUPABASE_SERVICE_ROLE_KEY` gehört nicht nach Vercel.** Er wird allein von
+> den E2E-Tests gebraucht (`tests/fixtures.ts`) und kommt im Anwendungscode
+> nicht vor. In der Produktion hätte er nichts zu tun außer Schaden anzurichten.
+
+### Was in dieser Auslieferung gehärtet wurde
+
+**1. Sicherheits-Kopfzeilen** — `next.config.ts` war bis hierher leer; die Header
+fehlten in PROJ-1 bis PROJ-5 also durchgehend. Jetzt liegen `X-Frame-Options:
+DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+origin-when-cross-origin` und `Strict-Transport-Security` an jeder Antwort.
+Nachgeprüft am Produktionsbuild gegen `localhost:3100`, alle vier vorhanden.
+Eine **Content-Security-Policy** ist bewusst nicht dabei: Sie ist die wirksamste
+dieser Kopfzeilen, bricht aber eine App, sobald eine Quelle fehlt, und gehört
+in einen eigenen Durchgang mit eigener Prüfung.
+
+**2. Drei der vier Supabase-Hinweise** — Migration
+`20261005170437_harden_db_functions.sql`, angewendet auf die Produktionsdatenbank:
+
+- `search_path` festgelegt auf `handle_new_user` und `update_updated_at` (Hinweis 0011)
+- `EXECUTE` auf `handle_new_user` für `PUBLIC`, `anon` und `authenticated` entzogen (Hinweise 0028 und 0029). Die ACL steht jetzt auf `{postgres=X/postgres,service_role=X/postgres}`
+
+Beides wurde **nach** dem Anwenden nachgeprüft, nicht nur angenommen:
+
+- `update_updated_at` feuert weiter — Update auf eine echte Gruppe als Rolle `authenticated`, `updated_at` stieg, Änderung zurückgerollt
+- Der Entzug bricht keinen bestehenden Trigger. Das Ausführungsrecht einer Trigger-Funktion prüft PostgreSQL beim `CREATE TRIGGER`, nicht bei jedem Auslösen. Belegt an einem Stellvertreter-Aufbau in derselben Datenbank: eigene Trigger-Funktion, Recht für `PUBLIC` und `authenticated` entzogen, Einfügen als `authenticated` lief fehlerfrei. Der Pfad über `supabase_auth_admin` selbst war nicht prüfbar — die MCP-Verbindung darf diese Rolle nicht annehmen
+- Keine Rückstände: Prüftabelle, Prüffunktion und Prüfprofile sind weg, geprüft über `pg_tables`, `pg_proc` und `public.profiles`
+- `get_advisors` meldet danach **nur noch einen** Hinweis statt vier
+
+**3. BUG-9** — der letzte offene Produktfehler, eine Zeile in
+`gap-notice.tsx`: `relaxCanHelp` gibt für `no-phase` jetzt `false`.
+
+### Fehlertracking: Vercel-Monitoring statt Sentry
+
+Bewusste Entscheidung des Nutzers am 2026-10-05. Sentry hätte ein eigenes Konto,
+ein eigenes Projekt und einen DSN gebraucht, und sein Einrichtungsassistent
+(`npx @sentry/wizard`) hätte `next.config.ts` umgeschrieben — genau die Datei,
+in der jetzt die Sicherheits-Kopfzeilen stehen. Vercel bringt eigenes
+Error-Tracking mit, ohne Konto und ohne Paket, dafür **ohne Source-Maps und mit
+weniger Funktionen**. Zu finden im Vercel-Dashboard unter „Monitoring".
+
+Wer später doch Sentry will: `docs/production/error-tracking.md`, und dabei die
+Header in `next.config.ts` erhalten.
+
+### Was nach der Auslieferung offen bleibt
+
+1. **Schutz gegen geleakte Passwörter** — der vierte Supabase-Hinweis, und der
+   einzige, der nicht per SQL geht. Supabase Dashboard → Authentication →
+   Policies → „Leaked password protection" einschalten. Prüft Passwörter gegen
+   HaveIBeenPwned
+2. **BUG-16** — ein Speichern, dessen Update keine Zeile trifft, meldet Erfolg
+   (`units.ts:578`). Gehört zu `/backend`
+3. **Prüfung in echtem WebKit** — braucht die Ordner-Ausnahme im Virenschutz,
+   und die muss in **Avast** stehen: Windows Defender ist auf diesem Rechner
+   abgeschaltet
+4. **Die 40 Testübungen** stecken weiter in der Datenbank, markiert mit
+   `Testdaten (PROJ-6)`. Ihr Inhalt ist die Rohmasse für PROJ-4 — erst
+   übernehmen, dann löschen
+5. **E-Mail-Templates** — siehe die Pre-Launch-Checkliste im PRD. Braucht
+   Custom SMTP
+
+### Befund am Rande: das Migrationsregister ist unvollständig
+
+Beim Pflichtpunkt „alle Migrationen angewendet" ist eine Abweichung
+aufgefallen, die **nicht** aus PROJ-6 stammt und die Auslieferung nicht
+aufhält, aber eine Falle für später ist:
+
+Das Repo hat 12 Migrationsdateien, die Datenbank führt 9 Einträge. Drei
+Dateien fehlen im Register ganz
+(`group_schedules_one_time_dates`, `groups_single_participant_count`,
+`groups_add_primary_sport`), drei weitere stehen unter anderen Zeitstempeln als
+die Dateinamen (die `units`-Migrationen).
+
+**Das Schema selbst ist vollständig** — nachgeprüft über
+`information_schema.columns`: `group_schedules.schedule_type` und `.date` sind
+da, `weekday` ist nullable, `groups.participants` existiert ohne
+`participants_min`/`participants_max`, `groups.primary_sport` ist da. Die
+Änderungen wurden also als rohes SQL eingespielt, ohne Eintrag ins Register.
+
+**Die Falle:** Ein `supabase db push` würde versuchen, die drei nicht
+registrierten Dateien erneut anzuwenden. Zwei sind idempotent
+(`ADD COLUMN IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS`), die dritte **ist es
+nicht**: `ALTER TABLE groups RENAME COLUMN participants_max TO participants` in
+`20261003120000` scheitert, weil die Spalte längst umbenannt ist. Vor einem
+`db push` also entweder das Register nachziehen oder diese Migration gegen
+Wiederholung absichern. Der Dateibestand im Repo ist korrekt und bildet ein
+neues Schema richtig auf — irreführend ist allein das Register.
+

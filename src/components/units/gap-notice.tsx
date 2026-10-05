@@ -63,6 +63,12 @@ function remediesFor(detail: GapDetail): string[] {
 /** Lockern gibt nur Sportart und Schwierigkeitsgrad frei — alles andere bleibt hart. */
 function relaxCanHelp(detail: GapDetail | null): boolean {
   if (!detail || detail.relaxed) return false
+  // Hat die Phase gar keine Übung, ist Lockern eine Sackgasse: `buildPool`
+  // filtert **zuerst** auf die Phase und lässt die lockerbaren Kriterien erst
+  // danach greifen (`generator.ts:264-266`). Ein leerer Phasen-Treffer bleibt
+  // deshalb auf jeder Lockerungsstufe leer. Der Knopf würde folgenlos bleiben
+  // und vom einzigen Ausweg ablenken — der Phase Übungen zuzuordnen.
+  if (detail.kind === 'no-phase') return false
   if (detail.kind !== 'all-filtered') return true
   return detail.blockedBy.some((entry) => SOFT.includes(entry.criterion))
 }

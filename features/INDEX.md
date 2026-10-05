@@ -13,19 +13,25 @@
 
 ## Woran zuletzt gearbeitet wurde
 
-**PROJ-6 (Einheiten-Generator)** — das Produkt ist **freigegeben** (0 kritisch, 0 hoch, 0 mittel), und seit dem 2026-10-05 ist auch die **E2E-Suite vollständig grün: 94 Tests, 0 Fehlschläge, 0 übersprungen in 10,0 Minuten** (zuvor 79 / 7 / 8).
+**PROJ-6 (Einheiten-Generator) ist ausgeliefert** — https://stundenplaner-self.vercel.app, Tag `v1.5.0-PROJ-6`, am 2026-10-05. Damit steht das Herzstück der App in Produktion: 94 E2E-Tests grün, 249 Unit-Tests grün, 0 kritische/hohe Fehler.
 
-Drei Befunde liegen zwischen Lauf 3 und Lauf 5, und zwei widerlegen eine Annahme der früheren Durchläufe:
+In derselben Auslieferung gehärtet:
 
-1. **Ein hängender Installationsprozess** trug den Großteil der Last, nicht die Nebenläufigkeit. Ein `npx playwright install chromium` von 09:52 Uhr lief noch acht Stunden später unverändert weiter; nach dem Beenden fielen fünf der sechs Zeitüberschreitungen weg, ohne eine geänderte Testzeile
-2. **BUG-14** — die Zusicherung `getByText('Gespeichert')` traf als laxe Teilzeichenkette auch „Noch nicht **gespeichert**". Sie war damit immer erfüllt, am sichersten bei fehlgeschlagenem Speichern. Der instabile Test war kein Rätsel, sondern ein Test, der seinen eigenen Fehlschlag überdeckt hat
-3. **BUG-15** — die Zusicherungen hatten 5 Sekunden Zeit, der Test 120. Der letzte Fehlschlag brauchte 16,9 Sekunden und war danach grün
+- **Sicherheits-Kopfzeilen** — `next.config.ts` war leer, die Header fehlten in PROJ-1 bis PROJ-5 also durchgehend. Jetzt liegen X-Frame-Options, X-Content-Type-Options, Referrer-Policy und HSTS an jeder Antwort, am Produktionsbuild nachgeprüft
+- **Drei der vier Supabase-Hinweise** — `search_path` auf beide Datenbankfunktionen, `EXECUTE` auf `handle_new_user` für `anon` und `authenticated` entzogen. Beides nach dem Anwenden nachgeprüft: Trigger feuern weiter, keine Rückstände, `get_advisors` meldet nur noch einen Hinweis
+- **BUG-9** — der letzte offene Produktfehler, eine Zeile in `gap-notice.tsx`
 
-Alle Behebungen betrafen ausschließlich `tests/` und `playwright.config.ts` — **kein Produktcode**.
+**Fehlertracking:** Vercel-Monitoring statt Sentry, bewusst entschieden — kein Konto, kein Paket, dafür ohne Source-Maps.
 
-**Nächster Schritt:** `/deploy`. Dort warten **BUG-9** (Einzeiler in `gap-notice.tsx`, `/frontend`), **BUG-16** (ein Speichern ohne getroffene Zeile meldet Erfolg, `/backend`) und die vier vorbestehenden Supabase-Hinweise. Offen bleibt außerdem die Prüfung in **echtem WebKit** — dafür braucht es eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright`, und die muss in **Avast** stehen: Windows Defender ist auf diesem Rechner abgeschaltet, eine Ausnahme im Windows-Sicherheitscenter wirkt nicht.
+### Was offen bleibt
 
-_Stand 2026-10-05. Dieser Abschnitt kann weg, sobald PROJ-6 deployed ist._
+1. **Schutz gegen geleakte Passwörter** — der vierte Supabase-Hinweis, nur im Dashboard einschaltbar: Authentication → Policies
+2. **BUG-16** — ein Speichern, dessen Update keine Zeile trifft, meldet Erfolg (`units.ts:578`). Gehört zu `/backend`
+3. **Prüfung in echtem WebKit** — braucht eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright`, und die muss in **Avast** stehen: Windows Defender ist auf diesem Rechner abgeschaltet, eine Ausnahme im Windows-Sicherheitscenter wirkt nicht
+4. **Das Migrationsregister ist unvollständig** — drei Dateien fehlen dort, das Schema ist aber vollständig. Ein `supabase db push` würde über `20261003120000` stolpern. Details im Deployment-Abschnitt der PROJ-6-Spec
+5. **Die 40 Testübungen** stecken weiter in der Datenbank — Rohmasse für PROJ-4, erst übernehmen, dann löschen
+
+**Nächster Schritt:** PROJ-7 (Einheiten-Editor) über `/write-spec`, oder PROJ-4 (Starter-Datenbank), die die Testübungen mit abräumt.
 
 ## Features
 
@@ -36,7 +42,7 @@ _Stand 2026-10-05. Dieser Abschnitt kann weg, sobald PROJ-6 deployed ist._
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
-| PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Approved | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
+| PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Roadmap | — | 2026-09-28 |
 | PROJ-9 | Kalenderansicht & Langzeitplanung | P1 | PROJ-6, PROJ-7 | Roadmap | — | 2026-09-28 |
 | PROJ-10 | Übungsrotation (Abwechslung über Wochen) | P1 | PROJ-6, PROJ-9 | Roadmap | — | 2026-09-28 |
