@@ -11,6 +11,14 @@
 - **Approved** - `/qa` passed, no critical/high bugs, ready to deploy
 - **Deployed** - `/deploy` done, live in production
 
+## Woran zuletzt gearbeitet wurde
+
+**PROJ-6 (Einheiten-Generator)** — gebaut und einmal vollständig geprüft. Von acht gefundenen Fehlern sind die beiden behoben, die zählten; fünf kleine sind offen und blockieren nichts.
+
+**Nächster Schritt: `/qa` erneut laufen lassen.** Alles Nötige steht am Anfang der Spec unter „Hier geht es weiter" — inklusive der einen Sache, die der Nutzer selbst erledigen muss, damit die E2E-Tests in vertretbarer Zeit durchlaufen.
+
+_Stand 2026-10-05. Dieser Abschnitt kann weg, sobald PROJ-6 freigegeben ist._
+
 ## Features
 
 | ID | Feature | Priority | Dependencies | Status | Spec | Created |

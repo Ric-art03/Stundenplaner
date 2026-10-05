@@ -7,6 +7,72 @@
 **Architected:** 2026-10-03
 **Backend:** 2026-10-04 (überarbeitet 2026-10-05)
 
+## Hier geht es weiter — Stand 2026-10-05
+
+> Dieser Abschnitt steht bewusst ganz oben: Er ist das Erste, was eine neue
+> Sitzung liest. Sobald PROJ-6 freigegeben ist, kann er ersatzlos weg.
+
+### In einem Satz
+
+Der Generator ist fertig gebaut und einmal vollständig geprüft. Von acht gefundenen Fehlern sind die beiden behoben, die zählten; fünf kleine sind offen und blockieren nichts. Es fehlt ein erneuter `/qa`-Durchlauf zur Freigabe.
+
+### Der nächste Schritt
+
+**`/qa` erneut laufen lassen.** Der vorige Bericht steht weiter unten unter „QA Test Results" — er nennt zu jedem der 94 Akzeptanzkriterien, *wie* es belegt ist (automatisiert, gegen echte Daten, vom Nutzer bedient, oder nur gelesen). Nur die zuletzt geänderten Stellen und die 15 bislang nur gelesenen Kriterien brauchen frische Aufmerksamkeit.
+
+Der Abschnitt „Übergabe an /qa" listet die Fälle, die Hände brauchen. **Wichtig dort:** Der Bedienstand lässt sich nur mit einer **neu generierten** Einheit prüfen — Einheiten von vor dem 2026-10-05 tragen keinen und öffnen immer in „Individuell". Das ist kein Fehler.
+
+### Fehlerstand
+
+| Fehler | Schwere | Stand |
+|---|---|---|
+| BUG-1 Gruppe löschen vernichtet Einheiten ohne Warnung | Hoch | ✅ behoben, 7 Tests |
+| BUG-2 Entwürfe in der Löschwarnung für Übungen | Niedrig | ✅ behoben, E2E-Test mit Gegenprobe |
+| BUG-8 E2E-Tests nie gelaufen | Niedrig | ⚠️ Strecke läuft, 6 Tests grün — voller Durchlauf scheitert am Rechner, siehe unten |
+| BUG-3 Keine Warnung beim Verlassen der Konfigurationsseite | Niedrig | offen — Edge Case 13 der Spec, schlicht nicht umgesetzt |
+| BUG-4 Zugriffsschutz prüft Eigentum an Gruppe und Übung nicht | Niedrig | offen — Härtung, vor PROJ-7 sinnvoll |
+| BUG-5 Platzhalter ohne Nachbesetzen | Niedrig | offen — gehört inhaltlich zu PROJ-7 |
+| BUG-6 Verwendungszeitpunkt steht auf „generiert" | Niedrig | offen |
+| BUG-7 Verlassener Entwurf nicht mehr auffindbar | Niedrig | offen |
+
+Keiner der fünf offenen blockiert das Deployment.
+
+### Die eine Sache, die der Nutzer selbst tun muss
+
+Die E2E-Tests laufen auf diesem Rechner nur im Schneckentempo: Der gebündelte Chromium ließ sich nicht entpacken, und der ersatzweise verwendete Edge braucht über 30 Sekunden, nur um einen Browser-Kontext zu starten. Beides deutet auf den Echtzeit-Virenscan. 17,5 Minuten für zwei von sechzehn Tests.
+
+**Abhilfe (einmalig, etwa eine Minute):** Im Windows-Echtzeitschutz eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright` eintragen, danach `npx playwright install chromium`. Anschließend reicht ein schlichtes `npm run test:e2e`.
+
+Solange das nicht geschehen ist, läuft die Suite nur so:
+
+```
+PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npm run test:e2e
+```
+
+`PLAYWRIGHT_PORT` ist nötig, falls auf 3000 bereits ein Entwicklungsserver läuft — der würde sonst weiterverwendet und die Umstellung auf den Produktionsbuild wäre wirkungslos.
+
+### Was danach ansteht
+
+1. **PROJ-16** — eigene Kategorien zentral verwalten. Phasen anlegen funktioniert bereits, nur das Verwalten fehlt
+2. **PROJ-17** — Stundenmuster, wartet auf `/write-spec`. Beim Schreiben zu klären: Gehört ein Muster zu einer Gruppe oder gilt es übergreifend? Was passiert mit einer Einheit, wenn das Muster später geändert wird? Was, wenn die Einheitsdauer der Gruppe nicht zur Musterlänge passt?
+3. **PROJ-7** — der Editor. `manuallyEdited` liegt bereit und wird von niemandem gesetzt, weil es genau dort gesetzt wird. BUG-5 gehört dorthin
+
+### Zwei Dinge, die vor der Marktreife weg müssen
+
+- **Die 40 Testübungen** stecken noch in der Datenbank (von 45 Übungen insgesamt), markiert mit `Testdaten (PROJ-6)`, und 12 Einheiten hängen an ihnen. Ihr Inhalt ist die Rohmasse für PROJ-4 — also erst übernehmen, dann löschen
+- **Vier vorbestehende Supabase-Hinweise**: `handle_new_user` und `update_updated_at` ohne gesetzten `search_path`, `handle_new_user` als `SECURITY DEFINER` für `anon` aufrufbar, und die abgeschaltete Prüfung auf geleakte Passwörter. Nichts davon stammt aus PROJ-6, gehört aber in `/deploy`
+
+### Prüfbefehle
+
+```
+npm test              # 249 Tests, Einheiten- und Komponententests
+npm run test:pruefplan # 15 Prüffälle gegen die echten Übungsdaten
+npm run build         # Produktionsbuild
+npm run lint          # 0 Fehler, 4 vorbestehende <img>-Warnungen aus PROJ-3
+```
+
+---
+
 ### Implementation Notes (Frontend)
 
 **Reine Logik, getrennt von der Oberfläche**
