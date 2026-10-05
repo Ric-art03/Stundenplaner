@@ -39,6 +39,8 @@ docs/
 
 Use `/refine PROJ-X` at any point to revisit and improve an existing feature spec.
 
+Use `/gottago` when you have to stop a session, also at short notice: it records the state in `docs/handoffs/`, leaves a pointer in `features/INDEX.md` and hands you a ready-made prompt for the next session. Background processes are left running on purpose — the briefing says which ones and for how long.
+
 ## Feature Tracking
 
 All features tracked in `features/INDEX.md`. Every skill reads it at start and updates it when done. Feature specs live in `features/PROJ-X-name.md`.
