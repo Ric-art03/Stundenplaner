@@ -2105,6 +2105,36 @@ Speichern ist bei einer Lücke gesperrt, eine gespeicherte Einheit hat also norm
 > den E2E-Tests gebraucht (`tests/fixtures.ts`) und kommt im Anwendungscode
 > nicht vor. In der Produktion hätte er nichts zu tun außer Schaden anzurichten.
 
+### Nachprüfung in der Produktion — 2026-10-05
+
+| Prüfung | Ergebnis |
+|---|---|
+| Neue Auslieferung erkennbar | ✅ Die vier Sicherheits-Kopfzeilen liegen an `https://stundenplaner-self.vercel.app/login` an. Sie sind der verlässlichste Marker, weil der vorige Stand sie **nicht** hatte |
+| Öffentliche Seiten | ✅ `/`, `/login`, `/register` → 200 |
+| Zugriffsschutz | ✅ `/units`, `/units/new`, `/exercises`, `/groups`, `/dashboard` → **307 auf `/login`** |
+| Oberfläche geladen | ✅ „Stundenplaner", „Anmelden", „E-Mail", „Passwort" im ausgelieferten HTML |
+| Env-Variablen in Produktion gesetzt | ✅ **bewiesen durch die 307**, siehe unten |
+
+**Warum die 307 die Env-Variablen beweist:** `createClient()` in
+`src/lib/supabase/server.ts:9-15` **wirft**, wenn
+`NEXT_PUBLIC_SUPABASE_URL` oder `NEXT_PUBLIC_SUPABASE_ANON_KEY` fehlen, und
+das geschützte Layout ruft sie ungeschützt auf. Fehlten die Variablen, käme
+auf `/units` eine **500**, keine Weiterleitung. Die 307 entsteht erst in
+`redirect('/login')` des Layouts — also nachdem der Client gebaut und
+`getUser()` durchgelaufen ist.
+
+> **Nicht** bewiesen ist damit die Netzverbindung zu Supabase: `getUser()`
+> ohne Sitzungscookie antwortet aus dem Client heraus, ohne Anfrage an den
+> Server. Die Middleware taugt dafür ebenfalls nicht als Beleg — sie steigt
+> bei fehlenden Variablen **still** aus (`middleware.ts:9-11`) statt zu
+> scheitern. Der letzte Schritt bleibt deshalb beim Nutzer: **einmal in der
+> Produktion anmelden** und eine Einheit generieren.
+
+**Nicht gemessen:** der Lighthouse-Wert aus der Checkliste
+(`docs/production/performance.md`, Ziel über 90). Das braucht einen Browser
+gegen die Produktions-URL und wurde in diesem Durchgang nicht erhoben — es
+wäre falsch, hier eine Zahl zu behaupten.
+
 ### Was in dieser Auslieferung gehärtet wurde
 
 **1. Sicherheits-Kopfzeilen** — `next.config.ts` war bis hierher leer; die Header
