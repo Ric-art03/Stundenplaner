@@ -16,14 +16,27 @@
 
 Der Generator ist fertig gebaut, **zweimal geprüft und freigegeben**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt. Offen sind sechs kleine Fehler am Produkt und — neu und wichtiger — **drei Baustellen an der Teststrecke**, die vor `/deploy` gehören, aber die Freigabe nicht aufhalten.
 
-### Der nächste Schritt
+### Der nächste Schritt — Stand nach Lauf 3
 
-**`/deploy`.** Dort sind vier Dinge zu erledigen, bevor es wirklich hinausgeht:
+**Die Freigabe des Produkts steht.** Offen ist nur noch die Teststrecke. Zwei
+Dinge, in dieser Reihenfolge:
 
-1. **BUG-11** — im Windows-Echtzeitschutz die Ordner-Ausnahme setzen und `npx playwright install` laufen lassen (**ohne** `chromium`, damit WebKit mitkommt). Erst dann ist die **Mobilbreite 375 px überhaupt im Browser geprüft** — derzeit ist sie nur am Code belegt und damit die einzige echte Prüflücke
-2. **BUG-10** — die neun veralteten E2E-Tests aus PROJ-3 und PROJ-5 nachziehen (eine umbenannte Beschriftung, verschwundene CSS-Klassen). Kein Produktfehler, aber eine rote Suite sagt nichts aus
-3. **BUG-12** — die Testkonten trennen. Ein PROJ-6-Test ist im Verbund rot und allein grün; die Suite ist damit noch nicht verlässlich
-4. **BUG-9** — ein Einzeiler am Produkt (eine Zeile in `gap-notice.tsx`)
+1. **Die Ordner-Ausnahme im Virenschutz setzen** — inzwischen **notwendig**,
+   nicht mehr optional. Seit BUG-11 behoben ist, laufen zwei Browser-Projekte
+   gleichzeitig, und 6 der 7 verbliebenen Fehlschläge aus Lauf 3 sind reine
+   **Zeitüberschreitungen** (bis zu 120 s für ein `page.goto`). Dann:
+   `npx playwright install` — **ohne** `chromium`, damit WebKit mitkommt
+2. **Den einen instabilen Test untersuchen** —
+   `PROJ-6-einheiten-generator.spec.ts:112`. Allein grün in 7 s, im Verbund
+   mal rot, mal grün. **Er blockiert acht weitere Tests** (Serien-Kaskade plus
+   das `exklusiv`-Projekt) und ist damit der einzige echte Hebel zu einer
+   grünen Suite. Der Befundstand steht unten unter „Was von den 7
+   Fehlschlägen aus Lauf 3 übrig ist" — inklusive der Erkenntnis, dass
+   `/units` eine async Server-Komponente ist und ein Lade-Rennen im Browser
+   damit ausgeschlossen ist
+
+Danach **`/deploy`** — dort warten noch **BUG-9** (ein Einzeiler am Produkt)
+und die vier vorbestehenden Supabase-Hinweise.
 
 ### Die gute Nachricht des zweiten Durchlaufs
 
@@ -1907,7 +1920,67 @@ Nach der Umstellung: **94 Tests in 8 Dateien**, `tsc --noEmit` ohne Fehler,
 |---|---|---|---|---|
 | 1 (vor den Behebungen) | 38 | 46 | 8 | 36 × WebKit, 9 × veraltet, 1 × Nebenläufigkeit |
 | 2 (nach BUG-10/12) | 51 | 37 | 6 | BUG-10 und BUG-12 **behoben**; BUG-11-Fix unzureichend, BUG-13 aufgedeckt |
-| 3 (nach allen Behebungen) | _siehe unten_ | | | |
+| 3 (nach allen Behebungen) | **79** | **7** | 8 | 21,6 Min. WebKit-Ausfälle **weg**, veraltete Tests **weg** |
+
+#### Was von den 7 Fehlschlägen aus Lauf 3 übrig ist
+
+**Sechs davon sind Zeitüberschreitungen im Mobil-Projekt — keine
+Produktfehler.** Die Meldungen sind eindeutig:
+
+| Test | Meldung |
+|---|---|
+| PROJ-5 „Hallenzeit entfernen" | `page.goto('/groups/new')` — **120 s** überschritten, „waiting until load" |
+| PROJ-5 „Einmalige Hallenzeit" | dasselbe im `beforeEach`, **120 s** |
+| PROJ-5 „Wiederkehrende Hallenzeit" | Test-Zeitüberschreitung, **120 s** |
+| PROJ-3 „Pflichtfeldvalidierung" | Test-Zeitüberschreitung, **120 s** |
+| PROJ-5 „Neue Gruppe Button öffnet Formular" | `toHaveURL` nach **5 s**: noch auf `/groups` |
+| PROJ-3 „Abbrechen-Link" | `toHaveURL` nach **5 s**: noch auf `/exercises/new` |
+
+Drei Belege, dass das die Umgebung ist und nicht die App:
+1. **Dieselben Tests sind im Chromium-Projekt grün.** „Abbrechen-Link" etwa
+   steht dort nicht in der Fehlerliste — nur in der Mobil-Fassung
+2. **Es sind reine Zeitüberschreitungen**, keine inhaltlich falschen
+   Zusicherungen. Keine fehlende Beschriftung, kein falscher Text
+3. **Der Seitenabzug von „Neue Gruppe Button" zeigt `/groups/new` korrekt
+   geöffnet** — die Seite kam an, nur nach dem 5-Sekunden-Fenster
+
+Die Ursache ist dieselbe wie bei BUG-8: der Echtzeit-Virenscan. Seit BUG-11
+behoben ist, laufen **zwei** Browser-Projekte gleichzeitig, und damit reicht
+es nicht mehr. **Die Ordner-Ausnahme ist damit von „wäre schön" zu
+„notwendig" geworden.**
+
+**Der siebte ist der offene Punkt.** `AC: der geänderte Name gilt in der
+Übersicht` (`PROJ-6-einheiten-generator.spec.ts:112`) ist **instabil**:
+
+| Lauf | Mobil-Projekt | Ergebnis |
+|---|---|---|
+| 1 | startete nicht | rot |
+| 2 | startete nicht | **grün** |
+| 3 | lief wirklich | rot |
+| allein, gezielt | — | **grün in 7,0 s** |
+
+Das Mobil-Projekt ist also **nicht** der Störer: In Lauf 1 und 2 lief es
+beidemal nicht, das Ergebnis war trotzdem unterschiedlich.
+
+Die echte Meldung lautet: `getByText('Eigener Einheitenname')` nach 5 s nicht
+gefunden, und `/units` zeigt den **Leerzustand**. Was dagegen spricht, es als
+Produktfehler zu führen:
+- Die Bestätigung „Gespeichert" war vorher sichtbar, und die erscheint nur,
+  wenn der Server `saved = true` zurückgemeldet hat
+- Allein läuft derselbe Test grün
+- Der Nutzer hat diesen Weg zweimal von Hand bestätigt, und im Bestand lagen
+  12 gespeicherte Einheiten
+
+Was noch **nicht** erklärt ist: `/units` ist eine **async
+Server-Komponente** (`units/page.tsx`), die ihre Daten vor dem HTML holt — ein
+Lade-Rennen im Browser ist damit ausgeschlossen. Der Server hat die Einheit
+also wirklich nicht gefunden. **Hier ist die Untersuchung offen.**
+
+**Dieser eine Test blockiert acht weitere:** Er steht in Zeile 112, und die
+Serien-Betriebsart überspringt danach die restlichen 7 Tests der Datei; dazu
+entfällt das `exklusiv`-Projekt, weil es von einem roten Projekt abhängt. Das
+sind genau die „8 did not run". **Er ist damit der einzige echte Hebel zu
+einer grünen Suite.**
 
 #### BUG-13: Der Umbenennen-Test sucht einen Knopf, der „Speichern" heißt
 - **Status:** ✅ **Behoben am 2026-10-05**, im selben Durchlauf

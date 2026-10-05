@@ -17,7 +17,11 @@
 
 Der zweite Durchlauf hat die **E2E-Suite erstmals vollständig laufen lassen** — blockiert hatte sie eine liegengebliebene Sperrdatei von Playwright, nicht der Virenscanner allein. Ergebnis: 38 grün, 46 rot, 8 übersprungen in 18,9 Minuten, und **keiner der roten Tests ist ein Produktfehler** (36 × fehlendes WebKit, 9 × veraltete Tests aus PROJ-3/PROJ-5, 1 × Nebenläufigkeit).
 
-**Nächster Schritt: `/deploy`.** Vier Aufgaben stehen dort am Anfang der Spec unter „Der nächste Schritt" — darunter die einzige echte Prüflücke: die **Mobilbreite 375 px** ist bislang nur am Code belegt, weil WebKit fehlt. Dafür muss der Nutzer einmalig eine Ordner-Ausnahme im Virenschutz setzen.
+Die Teststrecke wurde im selben Durchlauf aufgeräumt (BUG-10 bis BUG-13, alle nur in `tests/` und `playwright.config.ts` — **kein Produktcode**). Lauf 3 steht bei **79 grün / 7 rot**, von zuvor 38 / 46.
+
+**Nächster Schritt:** Zwei Dinge an der Teststrecke, dann `/deploy`. Beides steht am Anfang der Spec unter „Der nächste Schritt":
+1. Die **Ordner-Ausnahme im Virenschutz** ist jetzt notwendig — 6 der 7 verbliebenen Fehlschläge sind reine Zeitüberschreitungen, weil seit der BUG-11-Behebung zwei Browser-Projekte gleichzeitig laufen
+2. **Ein instabiler Test** (`PROJ-6-einheiten-generator.spec.ts:112`) blockiert acht weitere und ist der einzige Hebel zu einer grünen Suite
 
 _Stand 2026-10-05. Dieser Abschnitt kann weg, sobald PROJ-6 deployed ist._
 
