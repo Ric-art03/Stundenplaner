@@ -1,7 +1,7 @@
 import { test as setup, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
+import { createServerClient } from '@supabase/ssr'
+import { adminClient, env, STORAGE_STATE, TEST_EMAIL } from './fixtures'
 
 /**
  * Meldet einen Testnutzer an und legt den Sitzungszustand ab, damit die
@@ -11,45 +11,72 @@ import path from 'node:path'
  * Anmeldung leitet jede geschützte Seite auf `/login` um, und die Tests waren
  * so geschrieben, dass sie bei fehlendem Inhalt stillschweigend durchliefen.
  *
- * Der Weg nutzt die echte Anmeldestrecke der App: Der Dienstschlüssel erzeugt
- * einen einmaligen Anmeldelink, der Browser folgt ihm, und `/auth/callback`
- * tauscht ihn wie bei einem echten Nutzer gegen eine Sitzung.
+ * **Warum nicht einfach dem Anmeldelink folgen?** Zwei Gründe sprechen
+ * dagegen, beide geprüft:
+ *   1. Supabase leitet den Link auf die hinterlegte Produktions-URL um —
+ *      `http://localhost:3000` steht nicht unter den erlaubten Zielen, und
+ *      das zu ändern wäre eine Einstellung am Projekt nur für Tests.
+ *   2. Die Token kommen im URL-Fragment (`#access_token=…`), während
+ *      `/auth/callback` einen `?code=` erwartet. Ein Server sieht Fragmente nie.
+ *
+ * Stattdessen wird die Sitzung hier erzeugt und **von `@supabase/ssr` selbst**
+ * in Cookies geschrieben. So stimmt deren Format garantiert mit dem überein,
+ * was die App liest — statt es nachzubauen und bei der nächsten Version zu
+ * brechen.
  */
 
-export const STORAGE_STATE = path.join(__dirname, '.auth', 'user.json')
+setup('anmelden', async ({ page, context }) => {
+  const url = env('NEXT_PUBLIC_SUPABASE_URL')
+  const anonKey = env('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 
-/** Eigenes Konto, damit Tests nie die echten Daten des Entwicklers anfassen. */
-export const TEST_EMAIL = 'humpert263+test1@gmail.com'
-
-function env(name: string): string {
-  const file = readFileSync(path.join(__dirname, '..', '.env.local'), 'utf8')
-  const match = file.match(new RegExp(`^${name}=(.+)$`, 'm'))
-  if (!match) throw new Error(`${name} fehlt in .env.local`)
-  return match[1].trim()
-}
-
-setup('anmelden', async ({ page, baseURL }) => {
-  const admin = createClient(
-    env('NEXT_PUBLIC_SUPABASE_URL'),
-    env('SUPABASE_SERVICE_ROLE_KEY'),
-    { auth: { persistSession: false } }
-  )
-
-  const { data, error } = await admin.auth.admin.generateLink({
+  // 1. Einmal-Token für den Testnutzer erzeugen und sofort einlösen.
+  const { data: link, error: linkError } = await adminClient().auth.admin.generateLink({
     type: 'magiclink',
     email: TEST_EMAIL,
-    options: { redirectTo: `${baseURL}/auth/callback` },
   })
+  if (linkError) throw new Error(`Anmeldelink fehlgeschlagen: ${linkError.message}`)
 
-  if (error) throw new Error(`Anmeldelink fehlgeschlagen: ${error.message}`)
+  const plain = createClient(url, anonKey, { auth: { persistSession: false } })
+  const { data: verified, error: verifyError } = await plain.auth.verifyOtp({
+    token_hash: link.properties.hashed_token,
+    type: 'magiclink',
+  })
+  if (verifyError || !verified.session) {
+    throw new Error(`Sitzung konnte nicht erzeugt werden: ${verifyError?.message}`)
+  }
 
-  await page.goto(data.properties.action_link)
+  // 2. Die Bibliothek die Cookies bauen lassen, die der Server erwartet.
+  const written: { name: string; value: string }[] = []
+  const ssr = createServerClient(url, anonKey, {
+    cookies: {
+      getAll: () => [],
+      setAll: (cookies) => {
+        for (const cookie of cookies) written.push({ name: cookie.name, value: cookie.value })
+      },
+    },
+  })
+  await ssr.auth.setSession({
+    access_token: verified.session.access_token,
+    refresh_token: verified.session.refresh_token,
+  })
+  if (written.length === 0) throw new Error('@supabase/ssr hat keine Cookies geschrieben')
 
-  // Die Anmeldung gilt erst als gelungen, wenn eine geschützte Seite auch
-  // wirklich lädt — nicht schon, wenn der Link besucht wurde.
+  await context.addCookies(
+    written.map((cookie) => ({
+      name: cookie.name,
+      value: cookie.value,
+      domain: 'localhost',
+      path: '/',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'Lax' as const,
+    }))
+  )
+
+  // 3. Die Anmeldung gilt erst, wenn eine geschützte Seite wirklich lädt.
   await page.goto('/units')
-  await expect(page).toHaveURL(/\/units$/)
   await expect(page.getByRole('heading', { name: 'Meine Einheiten' })).toBeVisible()
+  await expect(page).toHaveURL(/\/units$/)
 
-  await page.context().storageState({ path: STORAGE_STATE })
+  await context.storageState({ path: STORAGE_STATE })
 })

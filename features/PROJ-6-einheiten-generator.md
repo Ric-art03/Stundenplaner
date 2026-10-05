@@ -234,6 +234,55 @@ Zu jeder Ursache nennt die Oberfläche, was dagegen hilft. Zwei Feinheiten:
 - `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
 - `npm run test:pruefplan` — 15 Fälle grün, erweitert um die Aufschlüsselung an echten Daten
 
+### Behebung BUG-2 und BUG-8 — 2026-10-05
+
+**BUG-2: Entwürfe erscheinen in der Löschwarnung für Übungen** — behoben
+
+`getUnitNamesUsingExercise` filterte nicht auf `saved` und nannte damit auch Einheiten, die der Nutzer nie abgelegt hat — Namen, die er in seinem Ordner nirgends wiederfindet. Ein `.eq('saved', true)` genügt; damit tragen jetzt alle fünf Abfragen auf `units` dieselbe Regel: Frische-Regel, beide Übersichten und beide Löschwarnungen.
+
+Geprüft wird das im E2E-Test **mit Gegenprobe**: erst als Entwurf (die Warnung muss schweigen), dann dieselbe Einheit gespeichert (die Warnung muss erscheinen). Ohne den zweiten Teil wäre der Test auch dann grün, wenn die Warnung grundsätzlich nie auftaucht.
+
+**BUG-8: Die E2E-Strecke läuft — der Rechner bremst sie aus** — teilweise behoben
+
+Drei Hindernisse lagen zwischen „Tests geschrieben" und „Tests gelaufen". Zwei sind beseitigt, das dritte liegt außerhalb des Repositories.
+
+1. **Der Playwright-Browser ließ sich nicht installieren.** Der Download lief durch, das Entpacken der tausenden Chromium-Dateien kam aber nicht voran — drei Dateien in mehreren Minuten, das typische Bild bei Echtzeit-Virenscan unter Windows. Zwei parallel gestartete Läufe hatten sich zudem gegenseitig das Verzeichnis weggeräumt und eine Sperrdatei hinterlassen.
+
+   Gelöst ohne Eingriff in die Rechnereinstellungen: `playwright.config.ts` akzeptiert jetzt `PLAYWRIGHT_CHANNEL`. Damit übernimmt ein bereits installierter Browser — hier Edge, ebenfalls Chromium-basiert. Ohne die Variable bleibt alles beim gebündelten Standard, es landet also nichts Rechnerabhängiges im Repository.
+
+   ```
+   PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npm run test:e2e
+   ```
+
+2. **Die Anmeldung über den Einmal-Link funktionierte nicht.** Geprüft statt vermutet: Supabase leitet den Link auf die hinterlegte Produktions-URL um, weil `http://localhost:3000` nicht unter den erlaubten Zielen steht, und liefert die Token im **URL-Fragment** (`#access_token=…`), während `/auth/callback` einen `?code=` erwartet. Ein Server sieht Fragmente nie.
+
+   Statt die Supabase-Einstellungen nur für Tests zu ändern oder das Passwort des Testkontos zu überschreiben, wird die Sitzung jetzt in Node erzeugt (`verifyOtp` mit dem Einmal-Token) und **von `@supabase/ssr` selbst** in Cookies geschrieben. Deren Format stimmt dadurch garantiert mit dem überein, was die App liest, statt nachgebaut zu werden und bei der nächsten Version zu brechen.
+
+3. **Zwei Fehler in meinen eigenen Tests**, vor dem ersten Lauf beim Durchsehen gefunden:
+   - `fullyParallel` hätte die Tests gleichzeitig gegen **ein** Testkonto laufen lassen, während sie zwischendurch dessen Einheiten löschen — sie hätten sich gegenseitig die Daten weggezogen. Jetzt `test.describe.configure({ mode: 'serial' })`
+   - Dasselbe über zwei Projekte hinweg: Das Handy-Projekt führt die datenverändernden PROJ-6-Tests nicht mehr mit aus
+
+**Ergebnis des Durchlaufs**
+
+| Teil | Ergebnis |
+|---|---|
+| 4 Tests ohne Anmeldung | ✅ alle grün |
+| Anmeldung (`auth.setup`) | ✅ grün — die Sitzung wird korrekt hergestellt |
+| 2 angemeldete Tests | ✅ grün |
+| 1 Test | ❌ abgebrochen: *Test timeout of 30000ms exceeded while setting up „context"* |
+| 13 Tests | nicht gelaufen — im Reihenfolge-Modus bricht die Kette nach einem Fehlschlag ab |
+
+Der Fehlschlag ist **kein Produktfehler**: Edge braucht auf diesem Rechner über 30 Sekunden, nur um einen Browser-Kontext zu starten — dieselbe Bremse, die zuvor das Entpacken von Chromium lahmgelegt hat. 17,5 Minuten für zwei Tests gehen nicht auf das Konto der Anwendung.
+
+Das Zeitlimit steht deshalb jetzt auf 120 Sekunden, damit ein langsamer Rechner nicht wie ein Produktfehler aussieht. Die eigentliche Abhilfe liegt außerhalb des Repositories: eine Ausnahme für den Ordner `%LOCALAPPDATA%\ms-playwright` im Echtzeitschutz. Danach lässt sich der gebündelte Chromium normal installieren, der deutlich schneller startet als ein vollständiger Edge — und `PLAYWRIGHT_CHANNEL` wird überflüssig.
+
+**Was damit belegt ist:** Die Teststrecke funktioniert — Anmeldung, Aufbau der Testdaten, Produktionsbuild und sechs Tests sind grün durchgelaufen. Was fehlt, ist ein vollständiger Durchlauf auf einem Rechner, der Browser in vertretbarer Zeit startet. BUG-8 bleibt deshalb offen.
+
+**Weitere Anpassungen an der Teststrecke**
+- Playwright verbietet, dass eine Testdatei eine andere importiert. `TEST_EMAIL` und `STORAGE_STATE` sind deshalb von `auth.setup.ts` nach `fixtures.ts` gewandert
+- Der Testserver ist von `npm run dev` auf einen Produktionsbuild umgestellt. Der Entwicklungsserver übersetzt jede Route beim ersten Aufruf neu, was einen Durchlauf zusätzlich aufblähte; nebenbei wird jetzt geprüft, was tatsächlich ausgeliefert wird
+- `PLAYWRIGHT_PORT` erlaubt einen eigenen Port, falls auf 3000 bereits ein Entwicklungsserver läuft — der würde sonst weiterverwendet und die Umstellung auf den Produktionsbuild wäre wirkungslos
+
 ### Behebung BUG-1: Löschen einer Gruppe warnt vor dem Verlust ihrer Einheiten — 2026-10-05
 
 Die QA fand den einzigen Fehler hoher Schwere: `units.group_id` steht auf ON DELETE CASCADE, das Löschen einer Gruppe nahm also sämtliche Einheiten samt Segmenten, Einträgen und Verwendungsnachweisen mit — und der Dialog sprach nur davon, dass die Aktion nicht rückgängig zu machen sei. Beim Löschen einer **Übung** nennt PROJ-6 die betroffenen Einheiten seit dem Backend-Schritt beim Namen; beim Löschen einer **Gruppe**, wo ungleich mehr auf dem Spiel steht, stand nichts.
@@ -1355,6 +1404,7 @@ Direkt gegen die echten 12 Einheiten geprüft:
 - **Priorität:** Vor dem Deployment beheben
 
 #### BUG-2: Entwürfe erscheinen in der Löschwarnung für Übungen
+- **Status:** Behoben am 2026-10-05, mit E2E-Test samt Gegenprobe
 - **Schwere:** Niedrig
 - **Schritte:** Einheit generieren, nicht speichern; eine darin verwendete Übung löschen wollen
 - **Erwartet:** Nur abgelegte Einheiten werden genannt
@@ -1395,6 +1445,7 @@ Direkt gegen die echten 12 Einheiten geprüft:
 - **Priorität:** Nice to have
 
 #### BUG-8: Die E2E-Tests konnten nicht ausgeführt werden
+- **Status:** Teilweise erledigt am 2026-10-05 — Teststrecke laeuft, sechs Tests gruen; ein vollstaendiger Durchlauf scheitert weiter an der Startzeit des Browsers auf diesem Rechner
 - **Schwere:** Niedrig (Werkzeug, kein Produktfehler)
 - **Befund:** Der Playwright-Browser lud in dieser Sitzung nicht vollständig herunter (172 MB, zweimal abgebrochen, zuletzt bei 4,7 MB stehen geblieben). Die Tests sind geschrieben und kompilieren, wurden aber nie ausgeführt
 - **Nachzuholen:** `npx playwright install chromium`, dann `npm run test:e2e`

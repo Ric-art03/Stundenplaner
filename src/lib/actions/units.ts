@@ -1001,6 +1001,10 @@ export async function getUnitNamesForGroup(groupId: string): Promise<string[]> {
 /**
  * Für die Löschwarnung bei einer Übung: „Diese Übung wird in 2 Einheiten
  * verwendet: …". Ohne die Namen bleibt die Warnung abstrakt.
+ *
+ * Entwürfe bleiben außen vor — gleiche Begründung wie bei der Gruppenwarnung:
+ * Sie werden beim nächsten Generieren ersetzt, stehen in keiner Übersicht und
+ * wären in der Warnung nur ein Name, den der Nutzer nirgends wiederfindet.
  */
 export async function getUnitNamesUsingExercise(exerciseId: string): Promise<string[]> {
   const { supabase, user } = await getAuthUser()
@@ -1026,6 +1030,7 @@ export async function getUnitNamesUsingExercise(exerciseId: string): Promise<str
     .from('units')
     .select('name, created_at')
     .eq('user_id', user.id)
+    .eq('saved', true)
     .in('id', unitIds)
     .order('created_at', { ascending: false })
 

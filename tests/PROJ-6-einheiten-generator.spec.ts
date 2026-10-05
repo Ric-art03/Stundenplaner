@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { adminClient, cleanup, seed, testUserId, type Fixtures } from './fixtures'
-import { TEST_EMAIL } from './auth.setup'
+import {
+  adminClient,
+  cleanup,
+  seed,
+  testUserId,
+  TEST_EMAIL,
+  type Fixtures,
+} from './fixtures'
 
 /**
  * E2E-Tests für PROJ-6 gegen die Akzeptanzkriterien der Spec.
@@ -9,6 +15,13 @@ import { TEST_EMAIL } from './auth.setup'
  * eigens angelegten Daten — die echten Übungen und Einheiten des Entwicklers
  * werden nie angefasst.
  */
+
+/**
+ * Nacheinander, nicht parallel: Alle Tests teilen sich **ein** Testkonto und
+ * räumen zwischendurch dessen Einheiten weg. Nebenläufig würden sie sich
+ * gegenseitig die Daten unter den Füßen wegziehen.
+ */
+test.describe.configure({ mode: 'serial' })
 
 const admin = adminClient()
 let userId: string
@@ -198,6 +211,51 @@ test.describe('PROJ-6 — Neu generieren', () => {
       .eq('user_id', userId)
       .eq('saved', true)
     expect(count).toBe(1)
+  })
+})
+
+test.describe('PROJ-6 — Löschwarnung bei Übungen', () => {
+  /** Die erste Übung, die in der aktuellen Einheit des Testkontos steckt. */
+  async function exerciseInCurrentUnit(): Promise<string> {
+    const { data: units } = await admin.from('units').select('id').eq('user_id', userId)
+    const unitIds = (units ?? []).map((u) => u.id)
+    const { data: segments } = await admin
+      .from('unit_segments')
+      .select('id')
+      .in('unit_id', unitIds)
+    const { data: items } = await admin
+      .from('unit_items')
+      .select('exercise_id')
+      .in('segment_id', (segments ?? []).map((s) => s.id))
+      .not('exercise_id', 'is', null)
+      .limit(1)
+
+    const id = items?.[0]?.exercise_id
+    if (!id) throw new Error('Keine eingeplante Übung gefunden')
+    return id
+  }
+
+  test('AC: ein Entwurf wird in der Warnung nicht genannt, eine gespeicherte Einheit schon', async ({
+    page,
+  }) => {
+    // Erst als Entwurf — die Warnung darf schweigen.
+    await generateStandardUnit(page)
+    const exerciseId = await exerciseInCurrentUnit()
+
+    await page.goto(`/exercises/${exerciseId}`)
+    await page.getByRole('button', { name: 'Löschen' }).click()
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await expect(page.getByText(/wird in .* Einheit/)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Abbrechen' }).click()
+
+    // Jetzt dieselbe Einheit speichern — nun muss die Warnung erscheinen.
+    // Ohne diese Gegenprobe wäre der Test auch dann grün, wenn die Warnung
+    // grundsätzlich nie auftaucht.
+    await admin.from('units').update({ saved: true }).eq('user_id', userId)
+
+    await page.goto(`/exercises/${exerciseId}`)
+    await page.getByRole('button', { name: 'Löschen' }).click()
+    await expect(page.getByText(/wird in .* Einheit/)).toBeVisible()
   })
 })
 

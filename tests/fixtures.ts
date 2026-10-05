@@ -15,7 +15,13 @@ import path from 'node:path'
 
 const MARKER = 'E2E-Testdaten (PROJ-6)'
 
-function env(name: string): string {
+/** Eigenes Konto, damit Tests nie die echten Daten des Entwicklers anfassen. */
+export const TEST_EMAIL = 'humpert263+test1@gmail.com'
+
+/** Ablage des Sitzungszustands aus der Anmeldung. */
+export const STORAGE_STATE = path.join(__dirname, '.auth', 'user.json')
+
+export function env(name: string): string {
   const file = readFileSync(path.join(__dirname, '..', '.env.local'), 'utf8')
   const match = file.match(new RegExp(`^${name}=(.+)$`, 'm'))
   if (!match) throw new Error(`${name} fehlt in .env.local`)
