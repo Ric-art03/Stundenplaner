@@ -13,11 +13,13 @@
 
 ## Woran zuletzt gearbeitet wurde
 
-**PROJ-6 (Einheiten-Generator)** — gebaut und einmal vollständig geprüft. Von acht gefundenen Fehlern sind die beiden behoben, die zählten; fünf kleine sind offen und blockieren nichts.
+**PROJ-6 (Einheiten-Generator)** — zweimal geprüft und **freigegeben**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt. Der eine hohe Fehler (Gruppe löschen vernichtet Einheiten) ist behoben und nachgeprüft.
 
-**Nächster Schritt: `/qa` erneut laufen lassen.** Alles Nötige steht am Anfang der Spec unter „Hier geht es weiter" — inklusive der einen Sache, die der Nutzer selbst erledigen muss, damit die E2E-Tests in vertretbarer Zeit durchlaufen.
+Der zweite Durchlauf hat die **E2E-Suite erstmals vollständig laufen lassen** — blockiert hatte sie eine liegengebliebene Sperrdatei von Playwright, nicht der Virenscanner allein. Ergebnis: 38 grün, 46 rot, 8 übersprungen in 18,9 Minuten, und **keiner der roten Tests ist ein Produktfehler** (36 × fehlendes WebKit, 9 × veraltete Tests aus PROJ-3/PROJ-5, 1 × Nebenläufigkeit).
 
-_Stand 2026-10-05. Dieser Abschnitt kann weg, sobald PROJ-6 freigegeben ist._
+**Nächster Schritt: `/deploy`.** Vier Aufgaben stehen dort am Anfang der Spec unter „Der nächste Schritt" — darunter die einzige echte Prüflücke: die **Mobilbreite 375 px** ist bislang nur am Code belegt, weil WebKit fehlt. Dafür muss der Nutzer einmalig eine Ordner-Ausnahme im Virenschutz setzen.
+
+_Stand 2026-10-05. Dieser Abschnitt kann weg, sobald PROJ-6 deployed ist._
 
 ## Features
 
@@ -28,7 +30,7 @@ _Stand 2026-10-05. Dieser Abschnitt kann weg, sobald PROJ-6 freigegeben ist._
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
-| PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | In Progress | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
+| PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Approved | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Roadmap | — | 2026-09-28 |
 | PROJ-9 | Kalenderansicht & Langzeitplanung | P1 | PROJ-6, PROJ-7 | Roadmap | — | 2026-09-28 |
 | PROJ-10 | Übungsrotation (Abwechslung über Wochen) | P1 | PROJ-6, PROJ-9 | Roadmap | — | 2026-09-28 |

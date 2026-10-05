@@ -1,55 +1,82 @@
 # PROJ-6: Einheiten-Generator
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-03
 **Last Updated:** 2026-10-05
-**QA:** 2026-10-05
+**QA:** 2026-10-05 (zwei Durchläufe, freigegeben im zweiten)
 **Architected:** 2026-10-03
 **Backend:** 2026-10-04 (überarbeitet 2026-10-05)
 
 ## Hier geht es weiter — Stand 2026-10-05
 
 > Dieser Abschnitt steht bewusst ganz oben: Er ist das Erste, was eine neue
-> Sitzung liest. Sobald PROJ-6 freigegeben ist, kann er ersatzlos weg.
+> Sitzung liest. Sobald PROJ-6 deployed ist, kann er ersatzlos weg.
 
 ### In einem Satz
 
-Der Generator ist fertig gebaut und einmal vollständig geprüft. Von acht gefundenen Fehlern sind die beiden behoben, die zählten; fünf kleine sind offen und blockieren nichts. Es fehlt ein erneuter `/qa`-Durchlauf zur Freigabe.
+Der Generator ist fertig gebaut, **zweimal geprüft und freigegeben**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt. Offen sind sechs kleine Fehler am Produkt und — neu und wichtiger — **drei Baustellen an der Teststrecke**, die vor `/deploy` gehören, aber die Freigabe nicht aufhalten.
 
 ### Der nächste Schritt
 
-**`/qa` erneut laufen lassen.** Der vorige Bericht steht weiter unten unter „QA Test Results" — er nennt zu jedem der 94 Akzeptanzkriterien, *wie* es belegt ist (automatisiert, gegen echte Daten, vom Nutzer bedient, oder nur gelesen). Nur die zuletzt geänderten Stellen und die 15 bislang nur gelesenen Kriterien brauchen frische Aufmerksamkeit.
+**`/deploy`.** Dort sind vier Dinge zu erledigen, bevor es wirklich hinausgeht:
 
-Der Abschnitt „Übergabe an /qa" listet die Fälle, die Hände brauchen. **Wichtig dort:** Der Bedienstand lässt sich nur mit einer **neu generierten** Einheit prüfen — Einheiten von vor dem 2026-10-05 tragen keinen und öffnen immer in „Individuell". Das ist kein Fehler.
+1. **BUG-11** — im Windows-Echtzeitschutz die Ordner-Ausnahme setzen und `npx playwright install` laufen lassen (**ohne** `chromium`, damit WebKit mitkommt). Erst dann ist die **Mobilbreite 375 px überhaupt im Browser geprüft** — derzeit ist sie nur am Code belegt und damit die einzige echte Prüflücke
+2. **BUG-10** — die neun veralteten E2E-Tests aus PROJ-3 und PROJ-5 nachziehen (eine umbenannte Beschriftung, verschwundene CSS-Klassen). Kein Produktfehler, aber eine rote Suite sagt nichts aus
+3. **BUG-12** — die Testkonten trennen. Ein PROJ-6-Test ist im Verbund rot und allein grün; die Suite ist damit noch nicht verlässlich
+4. **BUG-9** — ein Einzeiler am Produkt (eine Zeile in `gap-notice.tsx`)
+
+### Die gute Nachricht des zweiten Durchlaufs
+
+**Die E2E-Suite ist erstmals vollständig gelaufen** — 38 grün, 46 rot, 8 übersprungen, in **18,9 Minuten**. Die im ersten Durchlauf vermuteten Stunden gab es nie; der Durchlauf war durch eine liegengebliebene Sperrdatei blockiert, nicht langsam. Von den 46 roten Tests ist **keiner ein Produktfehler des Generators** — 36 sind fehlendes WebKit, 9 sind veraltete Tests, 1 ist Nebenläufigkeit.
 
 ### Fehlerstand
 
+**Am Produkt** — 0 kritisch, 0 hoch, 0 mittel, 6 niedrig offen (2 behoben):
+
 | Fehler | Schwere | Stand |
 |---|---|---|
-| BUG-1 Gruppe löschen vernichtet Einheiten ohne Warnung | Hoch | ✅ behoben, 7 Tests |
-| BUG-2 Entwürfe in der Löschwarnung für Übungen | Niedrig | ✅ behoben, E2E-Test mit Gegenprobe |
-| BUG-8 E2E-Tests nie gelaufen | Niedrig | ⚠️ Strecke läuft, 6 Tests grün — voller Durchlauf scheitert am Rechner, siehe unten |
+| BUG-1 Gruppe löschen vernichtet Einheiten ohne Warnung | Hoch | ✅ behoben und nachgeprüft, 7 Tests |
+| BUG-2 Entwürfe in der Löschwarnung für Übungen | Niedrig | ✅ behoben, im Code belegt |
 | BUG-3 Keine Warnung beim Verlassen der Konfigurationsseite | Niedrig | offen — Edge Case 13 der Spec, schlicht nicht umgesetzt |
 | BUG-4 Zugriffsschutz prüft Eigentum an Gruppe und Übung nicht | Niedrig | offen — Härtung, vor PROJ-7 sinnvoll |
 | BUG-5 Platzhalter ohne Nachbesetzen | Niedrig | offen — gehört inhaltlich zu PROJ-7 |
 | BUG-6 Verwendungszeitpunkt steht auf „generiert" | Niedrig | offen |
 | BUG-7 Verlassener Entwurf nicht mehr auffindbar | Niedrig | offen |
+| BUG-9 Lockern wird in einer Sackgasse angeboten | Niedrig | **neu** — eine Zeile in `gap-notice.tsx` |
 
-Keiner der fünf offenen blockiert das Deployment.
+**An der Teststrecke** — blockiert die Freigabe nicht, aber `/deploy`:
+
+| Fehler | Schwere | Stand |
+|---|---|---|
+| BUG-8 E2E-Suite nie vollständig gelaufen | Niedrig | ✅ **im Kern erledigt** — Suite lief erstmals zu Ende, 18,9 Min |
+| BUG-10 E2E-Tests aus PROJ-3 und PROJ-5 veraltet | Mittel | **neu** — 9 Fehlschläge, alle aus veralteten Erwartungen |
+| BUG-11 „Mobile Safari" verlangt WebKit | Niedrig | **neu** — 36 Fehlschläge, **375 px ungeprüft** |
+| BUG-12 PROJ-6-Test stört sich mit Nebenläufigkeit | Niedrig | **neu** — im Verbund rot, allein grün in 7 Sek |
 
 ### Die eine Sache, die der Nutzer selbst tun muss
 
-Die E2E-Tests laufen auf diesem Rechner nur im Schneckentempo: Der gebündelte Chromium ließ sich nicht entpacken, und der ersatzweise verwendete Edge braucht über 30 Sekunden, nur um einen Browser-Kontext zu starten. Beides deutet auf den Echtzeit-Virenscan. 17,5 Minuten für zwei von sechzehn Tests.
+Im ersten Durchlauf wurde allein der Echtzeit-Virenscan verdächtigt. Der zweite hat nachgemessen: **es sind zwei Ursachen, und die erste war die eigentliche.**
+
+1. **Eine liegengebliebene Sperrdatei.** In `%LOCALAPPDATA%\ms-playwright\__dirlock` lag eine Sperre aus dem abgebrochenen Versuch vom 2026-10-05, 01:14 Uhr. Solange sie dort lag, **brach jedes `npx playwright install` sofort ab — getarnt als Erfolg, mit Rückgabewert 0 und ohne eine Zeile Ausgabe.** Der Download hat deshalb nie wieder begonnen; die „abgebrochenen Downloads" des ersten Durchlaufs waren Downloads, die nie anfingen. **Diese Sperre ist entfernt.**
+2. **Der Echtzeit-Virenscan.** Danach läuft das Entpacken wirklich an — und bleibt reproduzierbar bei denselben drei Dateien (4,7 MB) stehen, während die großen Binärdateien dahinter gescannt werden. **Das bleibt zu tun.**
 
 **Abhilfe (einmalig, etwa eine Minute):** Im Windows-Echtzeitschutz eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright` eintragen, danach `npx playwright install chromium`. Anschließend reicht ein schlichtes `npm run test:e2e`.
 
-Solange das nicht geschehen ist, läuft die Suite nur so:
+> Endet `npx playwright install` wieder ohne Ausgabe und ohne Fehler, ist es
+> erneut Ursache 1. Dann:
+> `rm -rf "$LOCALAPPDATA/ms-playwright/__dirlock"` und noch einmal versuchen.
+
+Solange der gebündelte Chromium fehlt, läuft die Suite ersatzweise über Edge:
 
 ```
 PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npm run test:e2e
 ```
 
 `PLAYWRIGHT_PORT` ist nötig, falls auf 3000 bereits ein Entwicklungsserver läuft — der würde sonst weiterverwendet und die Umstellung auf den Produktionsbuild wäre wirkungslos.
+
+So lief die Suite im zweiten Durchlauf **vollständig durch: 18,9 Minuten** für 92 Testausführungen. Die Befürchtung aus dem ersten Durchlauf, ein Durchlauf brauche Stunden, war falsch — gebremst hat die Sperrdatei, nicht der Browser.
+
+**Ein Haken bleibt an diesem Ersatzweg:** Das Projekt **„Mobile Safari"** (`playwright.config.ts:69–75`) übernimmt den `channel` **nicht** und verlangt deshalb WebKit. Alle 36 seiner Tests brechen ab, und damit bleibt die **Prüfung auf 375 px und 768 px ungeprüft** (BUG-11). Mit der Ordner-Ausnahme und `npx playwright install` — **ohne** `chromium`, damit WebKit mitkommt — löst sich das von selbst.
 
 ### Was danach ansteht
 
@@ -69,7 +96,12 @@ npm test              # 249 Tests, Einheiten- und Komponententests
 npm run test:pruefplan # 15 Prüffälle gegen die echten Übungsdaten
 npm run build         # Produktionsbuild
 npm run lint          # 0 Fehler, 4 vorbestehende <img>-Warnungen aus PROJ-3
+npm run test:e2e      # 92 Testausführungen, 18,9 Min — erst nach der Virenscan-Ausnahme aussagekräftig
 ```
+
+Stand des letzten E2E-Durchlaufs (über Edge, ohne WebKit): **38 grün, 46 rot,
+8 übersprungen**. Die 46 roten sind in BUG-10, BUG-11 und BUG-12
+aufgeschlüsselt — **keiner ist ein Produktfehler des Generators**.
 
 ---
 
@@ -1289,7 +1321,203 @@ In zwei Durchgängen am 2026-10-04 und 2026-10-05 bestätigt und deshalb **nicht
 
 ## QA Test Results
 
-**Geprüft:** 2026-10-05
+> Es gibt zwei Durchläufe. Der **zweite** steht direkt hier darunter und gilt.
+> Der erste folgt danach ab „Erster Durchlauf" und bleibt als Beleg stehen,
+> weil er die Belegart jedes einzelnen Kriteriums festhält.
+
+### Zweiter Durchlauf — 2026-10-05
+
+**Prüfer:** QA Engineer (KI)
+**Anlass:** Freigabeprüfung nach den Behebungen von BUG-1 und BUG-2
+
+#### Was dieser Durchlauf geprüft hat
+
+Nicht alle 94 Kriterien erneut — das wäre Theater, nachdem der erste Durchlauf
+sie dokumentiert hat. Geprüft wurden gezielt: die **beiden behobenen Fehler**,
+die **zuletzt geänderten Stellen**, die **15 bislang nur gelesenen Kriterien**
+und der **gesamte automatisierte Bestand** als Rückschrittsprobe.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `npm test` | **249 Tests grün** über 11 Dateien (vorher 242) |
+| `npm run test:pruefplan` | **15 Prüffälle grün** gegen die echten Daten, jetzt 54 Kandidaten |
+| `npm run build` | erfolgreich, alle 20 Routen registriert |
+| `npm run lint` | **0 Fehler**, 4 vorbestehende `<img>`-Warnungen aus PROJ-3 |
+| `npm run test:e2e` | **erstmals vollständig gelaufen** — 38 grün, 46 rot, 8 übersprungen, 18,9 Min |
+
+#### Die E2E-Strecke — erstmals vollständig gelaufen
+
+Das ist der eigentliche Zugewinn dieses Durchlaufs. Nach dem Entfernen der
+Sperrdatei (BUG-8) lief die Suite über den Edge-Ersatzweg **zum ersten Mal
+überhaupt zu Ende** — angemeldet, gegen den Produktionsbuild:
+
+```
+PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npm run test:e2e
+→ 38 passed, 46 failed, 8 did not run (18,9 Minuten)
+```
+
+**Die Suite ist nicht langsam, sie war blockiert.** 18,9 Minuten für 92
+Testausführungen — die im ersten Durchlauf vermuteten Stunden kamen von der
+Sperrdatei, nicht von der Laufzeit. Die Schätzung „17,5 Minuten für zwei von
+sechzehn Tests" aus dem ersten Durchlauf ist damit widerlegt.
+
+**Die 46 Fehlschläge zerfallen sauber in drei Gruppen. Keine davon ist ein
+Produktfehler des Generators:**
+
+| Gruppe | Zahl | Ursache |
+|---|---|---|
+| `[Mobile Safari]` | **36** | **WebKit ist nicht installiert.** Playwright bricht mit „Please run `npx playwright install`" ab. Das Projekt übernimmt den `channel` nicht (`playwright.config.ts:72`) → **BUG-11** |
+| `[chromium]` PROJ-3 und PROJ-5 | **9** | Veraltete Testerwartungen → **BUG-10** |
+| `[chromium]` PROJ-6 | **1** | Test stört sich mit den nebenläufig laufenden Projekten → **BUG-12**. **Kein Produktfehler — allein nachgewiesen** |
+
+**Die 8 übersprungenen Tests sind der eigentliche Schaden dieses einen
+Fehlschlags.** Die PROJ-6-Datei läuft mit `mode: 'serial'`. Fällt ein Test
+durch, überspringt Playwright **den gesamten Rest der Datei**. Der Fehlschlag
+steht in Zeile 105 — alle acht Tests danach liefen nicht:
+
+> Abbrechen bleibt Entwurf · Umbenennen über das Menü · Löschen · Bedienstand
+> „Standard" · Bedienstand aus „Meine Einheiten" · Neu generieren aus
+> gespeicherter Einheit · Löschwarnung mit Entwurf · Leerzustand ohne Gruppe
+
+**Damit ist auch die Angabe „sechs Tests grün" aus dem ersten Durchlauf richtig
+eingeordnet:** Es waren dieselben sechs, die **vor** Zeile 105 liegen. Der
+Durchlauf endete damals an genau derselben Stelle. Der Fehlschlag ist also
+**reproduzierbar, kein Ausrutscher** — und er verdeckt acht weitere Kriterien.
+
+**Bilanz für PROJ-6 allein:** 15 Tests im angemeldeten Projekt — **6 grün,
+1 rot, 8 übersprungen**. Dazu die 3 Tests ohne Anmeldung
+(`…anon.spec.ts`), die **grün** sind: die Weiterleitung auf `/login` für
+`/units`, `/units/new` und `/units/<id>` ist damit erstmals wirklich im Browser
+belegt und nicht mehr nur gelesen.
+
+**Was dieser Lauf für PROJ-6 positiv belegt** — erstmals im Browser, nicht am
+Code: die Vorauswahl der Gruppe über `?group=`, „Standard" als Voreinstellung,
+die Verteilung 12/36/12 bei 60 Minuten, der Entwurf erscheint **nicht** in
+„Meine Einheiten", erneutes Generieren hinterlässt **genau einen** Entwurf, und
+der Speicherdialog öffnet mit vorausgefülltem Namen.
+
+**Was offen bleibt:** Die Darstellung auf 375 px ist weiterhin **nicht im
+Browser geprüft** (BUG-11). Am Code belegt ist das Minutenfeld als
+Rückfallebene zu den ziehbaren Grenzen (`segment-editor.tsx:78–82`).
+
+#### Die behobenen Fehler
+
+- **BUG-1** (Löschen einer Gruppe) — `group-units-warning.test.tsx`: **7 Tests grün**, einzeln nachgeprüft. `getUnitNamesForGroup` filtert auf `saved = true` und sortiert neueste zuerst
+- **BUG-2** (Entwürfe in der Löschwarnung) — im Code belegt: `getUnitNamesUsingExercise` filtert auf `.eq('saved', true)` (`src/lib/actions/units.ts:1009`). Der E2E-Test samt Gegenprobe ist geschrieben, konnte aber nicht laufen (BUG-8)
+
+#### Die vormals nur gelesenen Kriterien
+
+Dreizehn der fünfzehn sind in diesem Durchlauf am Quelltext belegt worden, mit
+Fundstelle. Das hebt sie von „nur gelesen" auf „am Code nachgewiesen" — nicht
+auf „bedient", das bleibt der E2E-Strecke vorbehalten.
+
+| Kriterium | Fundstelle und Befund |
+|---|---|
+| Alt + Pfeiltasten verschieben ein Segment | `segment-timeline.tsx:125` — `altKey` plus `ArrowLeft`/`ArrowRight`, ✅ |
+| Sportarten der Gruppe stehen oben und sind angehakt | `unit-config-form.tsx:132` — `[...group.sports, ...rest]`, Gruppensportarten zuerst, ✅ |
+| Lockern wird nicht angeboten, wenn es nichts bringt | `gap-notice.tsx:65` — korrekt für Material und Alter, **fehlerhaft für die leere Phase** → **BUG-9** |
+| Speichern gesperrt bei Lücke, mit Nennung des Segments | `unit-plan-view.tsx:118,164` — `disabled={… hasGaps}`, ✅ |
+| Frei gelassene Abschnitte sperren nicht | `unit-plan-view.tsx:118` — Filter auf `fillMode === 'generate'`, ✅ |
+| Umbenennen und Löschen über das Menü | `unit-actions-menu.tsx`, ✅ |
+| Klick auf das Menü öffnet **nicht** die Einheit | `unit-list.tsx:17–49` — das Menü liegt **neben** dem `Link`, nicht darin. Strukturell unmöglich, ✅ |
+| Keine Warnung bei gespeicherter Einheit | `unit-plan-view.tsx:176` — `manuallyEdited && !saved`, genau wie gefordert, ✅ |
+| Klick auf eine Übung öffnet ihre Detailseite | `unit-item-card.tsx:37` — `href={/exercises/${exercise.id}}`, ✅ |
+| Varianten-Hinweis sichtbar | `unit-item-card.tsx:79` — „N Varianten verfügbar", ✅ |
+| Einheiten auf der Gruppenseite, neueste zuerst | `units.ts:946` — `saved = true`, `created_at` absteigend, ✅ |
+| Leerzustand ohne Gruppe / ohne Übungen | `unit-generator-empty-state.tsx:25,44` — beide Knöpfe samt Verweis auf die Starter-Datenbank, ✅ |
+| Gruppenwechsel verwirft den Bearbeitungsstand | `unit-config-form.tsx:116–121` — setzt `customSegments` auf `null` und den Modus auf `standard`. Strenger als das Kriterium: verwirft bei **jedem** Gruppenwechsel, nicht nur bei abweichender Dauer, ✅ |
+| Edge Case 12: Netzwerkfehler | `units.ts:370,464` — der angelegte Einheiten-Satz wird im `catch` wieder gelöscht, keine halbe Einheit. Aufräumschritt belegt, nicht ausgelöst, ⚠️ |
+
+#### Datenintegrität — erneut gegen den echten Bestand
+
+Alle Prüfungen erneut gefahren, diesmal gegen 12 Einheiten und 71 Einträge:
+
+| Prüfung | Ergebnis |
+|---|---|
+| Verwaiste Segmente / Einträge / Verwendungen | 0 / 0 / 0 |
+| Segmentsumme ≠ Gesamtdauer | 0 |
+| Segment über seinem Minutenbudget | 0 |
+| Doppelte Übung innerhalb einer Einheit | 0 |
+| Plandauer außerhalb ±25 % der **effektiven** Dauer | **0 von 71** |
+| Einträge ohne Schätzdauer | 0 |
+| Entwürfe im Bestand | 0 |
+| Nutzer mit mehr als einem Entwurf | 0 |
+| Verwendungsnachweise zu Einträgen | 71 zu 71 |
+
+#### Sicherheit — erneut bewiesen
+
+- **Fremder angemeldeter Nutzer:** simulierte Sitzung mit fremder Kennung sieht **0 Zeilen** in `units`, `unit_segments`, `unit_items`, `exercise_usages`, `exercises`, `groups`, `venues`, `custom_categories`
+- **Ohne Anmeldung:** Rolle `anon` sieht **0 Zeilen** in allen geprüften Tabellen, `profiles` eingeschlossen
+- **Gegenprobe:** der Eigentümer sieht 12 / 71 / 71 — der Test blockiert also nicht einfach alles
+- **Richtlinien einzeln gelesen:** alle 14 Richtlinien der vier PROJ-6-Tabellen hängen an `auth.uid()`. `exercise_usages` hat bewusst keine UPDATE-Richtlinie
+- **Supabase-Sicherheitsprüfung:** 4 Hinweise, **alle vier vorbestehend** und keiner aus PROJ-6 (`handle_new_user` und `update_updated_at` ohne `search_path`, `handle_new_user` als `SECURITY DEFINER` für `anon` und `authenticated`, abgeschaltete Prüfung auf geleakte Passwörter). Gehören in `/deploy`
+- **BUG-4 unverändert bestätigt:** die INSERT-Richtlinie auf `units` lautet weiterhin nur `auth.uid() = user_id`; die `group_id` wird nicht auf Eigentum geprüft. Keine Offenlegung, weiterhin Härtung
+
+#### Nebenbefund aus PROJ-1 bestätigt
+
+`profiles.display_name` ist in der Datenbank **NOT NULL**, `src/lib/database.types.ts:15` führt
+`string | null`. Unverändert, ohne Auswirkung, gehört in einen Aufräum-Commit auf PROJ-1.
+
+#### Fehlerstand nach diesem Durchlauf
+
+| Fehler | Schwere | Stand |
+|---|---|---|
+| BUG-1 Gruppe löschen vernichtet Einheiten | Hoch | ✅ behoben und nachgeprüft, 7 Tests |
+| BUG-2 Entwürfe in der Löschwarnung | Niedrig | ✅ behoben, im Code belegt |
+| BUG-3 Keine Warnung beim Verlassen der Seite | Niedrig | offen |
+| BUG-4 Zugriffsschutz prüft Eigentum nicht | Niedrig | offen, erneut bestätigt |
+| BUG-5 Platzhalter ohne Nachbesetzen | Niedrig | offen, gehört zu PROJ-7 |
+| BUG-6 Verwendungszeitpunkt „generiert" | Niedrig | offen |
+| BUG-7 Verlassener Entwurf nicht auffindbar | Niedrig | offen |
+| BUG-9 Lockern wird in einer Sackgasse angeboten | Niedrig | **neu** |
+
+**Am Produkt: 0 kritisch, 0 hoch, 0 mittel, 6 niedrig offen** (BUG-1 und BUG-2 behoben).
+
+An der **Teststrecke** — kein Produktfehler, blockiert aber `/deploy`:
+
+| Fehler | Schwere | Stand |
+|---|---|---|
+| BUG-8 E2E-Suite lief nie vollständig | Niedrig | **erledigt bis auf die Virenscan-Ausnahme** — Suite lief erstmals zu Ende |
+| BUG-10 E2E-Tests aus PROJ-3 und PROJ-5 veraltet | Mittel | **neu** — 9 Fehlschläge, alle aus veralteten Erwartungen |
+| BUG-11 „Mobile Safari" übernimmt den Ersatzweg nicht | Niedrig | **neu** — 36 Fehlschläge, 375 px ungeprüft |
+| BUG-12 PROJ-6-Test stört sich mit Nebenläufigkeit | Niedrig | **neu** — 1 Fehlschlag, allein grün in 7,0 Sek |
+
+#### Entscheidung
+
+**Produktionsreif: JA.**
+
+0 kritisch, 0 hoch, 0 mittel am Produkt. Der einzige hohe Fehler (BUG-1) ist
+behoben und nachgeprüft.
+
+Der eine rote PROJ-6-E2E-Test wurde vor dieser Entscheidung **nicht
+weggewunken, sondern nachgefahren**: allein läuft er in 7,0 Sekunden grün
+(BUG-12). Er prüft im Verbund die Nebenläufigkeit der Teststrecke, nicht den
+Generator. Damit ist er als Testfehler eingeordnet — und zwar belegt, nicht
+vermutet.
+
+**Drei Dinge gehören trotzdem vor `/deploy`**, alle an der Teststrecke und
+keines am Produkt:
+
+1. **BUG-10** — neun veraltete Tests aus PROJ-3 und PROJ-5. Eine rote Suite aus
+   veralteten Gründen verdeckt künftige echte Rückschritte
+2. **BUG-11** — die Ordner-Ausnahme setzen und `npx playwright install` (ohne
+   `chromium`) laufen lassen, damit WebKit mitkommt. Erst dann ist die
+   **Mobilbreite 375 px überhaupt geprüft**; derzeit ist sie nur am Code belegt
+3. **BUG-12** — die Testkonten trennen, damit die Suite verlässlich wird
+
+Dazu **BUG-9** als Einzeiler am Produkt und die vier vorbestehenden
+Supabase-Hinweise, die ohnehin in `/deploy` gehören.
+
+**Was diese Freigabe ausdrücklich nicht behauptet:** dass jedes der 94
+Kriterien im Browser bedient wurde. Die Belegarten stehen im ersten Durchlauf
+einzeln aufgeschlüsselt; dieser zweite hat 13 vormals nur gelesene Kriterien am
+Quelltext mit Fundstelle belegt und 9 weitere erstmals im Browser. Die
+Mobilbreite bleibt die eine echte Lücke.
+
+---
+
+### Erster Durchlauf — 2026-10-05
+
 **App:** http://localhost:3000
 **Prüfer:** QA Engineer (KI)
 
@@ -1511,11 +1739,69 @@ Direkt gegen die echten 12 Einheiten geprüft:
 - **Priorität:** Nice to have
 
 #### BUG-8: Die E2E-Tests konnten nicht ausgeführt werden
-- **Status:** Teilweise erledigt am 2026-10-05 — Teststrecke laeuft, sechs Tests gruen; ein vollstaendiger Durchlauf scheitert weiter an der Startzeit des Browsers auf diesem Rechner
+- **Status:** ✅ **Im Kern erledigt am 2026-10-05, zweiter Durchlauf.** Die Suite ist **erstmals vollständig gelaufen** (38 grün, 46 rot, 8 übersprungen, 18,9 Min) — über den Edge-Ersatzweg. Offen bleibt allein die Virenscan-Ausnahme, damit der **gebündelte Chromium und WebKit** nutzbar werden; ohne sie fehlt die Mobilbreite (BUG-11). Die roten Tests sind in BUG-10 und BUG-11 aufgeschlüsselt und **keiner davon ein Produktfehler des Generators**
 - **Schwere:** Niedrig (Werkzeug, kein Produktfehler)
-- **Befund:** Der Playwright-Browser lud in dieser Sitzung nicht vollständig herunter (172 MB, zweimal abgebrochen, zuletzt bei 4,7 MB stehen geblieben). Die Tests sind geschrieben und kompilieren, wurden aber nie ausgeführt
-- **Nachzuholen:** `npx playwright install chromium`, dann `npm run test:e2e`
+- **Befund (erster Durchlauf):** Der Playwright-Browser lud nicht vollständig herunter, zuletzt bei 4,7 MB stehen geblieben. Vermutet wurde allein der Echtzeit-Virenscan
+- **Befund (zweiter Durchlauf) — zwei Ursachen, nicht eine:**
+  1. **Eine liegengebliebene Sperrdatei.** In `%LOCALAPPDATA%\ms-playwright\__dirlock` stand eine Sperre aus dem abgebrochenen Versuch vom 2026-10-05, 01:14 Uhr. Solange sie dort lag, **brach jedes `npx playwright install` sofort ab — und zwar mit Rückgabewert 0**, also als Erfolg getarnt. Der Download hat deshalb nie wieder begonnen. Das erklärt, warum der erste Durchlauf „abgebrochene Downloads" sah. Die Sperre ist in diesem Durchlauf entfernt worden
+  2. **Der Echtzeit-Virenscan.** Nach dem Entfernen der Sperre läuft das Entpacken wirklich an, bleibt aber reproduzierbar bei denselben drei Dateien stehen (`ABOUT`, die Manifest-Datei, `D3DCompiler_47.dll` — zusammen 4,7 MB) und kommt in 15 Minuten nicht weiter. Die großen Binärdateien dahinter (`chrome.dll`, rund 200 MB) werden offenbar beim Schreiben gescannt
+- **Was daraus folgt:** Die Ordner-Ausnahme im Virenschutz bleibt nötig. Sie allein hätte aber auch beim ersten Mal nicht genügt, weil die Sperrdatei den Download unabhängig davon verhindert hat. Beides musste weg; eines davon ist es jetzt
+- **Nachzuholen (in dieser Reihenfolge):**
+  1. Im Windows-Echtzeitschutz eine **Ordner-Ausnahme** für `%LOCALAPPDATA%\ms-playwright` eintragen
+  2. `npx playwright install chromium`
+  3. `npm run test:e2e`
+  4. Sollte Schritt 2 wieder ohne Ausgabe und ohne Fehler enden: `rm -rf "$LOCALAPPDATA/ms-playwright/__dirlock"` und erneut versuchen — das ist genau das Fehlerbild von Ursache 1
 - **Priorität:** Vor dem Deployment nachholen
+
+#### BUG-9: Lockern wird angeboten, wo es nachweislich nicht helfen kann
+- **Schwere:** Niedrig
+- **Gefunden:** 2026-10-05, zweiter Durchlauf (Code-Beweis, nicht bedient)
+- **Schritte:** Ein Segment auf eine **neu angelegte eigene Phase** stellen, für die es noch keine Übung gibt, und generieren
+- **Erwartet:** Kein Lockern-Knopf — stattdessen nur der Grund und der Rat, der Phase Übungen zuzuordnen
+- **Tatsächlich:** Der Knopf „Mit gelockerten Kriterien erneut versuchen" erscheint. Er kann nicht wirken: `buildPool` in `src/lib/units/generator.ts:263` filtert **zuerst** auf die Phase und erst danach greifen die lockerbaren Kriterien; `criteriaFor` gibt nur Sportart und Schwierigkeitsgrad frei. Ist `phaseMatches` leer (`kind: 'no-phase'`), bleibt der Pool auf **jeder** Lockerungsstufe leer. In `gap-notice.tsx:65` gibt `relaxCanHelp` für alles außer `'all-filtered'` pauschal `true` zurück und übersieht diesen Fall
+- **Abgrenzung:** Für `'exhausted'` und `'too-short'` ist das Anbieten **richtig** — dort kann eine gelockerte Sportart oder Schwierigkeit tatsächlich eine weitere Übung in den Pool holen. Nur `'no-phase'` ist die Sackgasse. Die Behebung ist eine Zeile: in `relaxCanHelp` zusätzlich `if (detail.kind === 'no-phase') return false`
+- **Warum es trotzdem zählt:** Edge Case 3 der Spec begründet die leere Phase ausdrücklich mit dem „klaren Lernmoment". Ein Knopf, der folgenlos bleibt, arbeitet dagegen — der Nutzer probiert das Lockern statt die Übungen der Phase zuzuordnen. Fachlich gedeckt ist der Nutzer: das Kriterium „Erfolgloses Lockern wird begründet" greift, er bekommt nach dem Klick eine Erklärung. Es ist ein Umweg, kein Datenfehler
+- **Priorität:** Im nächsten Durchgang
+
+#### BUG-10: Die E2E-Tests aus PROJ-3 und PROJ-5 prüfen gegen veraltete Oberflächen
+- **Schwere:** Mittel (Testschuld — **kein** Produktfehler)
+- **Gefunden:** 2026-10-05, zweiter Durchlauf, im ersten vollständigen angemeldeten E2E-Lauf
+- **Befund:** Neun Tests aus PROJ-3 und PROJ-5 fallen durch. Alle geprüften Fehlschläge gehen auf **veraltete Testerwartungen** zurück, nicht auf Produktfehler:
+  - **PROJ-5 (4 Tests)** suchen „**Trainingszeit** hinzufügen" und „Trainingszeit entfernen". Die Oberfläche heißt seit einer Umbenennung „**Hallenzeit**" — im Quellcode 7 Treffer für „Hallenzeit", in den Tests 9 für „Trainingszeit". Der Seitenabzug des Fehlschlags zeigt die Knöpfe „Wiederkehrende Hallenzeit hinzufügen" und „Einmalige Hallenzeit hinzufügen" einwandfrei vorhanden
+  - **PROJ-3 (5 Tests)** greifen auf Struktur statt auf Inhalt: `AC: Empty State bei leerer Datenbank` prüft `expect(hasExercises || hasEmptyState).toBe(true)` mit `page.locator('[class*="divide-y"]')`. Diese Klasse gibt es in der heutigen Listenansicht nicht mehr, und ein Leerzustand kann nicht erscheinen, weil `tests/fixtures.ts` dem Testkonto sechs Übungen anlegt — beide Teilbedingungen falsch, also Fehlschlag
+- **Warum das erst jetzt auffällt:** Diese Tests liefen bis zu diesem Durchlauf **nie angemeldet**. Abgemeldet leitete jede geschützte Seite auf `/login` um, und die Tests waren so gebaut, dass sie bei fehlendem Inhalt stillschweigend durchliefen. Die angemeldete Teststrecke aus PROJ-6 hat die Schuld nicht verursacht, sondern nur sichtbar gemacht
+- **Warum Mittel und nicht Niedrig:** Eine Rückschrittsprobe, die aus veralteten Gründen rot ist, ist so gut wie keine. Sie verdeckt künftige echte Rückschritte in PROJ-3 und PROJ-5 und macht jeden `npm run test:e2e` unlesbar
+- **Einordnung:** Gehört **nicht** zu PROJ-6. Die Behebung ist ein eigener Aufräum-Commit auf PROJ-3 und PROJ-5: Beschriftungen nachziehen und die Struktur-Selektoren durch Rollen und Texte ersetzen
+- **Priorität:** Vor `/deploy`, gemeinsam mit BUG-8 — sonst steht dort eine rote Suite, die nichts aussagt
+
+#### BUG-11: Das Projekt „Mobile Safari" übernimmt den Browser-Ersatzweg nicht
+- **Schwere:** Niedrig (Testwerkzeug — **kein** Produktfehler)
+- **Gefunden:** 2026-10-05, zweiter Durchlauf, im ersten vollständigen E2E-Lauf
+- **Befund:** Von den 46 Fehlschlägen des Durchlaufs sind **36** aus dem Projekt `Mobile Safari`. Alle brechen mit derselben Meldung ab: „Looks like Playwright Test or Playwright was just installed or updated. Please run … `npx playwright install`". In `playwright.config.ts:69–75` setzt das Projekt `...devices['iPhone 13']`, **ohne `...browser` zu übernehmen** — anders als die drei übrigen Projekte. `devices['iPhone 13']` verlangt WebKit, und WebKit ist auf diesem Rechner nicht installiert. Der Ersatzweg `PLAYWRIGHT_CHANNEL=msedge` greift für dieses Projekt also nicht
+- **Auswirkung:** Die Prüfungen auf **375 px und 768 px** laufen überhaupt nicht — und damit die Technical Requirement „Alle Views responsiv. Der Zeitverlauf muss auf Smartphone-Breite (375 px) bedienbar sein". Am Code belegt ist nur die Rückfallebene: das Minutenfeld je Segment (`segment-editor.tsx:78–82`, `type="number"`, `inputMode="numeric"`). **Im Browser ist auf Mobilbreite nichts geprüft**
+- **Zwei Wege zur Behebung:**
+  - Mit der Ordner-Ausnahme aus BUG-8 schlicht `npx playwright install` **ohne** `chromium` aufrufen, damit WebKit mitkommt. Dann läuft das Projekt wie gedacht — das ist der saubere Weg
+  - Oder, falls WebKit dauerhaft fehlen soll, in `playwright.config.ts` auch dieses Projekt mit `...browser` versehen. Dann prüft es die Mobilbreite in einem Chromium-Motor statt in WebKit — weniger aussagekräftig, aber besser als nichts
+- **Priorität:** Vor `/deploy`, zusammen mit BUG-8
+
+#### BUG-12: Ein PROJ-6-E2E-Test stört sich mit den nebenläufig laufenden Projekten
+- **Schwere:** Niedrig (Testwerkzeug — **kein** Produktfehler)
+- **Gefunden:** 2026-10-05, zweiter Durchlauf
+- **Betroffen:** `AC: der geänderte Name gilt in der Übersicht` (`tests/PROJ-6-einheiten-generator.spec.ts:105`)
+- **Der Nachweis, dass es kein Produktfehler ist:**
+
+  | Lauf | Ergebnis |
+  |---|---|
+  | In der **vollen Suite** | **rot** — und zwar reproduzierbar, in beiden QA-Durchläufen an derselben Stelle |
+  | **Allein**, mit `-g "der geänderte Name gilt in der Übersicht"` | **grün in 7,0 Sekunden** |
+
+  Ein Test, der allein grün und im Verbund rot ist, prüft nicht das Produkt,
+  sondern die Nebenläufigkeit.
+- **Was im Verbund passiert:** Der Test speichert eine Einheit unter eigenem Namen, wartet die Bestätigung „Gespeichert" ab — die laut `unit-plan-view.tsx:158` **nur** erscheint, wenn der Server `saved = true` zurückgemeldet hat — und findet in „Meine Einheiten" dennoch den Leerzustand. Zwischen Speichern und Nachsehen hat also etwas die Einheiten des Testkontos geleert
+- **Die wahrscheinliche Mechanik:** Alles teilt **ein einziges Testkonto**. Bei `fullyParallel: true` laufen die Projekte `chromium` und `Mobile Safari` gleichzeitig, und innerhalb von `chromium` laufen die drei Spec-Dateien gleichzeitig. `mode: 'serial'` ordnet nur die Tests **innerhalb** der PROJ-6-Datei, nicht das Verhältnis zu den übrigen. Dazu löscht `tests/PROJ-6-einheiten-generator.spec.ts:40` in jedem `beforeEach` **alle** Einheiten des Kontos (`delete().eq('user_id', userId)`) und `tests/fixtures.ts:108` tut dasselbe in `seed`/`cleanup`. Ein solcher Rundumschlag trifft zwangsläufig auch das, was ein nebenläufiger Test gerade braucht
+- **Warum das jetzt erst auffällt:** Vor diesem Durchlauf ist die Suite nie vollständig gelaufen (BUG-8). Nebenläufigkeitsfehler zeigen sich nur im Verbund
+- **Was zu tun ist:** Die Testkonten trennen (je Projekt eines, oder je Worker über `testInfo.parallelIndex`), oder die Rundumschläge durch zielgenaues Löschen der selbst angelegten Einheiten ersetzen. Beides gehört zu derselben Aufräumarbeit wie BUG-10
+- **Priorität:** Vor `/deploy`, gemeinsam mit BUG-10 und BUG-11
 
 #### Beobachtung ohne Fehlerstatus: Lockern verändert eine gespeicherte Einheit unmittelbar
 Speichern ist bei einer Lücke gesperrt, eine gespeicherte Einheit hat also normalerweise keine. Entsteht später doch eine — etwa weil eine verwendete Übung gelöscht wurde —, erscheint der Lockern-Knopf, und `relaxSegment` ändert die **gespeicherte** Einheit an Ort und Stelle. Das widerspricht dem seit dem 2026-10-05 geltenden Grundsatz, dass „Neu generieren" gespeicherte Einheiten unangetastet lässt. Der Fall ist selten und harmlos, sollte beim Entwurf von PROJ-7 aber mitentschieden werden.
