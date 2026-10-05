@@ -61,7 +61,7 @@ Alle drei Änderungen betreffen ausschließlich `tests/` und `playwright.config.
 | BUG-1 Gruppe löschen vernichtet Einheiten ohne Warnung | Hoch | ✅ behoben und nachgeprüft, 7 Tests |
 | BUG-2 Entwürfe in der Löschwarnung für Übungen | Niedrig | ✅ behoben, im Code belegt |
 | BUG-3 Keine Warnung beim Verlassen der Konfigurationsseite | Niedrig | offen — Edge Case 13 der Spec, schlicht nicht umgesetzt |
-| BUG-4 Zugriffsschutz prüft Eigentum an Gruppe und Übung nicht | Niedrig | offen — Härtung, vor PROJ-7 sinnvoll |
+| BUG-4 Zugriffsschutz prüft Eigentum an Gruppe und Übung nicht | Niedrig | ✅ **behoben am 2026-10-06** — fünf Richtlinien statt der zwei gemeldeten, am lebenden System nachgewiesen |
 | BUG-5 Platzhalter ohne Nachbesetzen | Niedrig | offen — gehört inhaltlich zu PROJ-7 |
 | BUG-6 Verwendungszeitpunkt steht auf „generiert" | Niedrig | offen |
 | BUG-7 Verlassener Entwurf nicht mehr auffindbar | Niedrig | offen |
@@ -1700,7 +1700,7 @@ Geprüft mit simulierten Sitzungen direkt in der Datenbank — unabhängig vom A
 - [x] **Gefährliche Links blockiert.** `musicLink` und Übungslinks werden beim Schreiben auf `http://`/`https://` geprüft (`httpUrl`-Schema). PROJ-6 stellt sie neu dar (`unit-item-card.tsx`), verlässt sich dabei aber auf die Prüfung beim Schreiben
 - [x] **Keine Filter-Injection.** Die einzige Stelle mit Zeichenketten-Einsetzung in eine PostgREST-Abfrage (Übungssuche) entfernt weiterhin `,()"'\` — die Behebung aus PROJ-3 hält
 - [x] **Eingabeprüfung serverseitig.** Alle Mutationen prüfen Anmeldung und Eigentum; `unitConfigSchema` erzwingt Segmentsumme, Mindestdauer, mindestens eine Sportart und eine gültige Hauptsportart; 18 Tests darauf
-- [ ] **Härtung fehlt in der Datenbank** — siehe BUG-4
+- [x] **Härtung in der Datenbank** — am 2026-10-06 nachgezogen, siehe BUG-4
 - [ ] **Keine Drosselung** — bewusste Entscheidung vom 2026-10-04, dokumentiert im Decision Log
 
 **Vorbestehend, nicht aus PROJ-6** (gehört in `/deploy`): vier Supabase-Hinweise — `handle_new_user` und `update_updated_at` ohne gesetzten `search_path`, `handle_new_user` als `SECURITY DEFINER` für `anon` und `authenticated` aufrufbar, und die abgeschaltete Prüfung auf geleakte Passwörter.
@@ -1753,6 +1753,51 @@ Direkt gegen die echten 12 Einheiten geprüft:
 - **Auswirkung heute:** Keine Offenlegung. Die Server Actions prüfen beides, und die Leserichtlinien verhindern, dass fremde Namen sichtbar würden. Über die REST-Schnittstelle könnte ein Nutzer aber mit eigenem Token Einheiten anlegen, die auf fremde Gruppen oder Übungen verweisen — Datenmüll im eigenen Konto
 - **Warum trotzdem melden:** PROJ-7 bringt weitere Schreibwege. Die Datenbank ist die zweite Verteidigungslinie und sollte nicht darauf bauen, dass jeder künftige Schreibweg selbst prüft
 - **Priorität:** Im nächsten Durchgang
+
+**✅ Behoben am 2026-10-06**, vor dem Entwurf von PROJ-7. Migration:
+`supabase/migrations/20261006090000_harden_unit_write_policies.sql`, im Register unter
+`20261006090000`. Über den SQL-Editor des Dashboards angewendet, weil der MCP-Weg
+`apply_migration` die Freigabe nicht erhielt.
+
+**Der Befund war größer als gemeldet — fünf Lücken, nicht zwei:**
+
+| Richtlinie | Ungeprüft | War gemeldet? |
+|---|---|---|
+| `units` INSERT | `group_id` | ja |
+| `units` UPDATE | `group_id` — eine Einheit ließ sich auf eine fremde Gruppe **umhängen** | nein |
+| `unit_items` INSERT | `exercise_id`, `variant_id` | ja |
+| `unit_items` UPDATE | dito | nein |
+| `exercise_usages` INSERT | `exercise_id`, `group_id`, `unit_id` | nein |
+
+Die vierte Zeile ist die für PROJ-7 entscheidende: **„Übung tauschen" ist ein UPDATE auf
+`exercise_id`**, kein INSERT. Hätte man nur den gemeldeten INSERT-Weg geschlossen, wäre genau
+der Weg offen geblieben, den der Editor am häufigsten benutzt.
+
+`unit_segments` blieb unberührt: dort wird das Eigentum über `unit_id` schon in beide
+Richtungen geprüft. Bei UPDATE ohne eigenes `WITH CHECK` zieht Postgres den `USING`-Ausdruck
+auch für die neue Zeile heran.
+
+Zusätzlich erzwingen die Richtlinien jetzt, dass eine Variante zu genau der Übung des Eintrags
+gehört — daran hängt das Umschalten im Editor. `exercise_id IS NULL` bleibt zulässig, sonst
+wären die Platzhalter aus `ON DELETE SET NULL` unänderbar und das Nachbesetzen aus BUG-5
+unmöglich.
+
+**Nachgewiesen am lebenden System**, alles in zurückgerollten Transaktionen, ohne eine Zeile
+anzulegen (Bestand vorher und nachher: 12 Einheiten, 45 Übungen, 71 Einträge):
+
+| Probe | Vor der Härtung | Nach der Härtung |
+|---|---|---|
+| Testkonto legt Einheit auf fremde Gruppe an | **durchgelassen** | **abgewiesen**, 42501 |
+| Eigenes Konto legt Einheit auf eigene Gruppe an | — | durchgelassen |
+| Eigenes Konto tauscht `exercise_id` auf **eigene** Übung | — | durchgelassen |
+| Eigenes Konto tauscht `exercise_id` auf **fremde** Übung | — | **abgewiesen**, 42501 |
+| Eigenes Konto schreibt Verwendungsnachweis mit eigenen Verweisen | — | durchgelassen |
+
+Für die vierte Probe wurde eine fremde Übung in derselben zurückgerollten Transaktion angelegt,
+weil das Testkonto keine hat — ohne sie wäre der Übungs-Teil der Härtung behauptet, nicht
+belegt. `get_advisors` meldet danach unverändert nur den Hinweis zu geleakten Passwörtern,
+keinen neuen Befund. Bestandsdaten vorher geprüft: 0 Verstöße, die Härtung macht also keine
+vorhandene Zeile unschreibbar.
 
 #### BUG-5: Der Platzhalter „Übung gelöscht" bietet kein Nachbesetzen
 - **Schwere:** Niedrig
