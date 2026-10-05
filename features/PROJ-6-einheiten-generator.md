@@ -6,6 +6,7 @@
 **QA:** 2026-10-05 (zwei Durchläufe, freigegeben im zweiten)
 **Architected:** 2026-10-03
 **Backend:** 2026-10-04 (überarbeitet 2026-10-05)
+**E2E:** 2026-10-05 — Lauf 5: **94 grün, 0 rot, 0 übersprungen** (Edge-Ersatzweg, ohne echtes WebKit)
 
 ## Hier geht es weiter — Stand 2026-10-05
 
@@ -14,37 +15,40 @@
 
 ### In einem Satz
 
-Der Generator ist fertig gebaut, **zweimal geprüft und freigegeben**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt. Offen sind sechs kleine Fehler am Produkt und — neu und wichtiger — **drei Baustellen an der Teststrecke**, die vor `/deploy` gehören, aber die Freigabe nicht aufhalten.
+Der Generator ist fertig gebaut, **zweimal geprüft und freigegeben**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt. Und seit dem 2026-10-05 ist auch **die E2E-Suite vollständig grün** — 94 Tests, 0 Fehlschläge, 10,0 Minuten.
 
-### Der nächste Schritt — Stand nach Lauf 3
+### Der nächste Schritt — Stand nach Lauf 5
 
-**Die Freigabe des Produkts steht.** Offen ist nur noch die Teststrecke. Zwei
-Dinge, in dieser Reihenfolge:
+**`/deploy`.** Die Teststrecke ist abgearbeitet; was dort noch offen ist, hält
+nichts auf:
 
-1. **Die Ordner-Ausnahme im Virenschutz setzen** — inzwischen **notwendig**,
-   nicht mehr optional. Seit BUG-11 behoben ist, laufen zwei Browser-Projekte
-   gleichzeitig, und 6 der 7 verbliebenen Fehlschläge aus Lauf 3 sind reine
-   **Zeitüberschreitungen** (bis zu 120 s für ein `page.goto`). Dann:
-   `npx playwright install` — **ohne** `chromium`, damit WebKit mitkommt
-2. **Den einen instabilen Test untersuchen** —
-   `PROJ-6-einheiten-generator.spec.ts:112`. Allein grün in 7 s, im Verbund
-   mal rot, mal grün. **Er blockiert acht weitere Tests** (Serien-Kaskade plus
-   das `exklusiv`-Projekt) und ist damit der einzige echte Hebel zu einer
-   grünen Suite. Der Befundstand steht unten unter „Was von den 7
-   Fehlschlägen aus Lauf 3 übrig ist" — inklusive der Erkenntnis, dass
-   `/units` eine async Server-Komponente ist und ein Lade-Rennen im Browser
-   damit ausgeschlossen ist
+| Offen | Wo es hingehört |
+|---|---|
+| **BUG-9** — Lockern wird in einer Sackgasse angeboten, ein Einzeiler in `gap-notice.tsx` | `/frontend` |
+| **BUG-16** — ein Speichern ohne getroffene Zeile meldet Erfolg | `/backend` |
+| Vier vorbestehende Supabase-Hinweise | `/deploy` |
+| Prüfung in **echtem WebKit** — dafür fehlt die Ordner-Ausnahme im Virenschutz, und die muss in **Avast** stehen, nicht im Windows-Sicherheitscenter (siehe unten) | Nutzer, einmalig |
 
-Danach **`/deploy`** — dort warten noch **BUG-9** (ein Einzeiler am Produkt)
-und die vier vorbestehenden Supabase-Hinweise.
+Die Suite läuft bis dahin über den Edge-Ersatzweg und prüft dabei **auch die
+Mobilbreiten** — in einem Chromium-Motor statt in WebKit:
 
-### Die gute Nachricht des zweiten Durchlaufs
+```
+PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npm run test:e2e
+```
 
-**Die E2E-Suite ist erstmals vollständig gelaufen** — 38 grün, 46 rot, 8 übersprungen, in **18,9 Minuten**. Die im ersten Durchlauf vermuteten Stunden gab es nie; der Durchlauf war durch eine liegengebliebene Sperrdatei blockiert, nicht langsam. Von den 46 roten Tests ist **keiner ein Produktfehler des Generators** — 36 sind fehlendes WebKit, 9 sind veraltete Tests, 1 ist Nebenläufigkeit.
+### Wie die Suite grün wurde
+
+**Lauf 3 stand bei 79 / 7 / 8, Lauf 5 steht bei 94 / 0 / 0.** Drei Befunde liegen dazwischen, und zwei davon widerlegen eine Annahme der früheren Durchläufe:
+
+1. **Ein hängender Installationsprozess**, nicht die Nebenläufigkeit, trug den Großteil der Last. Ein `npx playwright install chromium` von 09:52 Uhr lief während Lauf 3 noch — und acht Stunden später unverändert weiter. Nach dem Beenden fielen fünf der sechs Zeitüberschreitungen weg, ohne eine geänderte Testzeile
+2. **BUG-14** — die Zusicherung `getByText('Gespeichert')` traf auch „Noch nicht **gespeichert**". Sie war damit immer erfüllt, am sichersten bei fehlgeschlagenem Speichern. Die Begründung, mit der der instabile Test bisher nicht als Produktfehler geführt wurde, trägt damit nicht
+3. **BUG-15** — die Zusicherungen hatten 5 Sekunden, der Test 120. Der letzte Fehlschlag brauchte 16,9 Sekunden und war danach grün
+
+Alle drei Änderungen betreffen ausschließlich `tests/` und `playwright.config.ts` — **kein Produktcode**.
 
 ### Fehlerstand
 
-**Am Produkt** — 0 kritisch, 0 hoch, 0 mittel, 6 niedrig offen (2 behoben):
+**Am Produkt** — 0 kritisch, 0 hoch, 0 mittel, **7 niedrig offen** (2 behoben):
 
 | Fehler | Schwere | Stand |
 |---|---|---|
@@ -56,6 +60,7 @@ und die vier vorbestehenden Supabase-Hinweise.
 | BUG-6 Verwendungszeitpunkt steht auf „generiert" | Niedrig | offen |
 | BUG-7 Verlassener Entwurf nicht mehr auffindbar | Niedrig | offen |
 | BUG-9 Lockern wird in einer Sackgasse angeboten | Niedrig | **neu** — eine Zeile in `gap-notice.tsx` |
+| BUG-16 Ein Speichern ohne getroffene Zeile meldet Erfolg | Niedrig | **neu** — `units.ts:578`, gehört zu `/backend` |
 
 **An der Teststrecke** — blockiert die Freigabe nicht, aber `/deploy`:
 
@@ -66,19 +71,31 @@ und die vier vorbestehenden Supabase-Hinweise.
 | BUG-11 „Mobile Safari" verlangt WebKit | Niedrig | ✅ **behoben** — Ersatzweg zieht jetzt den Browsertyp mit |
 | BUG-12 PROJ-6-Test stört sich mit Nebenläufigkeit | Niedrig | ✅ **behoben** — Grundbestand zentral, Löschen zielgenau |
 | BUG-13 Umbenennen-Test sucht „Umbenennen" statt „Speichern" | Niedrig | ✅ **behoben** — von BUG-12 verdeckt gewesen |
+| BUG-14 „Gespeichert" war eine Tautologie, keine Prüfung | Mittel | ✅ **behoben** — fünf Zusicherungen auf `exact`, dazu eine Bestandsprüfung |
+| BUG-15 Zusicherungen hatten 5 Sekunden, der Test 120 | Niedrig | ✅ **behoben** — `expect: { timeout: 15_000 }` |
 
 ### Die eine Sache, die der Nutzer selbst tun muss
 
-Im ersten Durchlauf wurde allein der Echtzeit-Virenscan verdächtigt. Der zweite hat nachgemessen: **es sind zwei Ursachen, und die erste war die eigentliche.**
+Drei Durchläufe haben drei verschiedene Ursachen aufgedeckt, und die dritte erklärt, warum die Abhilfe der ersten beiden nicht gewirkt hat.
 
-1. **Eine liegengebliebene Sperrdatei.** In `%LOCALAPPDATA%\ms-playwright\__dirlock` lag eine Sperre aus dem abgebrochenen Versuch vom 2026-10-05, 01:14 Uhr. Solange sie dort lag, **brach jedes `npx playwright install` sofort ab — getarnt als Erfolg, mit Rückgabewert 0 und ohne eine Zeile Ausgabe.** Der Download hat deshalb nie wieder begonnen; die „abgebrochenen Downloads" des ersten Durchlaufs waren Downloads, die nie anfingen. **Diese Sperre ist entfernt.**
-2. **Der Echtzeit-Virenscan.** Danach läuft das Entpacken wirklich an — und bleibt reproduzierbar bei denselben drei Dateien (4,7 MB) stehen, während die großen Binärdateien dahinter gescannt werden. **Das bleibt zu tun.**
+1. **Eine Sperre im Browser-Ordner.** `%LOCALAPPDATA%\ms-playwright\__dirlock` blockiert jedes weitere `npx playwright install` — **getarnt als Erfolg, mit Rückgabewert 0 und ohne eine Zeile Ausgabe.** Am 2026-10-05 lag sie zweimal: zuerst als liegengebliebene Datei vom 01:14 Uhr, dann **gehalten von einem lebenden Prozess**. Ein `npx playwright install chromium` von 09:52 Uhr hing zu diesem Zeitpunkt noch — **acht Stunden**, unverändert bei denselben drei Dateien. Prozessbaum beendet, Sperre entfernt
+2. **Der Download war nie das Problem.** Ohne Sperre lädt er in gut zwei Minuten vollständig: 172,8 MiB, 100 %. Die „abgebrochenen Downloads" der früheren Durchläufe waren Downloads, die nie anfingen
+3. **Das Entpacken bleibt stehen** — reproduzierbar bei denselben drei Dateien (4,7 MB von 172,8 MiB), während die großen Binärdateien dahinter gescannt werden. **Das bleibt zu tun.**
 
-**Abhilfe (einmalig, etwa eine Minute):** Im Windows-Echtzeitschutz eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright` eintragen, danach `npx playwright install chromium`. Anschließend reicht ein schlichtes `npm run test:e2e`.
+**Und hier liegt der Grund, warum eine schon eingetragene Ausnahme nichts bewirkt hätte:** Der Echtzeitschutz dieses Rechners ist **nicht Windows Defender**. Installiert sind drei Schutzprogramme — Defender, **Avast** und McAfee. `Get-MpPreference` scheitert mit `0x800106ba` (der Defender-Dienst läuft nicht), und im Sicherheitscenter steht Avast als der aktive Scanner. Eine Ordner-Ausnahme im Windows-Sicherheitscenter landet damit bei einem **abgeschalteten** Scanner.
 
-> Endet `npx playwright install` wieder ohne Ausgabe und ohne Fehler, ist es
-> erneut Ursache 1. Dann:
-> `rm -rf "$LOCALAPPDATA/ms-playwright/__dirlock"` und noch einmal versuchen.
+**Abhilfe (einmalig, etwa eine Minute):**
+
+1. In **Avast** → Menü → Einstellungen → Allgemein → **Blockierte & zugelassene Apps** bzw. **Ausnahmen** → Ordner hinzufügen: `C:\Users\goryg\AppData\Local\ms-playwright`
+2. Falls McAfee ebenfalls scannt, dort dasselbe
+3. `npx playwright install` — **ohne** `chromium`, damit WebKit mitkommt
+4. Danach reicht ein schlichtes `npm run test:e2e`
+
+> Endet `npx playwright install` ohne Ausgabe und ohne Fehler, ist es wieder
+> Ursache 1. Dann erst nachsehen, ob noch ein Installationsprozess läuft
+> (`Get-CimInstance Win32_Process -Filter "Name='node.exe'"`), ihn beenden,
+> dann `rm -rf "$LOCALAPPDATA/ms-playwright/__dirlock"` und neu versuchen.
+> Bleibt das Entpacken bei wenigen Megabyte stehen, greift die Ausnahme nicht.
 
 Solange der gebündelte Chromium fehlt, läuft die Suite ersatzweise über Edge:
 
@@ -88,9 +105,7 @@ PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npm run test:e2e
 
 `PLAYWRIGHT_PORT` ist nötig, falls auf 3000 bereits ein Entwicklungsserver läuft — der würde sonst weiterverwendet und die Umstellung auf den Produktionsbuild wäre wirkungslos.
 
-So lief die Suite im zweiten Durchlauf **vollständig durch: 18,9 Minuten** für 92 Testausführungen. Die Befürchtung aus dem ersten Durchlauf, ein Durchlauf brauche Stunden, war falsch — gebremst hat die Sperrdatei, nicht der Browser.
-
-**Ein Haken bleibt an diesem Ersatzweg:** Das Projekt **„Mobile Safari"** (`playwright.config.ts:69–75`) übernimmt den `channel` **nicht** und verlangt deshalb WebKit. Alle 36 seiner Tests brechen ab, und damit bleibt die **Prüfung auf 375 px und 768 px ungeprüft** (BUG-11). Mit der Ordner-Ausnahme und `npx playwright install` — **ohne** `chromium`, damit WebKit mitkommt — löst sich das von selbst.
+**Dieser Ersatzweg trägt inzwischen die ganze Suite.** Seit BUG-11 behoben ist, zieht auch das Projekt „Mobile Safari" den Browsertyp mit und läuft in einem Chromium-Motor statt in WebKit — weniger aussagekräftig als echtes Safari, aber die Mobilbreiten werden geprüft. Was der Ausnahme noch fehlt, ist allein die Prüfung in **echtem WebKit**.
 
 ### Was danach ansteht
 
@@ -110,12 +125,13 @@ npm test              # 249 Tests, Einheiten- und Komponententests
 npm run test:pruefplan # 15 Prüffälle gegen die echten Übungsdaten
 npm run build         # Produktionsbuild
 npm run lint          # 0 Fehler, 4 vorbestehende <img>-Warnungen aus PROJ-3
-npm run test:e2e      # 92 Testausführungen, 18,9 Min — erst nach der Virenscan-Ausnahme aussagekräftig
+npm run test:e2e      # 94 Testausführungen, 10,0 Min (Edge-Ersatzweg, siehe oben)
 ```
 
-Stand des letzten E2E-Durchlaufs (über Edge, ohne WebKit): **38 grün, 46 rot,
-8 übersprungen**. Die 46 roten sind in BUG-10, BUG-11 und BUG-12
-aufgeschlüsselt — **keiner ist ein Produktfehler des Generators**.
+Stand des letzten E2E-Durchlaufs (Lauf 5, über Edge): **94 grün, 0 rot, 0
+übersprungen in 10,0 Minuten.** Der Weg dorthin steht unter „Wie aus 7
+Fehlschlägen 0 wurden"; alle Behebungen betrafen ausschließlich `tests/` und
+`playwright.config.ts`. Ungeprüft bleibt allein **echtes WebKit**.
 
 ---
 
@@ -1921,8 +1937,22 @@ Nach der Umstellung: **94 Tests in 8 Dateien**, `tsc --noEmit` ohne Fehler,
 | 1 (vor den Behebungen) | 38 | 46 | 8 | 36 × WebKit, 9 × veraltet, 1 × Nebenläufigkeit |
 | 2 (nach BUG-10/12) | 51 | 37 | 6 | BUG-10 und BUG-12 **behoben**; BUG-11-Fix unzureichend, BUG-13 aufgedeckt |
 | 3 (nach allen Behebungen) | **79** | **7** | 8 | 21,6 Min. WebKit-Ausfälle **weg**, veraltete Tests **weg** |
+| 4 (nach BUG-14) | **92** | **1** | 1 | 17,1 Min. Der instabile Test grün, inklusive neuer Bestandsprüfung |
+| 5 (nach BUG-15) | **94** | **0** | **0** | **10,0 Min. Vollständig grün** |
 
-#### Was von den 7 Fehlschlägen aus Lauf 3 übrig ist
+#### Wie aus 7 Fehlschlägen 0 wurden — Lauf 4 und 5
+
+**Sechs der sieben waren Zeitüberschreitungen, und zwei Dinge haben sie beseitigt.**
+
+Das erste war kein Testfehler, sondern ein hängender Prozess: Ein `npx playwright install chromium` vom 2026-10-05, 09:52 Uhr lief während Lauf 3 noch — und lief auch acht Stunden später noch, unverändert bei drei entpackten Dateien. Er wurde die ganze Zeit vom Echtzeitscanner begleitet. Nach dem Beenden des Prozessbaums fielen in Lauf 4 fünf der sechs Zeitüberschreitungen weg, ohne dass eine Testzeile geändert wurde. Die Last, die als „zwei gleichzeitig laufende Browser-Projekte" gedeutet wurde, kam zu einem guten Teil von ihm.
+
+Das zweite war **BUG-15**: Die Zusicherungen hatten 5 Sekunden, der Test 120. Der letzte verbliebene Fehlschlag — `AC: Abbrechen-Link führt zurück zur Übersichtsseite` im Mobil-Projekt — brauchte in Lauf 5 **16,9 Sekunden** und war grün, derselbe Test im Chromium-Projekt 3,1 Sekunden. Er konnte das alte Fenster nie gewinnen.
+
+**Der siebte, der instabile Test, war etwas anderes: eine Zusicherung, die nichts zusicherte.** Siehe **BUG-14**. Die Annahme, ein sichtbares „Gespeichert" belege ein erfolgreiches Speichern, war falsch — der laxe Textvergleich traf auch „Noch nicht gespeichert". Der Test ist seit Lauf 4 grün (6,1 s, dann 12,2 s), und er kann einen fehlgeschlagenen Speichervorgang nicht mehr überdecken: Die neue Zwischenprüfung am Bestand trennt die drei möglichen Ursachen voneinander, falls er wiederkommt.
+
+**Was offen bleibt:** Die Prüfung in **echtem WebKit** (dafür braucht es die Ausnahme im Virenschutz, siehe oben) und **BUG-16** — ein Speichern ohne getroffene Zeile meldet Erfolg. Das ist die Mechanik, die das Bild aus Lauf 3 erzeugt haben kann; nachgewiesen ist sie nicht.
+
+#### Was in Lauf 3 noch offen war (historisch)
 
 **Sechs davon sind Zeitüberschreitungen im Mobil-Projekt — keine
 Produktfehler.** Die Meldungen sind eindeutig:
@@ -1974,7 +2004,15 @@ Produktfehler zu führen:
 Was noch **nicht** erklärt ist: `/units` ist eine **async
 Server-Komponente** (`units/page.tsx`), die ihre Daten vor dem HTML holt — ein
 Lade-Rennen im Browser ist damit ausgeschlossen. Der Server hat die Einheit
-also wirklich nicht gefunden. **Hier ist die Untersuchung offen.**
+also wirklich nicht gefunden.
+
+> **Nachtrag vom selben Tag:** Diese Untersuchung ist abgeschlossen, und sie
+> hat die Voraussetzung des Absatzes darüber widerlegt. Die Bestätigung
+> „Gespeichert" war **keine** Bestätigung — siehe **BUG-14**. Das Speichern
+> hat nicht gegriffen, der Test hat es nur nicht gemerkt. Auch der Satz, das
+> Mobil-Projekt sei nicht der Störer, stand auf einem Vergleich mit Lauf 1,
+> dessen Fehlschlag damals eine andere, inzwischen behobene Ursache hatte
+> (BUG-12) — er trägt nicht.
 
 **Dieser eine Test blockiert acht weitere:** Er steht in Zeile 112, und die
 Serien-Betriebsart überspringt danach die restlichen 7 Tests der Datei; dazu
@@ -1990,6 +2028,36 @@ einer grünen Suite.**
 - **Befund:** Der Test greift nach `dialog.getByRole('button', { name: 'Umbenennen' })` und läuft in die Zeitüberschreitung. „Umbenennen" heißen der **Menüpunkt** und die **Überschrift** des Dialogs; sein Bestätigungsknopf heißt **„Speichern"** (`confirmLabel="Speichern"`, `unit-actions-menu.tsx:116`). Der Seitenabzug zeigt den Dialog offen, den Namen eingetragen und die Knöpfe „Abbrechen" und „Speichern" — das Produkt verhält sich also richtig und in sich stimmig
 - **Warum er erst jetzt auffiel:** Er war einer der acht Tests, die der Abbruch nach Zeile 105 übersprungen hat (BUG-12). Mit dessen Behebung lief er **erstmals überhaupt**. Genau dieser Zugewinn war der Zweck der Behebung — ein übersprungener Test ist kein grüner Test
 - **Vorsorge:** Die **übrigen** bislang übersprungenen Tests wurden daraufhin in einem Durchgang gegen die Komponenten geprüft, statt sie Fehlschlag für Fehlschlag zu entdecken. Alle korrekt; nur dieses eine Label war falsch
+
+#### BUG-14: Die Bestätigung „Gespeichert" war keine Prüfung, sondern eine Tautologie
+- **Status:** ✅ **Behoben am 2026-10-05**, Lauf 4
+- **Schwere:** Mittel (Testwerkzeug — **kein** Produktfehler, aber die Ursache dafür, dass ein echter Fehlschlag drei Läufe lang als unerklärt geführt wurde)
+- **Gefunden:** 2026-10-05 bei der Untersuchung des instabilen Tests aus Lauf 3
+- **Betroffen:** fünf Zusicherungen in `tests/PROJ-6-einheiten-generator.spec.ts` (Zeilen 120, 139, 158, 192, 211)
+- **Befund:** `page.getByText('Gespeichert')` übersetzt Playwright zu `internal:text="Gespeichert"i` — **Teilzeichenkette, Groß- und Kleinschreibung gleichgültig**. Belegt im installierten Playwright an zwei Stellen: `escapeForTextSelector` hängt ohne `exact` ein `i` an (`playwright-core/lib/utils/isomorphic/stringUtils.js:116-120`), und der Textvergleicher wird damit zu `kind: "lax"` mit `normalized.toLowerCase().includes(selector)` (`createTextMatcher`, Injected-Script). Der Absatz des Entwurfs lautet „**Noch nicht gespeichert** — diese Einheit erscheint erst in deinen Übersichten …" (`unit-plan-view.tsx:227`) und enthält die gesuchte Zeichenkette. Die Zusicherung war also erfüllt — **am sichersten gerade dann, wenn das Speichern nicht gegriffen hatte**
+- **Was daraus folgt:** Die Begründung, mit der der instabile Test bisher nicht als Produktfehler geführt wurde — „die Bestätigung war vorher sichtbar, und die erscheint nur, wenn der Server `saved = true` zurückgemeldet hat" —, **trägt nicht**. Die Erfolgsmeldung heißt „Einheit gespeichert" (`unit-plan-view.tsx:98`), der Vermerk neben dem Haken „Gespeichert" (`unit-plan-view.tsx:161`), und der erscheint nur bei `unit.saved`. Die leere Übersicht aus Lauf 3 war damit kein Rätsel: **Das Speichern hat nicht gegriffen, und der Test hat darüber hinweggesehen.** Die Suche nach einem Lade-Rennen im Browser ging ins Leere, weil es keines zu finden gab
+- **Zweiter, unabhängiger Flattereffekt in derselben Zeile:** Bei **Erfolg** passen vorübergehend **zwei** Elemente auf den laxen Vergleich — die Meldung „Einheit gespeichert" und der noch stehende Entwurfs-Absatz, bis `router.refresh()` ankommt. Zwei Treffer sind im strikten Modus ein Fehler, und je langsamer der Server antwortet, desto länger steht das Fenster offen. Unter der Last zweier gleichzeitig laufender Browser-Projekte also genau dann, wenn die Suite voll läuft
+- **Behebung:** alle fünf Zusicherungen auf `{ exact: true }`. Damit greift der strikte Vergleich `normalized === 'Gespeichert'` und trifft genau den Vermerk, den die Seite erst nach `unit.saved === true` vom Server zeigt. „Noch nicht gespeichert" und „Einheit gespeichert" fallen beide heraus
+- **Dazu eine Zwischenprüfung am Bestand** im betroffenen Test: Sie trennt die drei verbleibenden Möglichkeiten voneinander — keine Zeile (die Einheit wurde weggelöscht), `saved: false` (das Speichern lief ins Leere), `saved: true` bei trotzdem leerer Übersicht (dann schlägt das Lesen in `getUnits` fehl). Tritt der Fall wieder auf, steht die Ursache im Fehlschlag statt in einer Vermutung
+
+#### BUG-15: Die Zusicherungen hatten 5 Sekunden, der Test 120
+- **Status:** ✅ **Behoben am 2026-10-05**, Lauf 5
+- **Schwere:** Niedrig (Testwerkzeug — **kein** Produktfehler)
+- **Gefunden:** 2026-10-05 am letzten verbliebenen Fehlschlag aus Lauf 4
+- **Betroffen:** `playwright.config.ts`; sichtbar an `AC: Abbrechen-Link führt zurück zur Übersichtsseite` (`tests/PROJ-3-uebungsdatenbank.spec.ts:129`) im Projekt „Mobile Safari", in Lauf 3 **und** Lauf 4
+- **Befund:** Die Testzeit war bewusst auf 120 Sekunden gesetzt, weil auf diesem Rechner schon das Starten eines Browser-Kontexts eine halbe Minute dauern kann. Die **Zusicherungen** blieben dabei bei den 5 Sekunden der Voreinstellung — ein Fenster, das 24-mal kleiner ist als das des Tests, den es absichern soll
+- **Warum das kein Produktfehler ist:** Der Seitenabzug zeigt den Link `Abbrechen` mit `/url: /exercises` **geklickt und fokussiert** (`[active]`), die Meldung lautet „5 × unexpected value `/exercises/new`". Der Klick saß also; nur die clientseitige Navigation kam nach dem Fenster an. Derselbe Test ist im Chromium-Projekt grün — gegen denselben Server, nur ohne die Last des zweiten Projekts daneben
+- **Behebung:** `expect: { timeout: 15_000 }` in `playwright.config.ts`, mit derselben Begründung, die über der Testzeit schon stand: lieber ein langsamer Durchlauf als ein Fehlschlag, der nach einem Produktfehler aussieht und keiner ist
+
+#### BUG-16: Ein Speichern, das keine Zeile trifft, meldet Erfolg
+- **Status:** **Offen** — gehört zu `/backend`, nicht zu QA (wie BUG-9)
+- **Schwere:** Niedrig
+- **Gefunden:** 2026-10-05, als BUG-14 die Frage freilegte, wie ein Speichern scheitern kann, ohne sich zu zeigen
+- **Betroffen:** `saveUnit` (`src/lib/actions/units.ts:578-585`), dieselbe Mechanik in `renameUnit` (`:530-537`)
+- **Befund:** Das Update läuft über `.eq('id', unitId).eq('user_id', user.id)`. Trifft es **keine** Zeile, ist das in Supabase kein Fehler: `error` bleibt leer, die Aktion meldet `success: true`, die Oberfläche zeigt „Einheit gespeichert" — und geschrieben wurde nichts. Der Nutzer hält eine Einheit für gesichert, die in keiner Übersicht erscheint
+- **Wie eine Zeile verschwinden kann:** `generateUnit` (`:333`) löscht Entwürfe **kontoweit** — `.eq('user_id', user.id).eq('saved', false)`, nicht nach Gruppe eingeschränkt. Ein zweites Generieren in einem anderen Tab reißt damit den Entwurf weg, den die erste Seite gerade speichern will. Zwei offene Tabs genügen
+- **Was nachgewiesen ist und was nicht:** Die Mechanik erzeugt **genau** das Bild aus Lauf 3 — Bestätigung sichtbar, Übersicht leer, Server hat die Einheit wirklich nicht. Dass sie dort zugeschlagen hat, ist damit **nicht** bewiesen: Innerhalb der Serien-Betriebsart generiert im Lauf niemand nebenher, und in Lauf 4 und 5 trat der Fall nicht wieder auf. Die Zwischenprüfung aus BUG-14 nagelt es beim nächsten Auftreten fest
+- **Was zu tun ist:** `.select('id')` an das Update hängen und eine leere Antwort als Fehler behandeln („Diese Einheit existiert nicht mehr."). Dazu den kontoweiten Rundumschlag in `generateUnit` auf die bearbeitete Gruppe einschränken
 
 #### Beobachtung ohne Fehlerstatus: Lockern verändert eine gespeicherte Einheit unmittelbar
 Speichern ist bei einer Lücke gesperrt, eine gespeicherte Einheit hat also normalerweise keine. Entsteht später doch eine — etwa weil eine verwendete Übung gelöscht wurde —, erscheint der Lockern-Knopf, und `relaxSegment` ändert die **gespeicherte** Einheit an Ort und Stelle. Das widerspricht dem seit dem 2026-10-05 geltenden Grundsatz, dass „Neu generieren" gespeicherte Einheiten unangetastet lässt. Der Fall ist selten und harmlos, sollte beim Entwurf von PROJ-7 aber mitentschieden werden.

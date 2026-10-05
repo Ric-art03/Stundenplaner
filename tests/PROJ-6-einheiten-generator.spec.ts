@@ -117,7 +117,39 @@ test.describe('PROJ-6 — Speichern, Benennen, Löschen', () => {
     await dialog.getByLabel('Name').fill('Eigener Einheitenname')
     await dialog.getByRole('button', { name: 'Speichern' }).click()
 
-    await expect(page.getByText('Gespeichert')).toBeVisible()
+    /**
+     * ‚Gespeichert‘ **nur** mit `exact`.
+     *
+     * Ohne das greift `getByText` als Teilzeichenkette und ohne Rücksicht auf
+     * Groß- und Kleinschreibung (`internal:text="…"i`). Der Absatz des
+     * Entwurfs — ‚Noch nicht gespeichert — diese Einheit erscheint erst …‘ —
+     * erfüllte die Zusicherung damit ebenfalls. Ein **fehlgeschlagenes**
+     * Speichern lief so als Bestätigung durch, und der Test scheiterte erst
+     * eine Zeile später an der leeren Übersicht — an einer Stelle, die wie ein
+     * Produktfehler aussieht und keiner ist.
+     *
+     * Mit `exact` trifft die Zusicherung genau den Vermerk neben dem Haken,
+     * den die Seite erst nach `unit.saved === true` vom Server zeigt.
+     */
+    await expect(page.getByText('Gespeichert', { exact: true })).toBeVisible()
+
+    /**
+     * Zwischenprüfung am Bestand. Scheitert der Test im Verbund, trennt sie
+     * die drei möglichen Ursachen voneinander: keine Zeile (die Einheit wurde
+     * weggelöscht), `saved: false` (das Speichern lief ins Leere, etwa weil
+     * die Zeile vorher verschwand — ein Update ohne Treffer meldet in
+     * Supabase keinen Fehler), oder `saved: true` bei trotzdem leerer
+     * Übersicht (dann schlug das Lesen in `getUnits` fehl).
+     */
+    const { data: row } = await admin
+      .from('units')
+      .select('id, saved')
+      .eq('user_id', userId)
+      .eq('group_id', fixtures.groupId)
+      .maybeSingle()
+    expect(row, 'Die Einheit steht nicht mehr im Bestand').not.toBeNull()
+    expect(row?.saved, 'Der Server hat die Einheit nicht als gespeichert vermerkt').toBe(true)
+
     await page.goto('/units')
     await expect(page.getByText('Eigener Einheitenname')).toBeVisible()
   })
@@ -136,7 +168,7 @@ test.describe('PROJ-6 — Speichern, Benennen, Löschen', () => {
     await generateStandardUnit(page)
     await page.getByRole('button', { name: 'Einheit speichern' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click()
-    await expect(page.getByText('Gespeichert')).toBeVisible()
+    await expect(page.getByText('Gespeichert', { exact: true })).toBeVisible()
 
     await page.goto('/units')
     await page.getByRole('button', { name: /Aktionen für/ }).first().click()
@@ -155,7 +187,7 @@ test.describe('PROJ-6 — Speichern, Benennen, Löschen', () => {
     await generateStandardUnit(page)
     await page.getByRole('button', { name: 'Einheit speichern' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click()
-    await expect(page.getByText('Gespeichert')).toBeVisible()
+    await expect(page.getByText('Gespeichert', { exact: true })).toBeVisible()
 
     await page.goto('/units')
     await page.getByRole('button', { name: /Aktionen für/ }).first().click()
@@ -189,7 +221,7 @@ test.describe('PROJ-6 — Zurück zum Generator', () => {
     await generateStandardUnit(page)
     await page.getByRole('button', { name: 'Einheit speichern' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click()
-    await expect(page.getByText('Gespeichert')).toBeVisible()
+    await expect(page.getByText('Gespeichert', { exact: true })).toBeVisible()
 
     // Über die Übersicht statt direkt aus dem Generator.
     await page.goto('/units')
@@ -208,7 +240,7 @@ test.describe('PROJ-6 — Neu generieren', () => {
 
     await page.getByRole('button', { name: 'Einheit speichern' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click()
-    await expect(page.getByText('Gespeichert')).toBeVisible()
+    await expect(page.getByText('Gespeichert', { exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: /Neu generieren/ }).click()
 

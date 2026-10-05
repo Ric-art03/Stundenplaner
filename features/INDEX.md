@@ -13,15 +13,17 @@
 
 ## Woran zuletzt gearbeitet wurde
 
-**PROJ-6 (Einheiten-Generator)** — zweimal geprüft und **freigegeben**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt. Der eine hohe Fehler (Gruppe löschen vernichtet Einheiten) ist behoben und nachgeprüft.
+**PROJ-6 (Einheiten-Generator)** — das Produkt ist **freigegeben** (0 kritisch, 0 hoch, 0 mittel), und seit dem 2026-10-05 ist auch die **E2E-Suite vollständig grün: 94 Tests, 0 Fehlschläge, 0 übersprungen in 10,0 Minuten** (zuvor 79 / 7 / 8).
 
-Der zweite Durchlauf hat die **E2E-Suite erstmals vollständig laufen lassen** — blockiert hatte sie eine liegengebliebene Sperrdatei von Playwright, nicht der Virenscanner allein. Ergebnis: 38 grün, 46 rot, 8 übersprungen in 18,9 Minuten, und **keiner der roten Tests ist ein Produktfehler** (36 × fehlendes WebKit, 9 × veraltete Tests aus PROJ-3/PROJ-5, 1 × Nebenläufigkeit).
+Drei Befunde liegen zwischen Lauf 3 und Lauf 5, und zwei widerlegen eine Annahme der früheren Durchläufe:
 
-Die Teststrecke wurde im selben Durchlauf aufgeräumt (BUG-10 bis BUG-13, alle nur in `tests/` und `playwright.config.ts` — **kein Produktcode**). Lauf 3 steht bei **79 grün / 7 rot**, von zuvor 38 / 46.
+1. **Ein hängender Installationsprozess** trug den Großteil der Last, nicht die Nebenläufigkeit. Ein `npx playwright install chromium` von 09:52 Uhr lief noch acht Stunden später unverändert weiter; nach dem Beenden fielen fünf der sechs Zeitüberschreitungen weg, ohne eine geänderte Testzeile
+2. **BUG-14** — die Zusicherung `getByText('Gespeichert')` traf als laxe Teilzeichenkette auch „Noch nicht **gespeichert**". Sie war damit immer erfüllt, am sichersten bei fehlgeschlagenem Speichern. Der instabile Test war kein Rätsel, sondern ein Test, der seinen eigenen Fehlschlag überdeckt hat
+3. **BUG-15** — die Zusicherungen hatten 5 Sekunden Zeit, der Test 120. Der letzte Fehlschlag brauchte 16,9 Sekunden und war danach grün
 
-**Nächster Schritt:** Zwei Dinge an der Teststrecke, dann `/deploy`. Beides steht am Anfang der Spec unter „Der nächste Schritt":
-1. Die **Ordner-Ausnahme im Virenschutz** ist jetzt notwendig — 6 der 7 verbliebenen Fehlschläge sind reine Zeitüberschreitungen, weil seit der BUG-11-Behebung zwei Browser-Projekte gleichzeitig laufen
-2. **Ein instabiler Test** (`PROJ-6-einheiten-generator.spec.ts:112`) blockiert acht weitere und ist der einzige Hebel zu einer grünen Suite
+Alle Behebungen betrafen ausschließlich `tests/` und `playwright.config.ts` — **kein Produktcode**.
+
+**Nächster Schritt:** `/deploy`. Dort warten **BUG-9** (Einzeiler in `gap-notice.tsx`, `/frontend`), **BUG-16** (ein Speichern ohne getroffene Zeile meldet Erfolg, `/backend`) und die vier vorbestehenden Supabase-Hinweise. Offen bleibt außerdem die Prüfung in **echtem WebKit** — dafür braucht es eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright`, und die muss in **Avast** stehen: Windows Defender ist auf diesem Rechner abgeschaltet, eine Ausnahme im Windows-Sicherheitscenter wirkt nicht.
 
 _Stand 2026-10-05. Dieser Abschnitt kann weg, sobald PROJ-6 deployed ist._
 

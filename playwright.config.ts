@@ -52,6 +52,17 @@ export default defineConfig({
   // langsamer Durchlauf als ein Fehlschlag, der nach einem Produktfehler
   // aussieht und keiner ist.
   timeout: 120_000,
+  /**
+   * Dasselbe Zugeständnis für die **Zusicherungen**. Ohne das blieb es bei
+   * den 5 Sekunden der Voreinstellung, während der Test selbst 120 bekam —
+   * eine Navigation, die unter der Last zweier gleichzeitig laufender
+   * Browser-Projekte 6 Sekunden braucht, scheiterte damit an einem Fenster,
+   * das 24-mal kleiner war als das des Tests. Genau so fiel
+   * ‚Abbrechen-Link führt zurück zur Übersichtsseite‘ in Lauf 3 **und** 4:
+   * Der Seitenabzug zeigt den Link geklickt und fokussiert, nur die Adresse
+   * kam zu spät.
+   */
+  expect: { timeout: 15_000 },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
