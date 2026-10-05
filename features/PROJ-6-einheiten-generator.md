@@ -1,36 +1,42 @@
 # PROJ-6: Einheiten-Generator
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-03
 **Last Updated:** 2026-10-05
 **QA:** 2026-10-05 (zwei Durchläufe, freigegeben im zweiten)
 **Architected:** 2026-10-03
 **Backend:** 2026-10-04 (überarbeitet 2026-10-05)
-**E2E:** 2026-10-05 — Lauf 5: **94 grün, 0 rot, 0 übersprungen** (Edge-Ersatzweg, ohne echtes WebKit)
+**E2E:** 2026-10-05 — Lauf 5 und 6: je **94 grün, 0 rot, 0 übersprungen** (Edge-Ersatzweg, ohne echtes WebKit)
+**Deployed:** 2026-10-05 — https://stundenplaner-self.vercel.app, Tag `v1.5.0-PROJ-6`
 
-## Hier geht es weiter — Stand 2026-10-05
+## Ausgeliefert — Stand 2026-10-05
 
-> Dieser Abschnitt steht bewusst ganz oben: Er ist das Erste, was eine neue
-> Sitzung liest. Sobald PROJ-6 deployed ist, kann er ersatzlos weg.
+> **PROJ-6 ist in Produktion:** https://stundenplaner-self.vercel.app, Tag
+> `v1.5.0-PROJ-6`. Die Einzelheiten der Auslieferung, der Härtung und der
+> Nachprüfung stehen unten unter **Deployment**.
 
 ### In einem Satz
 
-Der Generator ist fertig gebaut, **zweimal geprüft und freigegeben**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt. Und seit dem 2026-10-05 ist auch **die E2E-Suite vollständig grün** — 94 Tests, 0 Fehlschläge, 10,0 Minuten.
+Der Generator ist fertig gebaut, **zweimal geprüft, freigegeben und
+ausgeliefert**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt,
+**94 E2E-Tests grün** (Lauf 5 und 6, 0 Fehlschläge) und **249 Unit-Tests grün**.
 
-### Der nächste Schritt — Stand nach Lauf 5
-
-**`/deploy`.** Die Teststrecke ist abgearbeitet; was dort noch offen ist, hält
-nichts auf:
+### Was noch offen ist
 
 | Offen | Wo es hingehört |
 |---|---|
-| ~~**BUG-9**~~ — Lockern in der Sackgasse | ✅ behoben in `/deploy` |
-| **BUG-16** — ein Speichern ohne getroffene Zeile meldet Erfolg | `/backend`, **offen** |
-| ~~Vier vorbestehende Supabase-Hinweise~~ | ✅ drei behoben in `/deploy`; der vierte (geleakte Passwörter) ist eine Dashboard-Einstellung |
-| Prüfung in **echtem WebKit** — dafür fehlt die Ordner-Ausnahme im Virenschutz, und die muss in **Avast** stehen, nicht im Windows-Sicherheitscenter (siehe unten) | Nutzer, einmalig |
+| **BUG-16** — ein Speichern ohne getroffene Zeile meldet Erfolg (`units.ts:578`) | `/backend` |
+| **Schutz gegen geleakte Passwörter** — der vierte Supabase-Hinweis, nur im Dashboard einschaltbar | Nutzer, einmalig |
+| **Einmal in der Produktion anmelden** und eine Einheit generieren — der letzte Schritt, den keine automatische Prüfung ersetzt | Nutzer, einmalig |
+| **Prüfung in echtem WebKit** — die Ordner-Ausnahme muss in **Avast** stehen, nicht im Windows-Sicherheitscenter | Nutzer, einmalig |
+| **Die 40 Testübungen** in der Datenbank — Rohmasse für PROJ-4, erst übernehmen, dann löschen | PROJ-4 |
+| **Lighthouse-Wert** nicht erhoben | offen |
 
-Die Suite läuft bis dahin über den Edge-Ersatzweg und prüft dabei **auch die
-Mobilbreiten** — in einem Chromium-Motor statt in WebKit:
+Erledigt in `/deploy`: **BUG-9**, die Sicherheits-Kopfzeilen (fehlten in
+PROJ-1 bis PROJ-5 durchgehend) und **drei der vier** Supabase-Hinweise.
+
+Die Suite läuft bis zur Virenschutz-Ausnahme über den Edge-Ersatzweg und prüft
+dabei **auch die Mobilbreiten** — in einem Chromium-Motor statt in WebKit:
 
 ```
 PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npm run test:e2e
@@ -38,7 +44,7 @@ PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npm run test:e2e
 
 ### Wie die Suite grün wurde
 
-**Lauf 3 stand bei 79 / 7 / 8, Lauf 5 steht bei 94 / 0 / 0.** Drei Befunde liegen dazwischen, und zwei davon widerlegen eine Annahme der früheren Durchläufe:
+**Lauf 3 stand bei 79 / 7 / 8, Lauf 5 und 6 stehen bei 94 / 0 / 0.** Drei Befunde liegen dazwischen, und zwei davon widerlegen eine Annahme der früheren Durchläufe:
 
 1. **Ein hängender Installationsprozess**, nicht die Nebenläufigkeit, trug den Großteil der Last. Ein `npx playwright install chromium` von 09:52 Uhr lief während Lauf 3 noch — und acht Stunden später unverändert weiter. Nach dem Beenden fielen fünf der sechs Zeitüberschreitungen weg, ohne eine geänderte Testzeile
 2. **BUG-14** — die Zusicherung `getByText('Gespeichert')` traf auch „Noch nicht **gespeichert**". Sie war damit immer erfüllt, am sichersten bei fehlgeschlagenem Speichern. Die Begründung, mit der der instabile Test bisher nicht als Produktfehler geführt wurde, trägt damit nicht
