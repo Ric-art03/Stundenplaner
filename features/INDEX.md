@@ -37,7 +37,15 @@ In derselben Auslieferung gehärtet:
 
 **PROJ-7 (Einheiten-Editor) hat seit dem 2026-10-06 eine Spec** — [PROJ-7-einheiten-editor.md](PROJ-7-einheiten-editor.md). Der Editor ist ein Modus auf der Detailseite, keine eigene Seite; er ändert Inhalte innerhalb eines Segments (tauschen, auswürfeln, Variante, entfernen, Plandauer, umsortieren, einfügen), während das Zeitgerüst beim Generator bleibt. Zwei Dinge aus PROJ-6 sind dort mitentschieden: **BUG-5** (Nachbesetzen des Platzhalters) wird hier behoben, und die **Lücken-Sperre beim Speichern fällt weg** — ersetzt durch eine Nachfrage, die die betroffenen Segmente benennt. **BUG-4 (Eigentumsprüfung in der Datenbank) ist am 2026-10-06 erledigt** — bewusst vor dem Entwurf, weil der Editor neue Schreibwege bringt. Dabei kam heraus, dass der Befund größer war als gemeldet: **fünf** Richtlinien statt zwei, darunter der UPDATE-Weg auf `unit_items`, den das Tauschen benutzt. Angewendet über den SQL-Editor des Dashboards (`apply_migration` über MCP wurde ohne Dialog abgelehnt), Migration `20261006090000_harden_unit_write_policies.sql`, im Register eingetragen, am lebenden System in zurückgerollten Transaktionen nachgewiesen.
 
-**Nächster Schritt:** `/architecture PROJ-7`, oder PROJ-4 (Starter-Datenbank), die die Testübungen mit abräumt.
+**PROJ-7 hat seit dem 2026-10-07 einen Technikentwurf** — Abschnitt „Tech Design" in der Spec. Die tragende Entscheidung: der Editor arbeitet an **einer Arbeitsfassung des Plans im Browser**, und erst „Speichern" schickt sie in einem Zug an den Server. Daraus fallen „Rückgängig", die Zählung der offenen Änderungen und die Nachfrage beim Verlassen ohne eigene Rechnung ab. Drei Punkte wurden dabei entschieden, die vorher offen waren:
+
+- **Das Speichern läuft als eine nicht teilbare Datenbank-Operation**, über eine neue Datenbank-Funktion. Anders als beim „Lockern" sind alle Segmente betroffen, ein Abbruch in der Mitte würde den ganzen Plan leer zurücklassen. Nebeneffekt: der neue Weg hat **BUG-16** von Anfang an nicht — am bestehenden „Einheit speichern" bleibt der Fehler offen
+- **Hinweis auf fremde Änderungen: ja** (die offene Frage zu Edge Case 4). Der Änderungsstempel der Einheit existiert schon und wird von selbst nachgezogen; das Speichern bringt ihn mit und fragt bei Abweichung nach, statt stillschweigend zu überschreiben
+- **Die Kandidaten eines Segments werden einmal geladen und behalten.** Danach sind Würfeln, Auswahldialog und Variantenwechsel ohne Wartezeit. Welche Kriterien eine Übung verfehlt, rechnet weiter der Server aus derselben Kriterienliste des Generators — die Filterregeln bleiben an einer Stelle
+
+**Keine neuen Pakete.** Hoch/Runter statt Ziehen-und-Ablegen nimmt den einzigen Grund dafür weg. An der Datenbank ändert sich nur **ein** Merkmal an der Übung („noch zu ergänzen" für das Schnell-Anlegen, eine Erweiterung an PROJ-3) plus die Funktion fürs Speichern.
+
+**Nächster Schritt:** `/frontend PROJ-7`, oder PROJ-4 (Starter-Datenbank), die die Testübungen mit abräumt. Der Entwurf schlägt allerdings vor, mit der Arbeitsfassung und den sieben Operationen als reiner, testbarer Logik anzufangen — siehe „Reihenfolge des Bauens" in der Spec.
 
 ## Features
 
@@ -49,7 +57,7 @@ In derselben Auslieferung gehärtet:
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
-| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Planned | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
+| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Architected | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
 | PROJ-9 | Kalenderansicht & Langzeitplanung | P1 | PROJ-6, PROJ-7 | Roadmap | — | 2026-09-28 |
 | PROJ-10 | Übungsrotation (Abwechslung über Wochen) | P1 | PROJ-6, PROJ-9 | Roadmap | — | 2026-09-28 |
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |

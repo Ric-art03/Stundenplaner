@@ -1,8 +1,8 @@
 # PROJ-7: Einheiten-Editor
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-06
-**Last Updated:** 2026-10-06
+**Last Updated:** 2026-10-07
 
 ## Dependencies
 - **Benötigt:** PROJ-6 (Einheiten-Generator) — der Editor arbeitet auf der gespeicherten
@@ -290,22 +290,34 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 
 ## Open Questions
 
-- [ ] **Soll ein Zwischenstand das Neuladen überleben?** Der Nutzer hat sich bewusst für
-  „Änderungen erst beim Speichern" entschieden und den Verlust bei Absturz in Kauf genommen. Ob
-  sich das Ablegen im Browser (localStorage) später lohnt, sollte sich im Gebrauch zeigen —
-  nicht vorab auf Vermutung bauen
-- [ ] **Soll ein Hinweis erscheinen, wenn die Einheit zwischenzeitlich anderswo geändert wurde?**
-  Edge Case 4. Beim Solo-Nutzer selten, aber zwei Tabs auf demselben Telefon sind nicht
-  ausgeschlossen. Entscheidung gehört in `/architecture`, weil sie an einem Änderungsstempel
-  hängt
-- [ ] **Braucht es eine Obergrenze für Einträge je Segment?** Edge Case 14. Ohne Erfahrungswert
-  keine Zahl erfinden
-- [ ] **Soll der Lückenhinweis das „Lockern" weiter anbieten**, jetzt wo der Nutzer die Lücke
-  selbst füllen kann? Beides nebeneinander ist womöglich eine Wahl zu viel. Im Gebrauch
-  beobachten
-- [ ] **BUG-6 (Verwendungszeitpunkt steht auf „generiert")** — der Editor schreibt
-  Verwendungsnachweise neu. Ob dabei ein sinnvoller Zeitpunkt entsteht oder BUG-6 gesondert
-  behoben werden muss, klärt `/backend`
+### Am 2026-10-07 in `/architecture` entschieden
+
+- [x] **Soll ein Hinweis erscheinen, wenn die Einheit zwischenzeitlich anderswo geändert wurde?**
+  **Ja.** Die Einheit trägt schon einen Änderungsstempel, der bei jeder Änderung von selbst
+  nachgezogen wird — es muss nichts Neues gebaut werden. Der Bearbeiten-Modus merkt sich den
+  Stempel, den er beim Öffnen gesehen hat, und bringt ihn beim Speichern mit. Weicht er ab, wird
+  nicht stillschweigend überschrieben, sondern nachgefragt. Siehe Tech Design, Abschnitt „Zwei
+  Tabs auf derselben Einheit"
+
+### Weiter offen
+
+- [ ] **Soll ein Zwischenstand das Neuladen überleben?** Unverändert offen und bewusst so: der
+  Nutzer hat den Verlust bei Absturz in Kauf genommen. Das Design hält die Tür auf — die offenen
+  Änderungen liegen als **ein** zusammenhängender Stand im Browser und nicht verstreut über die
+  Oberfläche, also wäre ein späteres Ablegen in `localStorage` eine Ergänzung an einer Stelle und
+  kein Umbau
+- [ ] **Braucht es eine Obergrenze für Einträge je Segment?** Unverändert offen. Nichts im Entwurf
+  bricht bei zwanzig Einträgen, es wird nur lang
+- [ ] **Soll der Lückenhinweis das „Lockern" weiter anbieten?** Unverändert offen, im Gebrauch zu
+  beobachten. Der Entwurf stellt „Übung einfügen" **neben** „Lockern", nimmt also keines von
+  beiden weg — das lässt sich ohne Umbau wieder ändern
+- [ ] **BUG-6 (Verwendungszeitpunkt steht auf „generiert")** — bleibt bei `/backend`. Der Editor
+  baut die Verwendungsnachweise bei jedem Speichern neu auf; ob dabei ein sinnvoller Zeitpunkt
+  entsteht, entscheidet sich an der Stelle, die sie schreibt
+- [ ] **Soll die Markierung „noch zu ergänzen" auch von Hand gesetzt werden können?** Neu
+  aufgekommen: die Markierung entsteht beim Schnell-Anlegen und verschwindet beim regulären
+  Speichern. Ein Nutzer könnte sie auch selbst an eine halbfertige Übung hängen wollen. Nicht in
+  diesem Feature — erst im Gebrauch zeigen lassen, ob das Bedürfnis da ist
 
 ## Decision Log
 
@@ -339,13 +351,303 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| — | — | — |
+| Die offenen Änderungen liegen als **ein** Stand im Browser, nicht als Einzelzustände an den Karten | „Drei offene Änderungen", „Rückgängig" und die Nachfrage beim Verlassen brauchen alle dieselbe Antwort auf die Frage „was ist anders als beim Öffnen". Verteilt über zwanzig Karten wäre jede dieser drei Anzeigen eine eigene Rechnung — und drei Rechnungen laufen auseinander | 2026-10-07 |
+| Die sieben Operationen sind reine Umformungen dieses Stands, getrennt von der Oberfläche | Jede Operation ist damit für sich prüfbar — ohne Browser, ohne Klick, ohne Datenbank. Bei sieben Operationen mal Lücken, Platzhaltern und Varianten ist das der Unterschied zwischen Tests, die man schreibt, und Tests, die man sich spart | 2026-10-07 |
+| „Rückgängig" merkt sich die vorigen Stände, nicht die Gegen-Operationen | Für jede der sieben Operationen eine Umkehrung zu schreiben hieße, vierzehn Dinge richtig zu haben statt sieben. Der Preis ist Speicher für ein paar Dutzend Pläne — nicht messbar | 2026-10-07 |
+| Das Speichern läuft als **eine** Datenbank-Operation, über eine eigene Datenbank-Funktion | Anders als beim „Lockern" sind nicht ein Segment, sondern alle betroffen. Löschen und Einfügen in Einzelschritten würde bei einem Abbruch mitten im Vorgang den ganzen Plan leer zurücklassen, und der Nutzer müsste ihn von Hand neu aufbauen. Entweder vollständig oder gar nicht ist hier die einzige vertretbare Zusage | 2026-10-07 |
+| Die Eigentumsprüfung sitzt in derselben Datenbank-Operation und meldet einen Fehlschlag laut | Ein Schreibvorgang, der keine Zeile trifft, darf nicht als Erfolg zurückkommen — genau das ist BUG-16 am bestehenden `saveUnit`. Der neue Weg macht den Fehler von Anfang an nicht | 2026-10-07 |
+| Beim Speichern eines Segments werden seine Einträge vollständig ersetzt, nicht abgeglichen | Die Kennungen der Einträge werden nirgends sonst verwiesen, ein Abgleich brächte also keinen Gewinn und drei Fehlerquellen (verschoben, ersetzt, entfernt). Innerhalb einer Datenbank-Operation ist Ersetzen gefahrlos | 2026-10-07 |
+| Der Änderungsstempel der Einheit dient als Hinweis auf fremde Änderungen, nicht als Sperre | Der Stempel existiert bereits und wird von selbst nachgezogen. Als Sperre würde er einen Fall erzwingen, den der Solo-Nutzer fast nie hat; als Hinweis kostet er einen Vergleich und fängt die zwei Tabs auf demselben Telefon ab | 2026-10-07 |
+| Die Kandidaten eines Segments werden einmal geladen und für die Dauer des Bearbeiten-Modus behalten | Ausgewürfelt wird in der Halle, oft mehrmals hintereinander. Jeder Würfel über den Server wäre jedes Mal eine Wartezeit an genau der Stelle, an der sie störte. Nach dem ersten Laden sind Würfeln, Dialog und Variantenwechsel ohne Wartezeit — die 500-ms-Vorgabe ist damit mit Abstand erfüllt | 2026-10-07 |
+| Welche Kriterien eine Übung verfehlt, rechnet der **Server** aus, einmal je Segment | Die Regeln liegen als Kriterienliste im Generator und sollen dort bleiben. Der Browser bekommt das Ergebnis — „passt" oder „scheitert an Material und Altersgruppe" — und nicht die Regeln. Damit gibt es die Filterregeln weiter nur einmal, und der Pool der Übungen wird nicht komplett in den Browser geschoben | 2026-10-07 |
+| Der Browser erhält eine schlanke Fassung der Kandidaten, nicht die vollen Übungen | Für Liste, Suche und Würfeln braucht er Name, Dauer, Variantentitel, eine Materialzeile und die Eignung. Beschreibungen, Bilder, Links und Notizen bleiben auf dem Server — sie wären der größte Teil der Daten und werden nicht gebraucht | 2026-10-07 |
+| Varianten sind in dieser Liste eigene Einträge, wie im Generator | Dadurch ist „auf Variante umschalten" nur das Greifen des Geschwister-Eintrags derselben Übung — kein zweiter Ladeweg, keine zweite Auflösung der effektiven Variantendaten | 2026-10-07 |
+| Eine schnell angelegte Übung wird sofort in die Datenbank geschrieben, nicht mit dem Plan | Die Spec verlangt, dass sie beim Verwerfen der Planänderungen bestehen bleibt. Das geht nur, wenn ihr Anlegen nicht am Speichern des Plans hängt. Sie wird über denselben Weg angelegt wie jede andere Übung und bekommt nur die Markierung dazu | 2026-10-07 |
+| Die Markierung „noch zu ergänzen" ist ein eigenes Merkmal an der Übung, nicht aus den Feldern erraten | Aus „kein Material und keine Altersgruppe" zu schließen, eine Übung sei unfertig, würde vollständig gepflegte Übungen fälschlich markieren und wäre nicht abschaltbar. Ein gesetztes Merkmal ist eindeutig, filterbar und verschwindet an genau einer Stelle wieder | 2026-10-07 |
+| Ein Segment auf „frei lassen" behält diese Einstellung, auch wenn der Nutzer es füllt | Die Einstellung hält fest, was im Generator gewählt wurde — „Zurück zum Generator" muss die Maske so öffnen, wie der Nutzer sie verlassen hat. Was die Leseansicht zeigt, hängt künftig daran, ob Einträge **da** sind, nicht an der Einstellung | 2026-10-07 |
+| Die Lückenbegründung des Generators wird beim Speichern für jedes geänderte Segment verworfen | Sie beschreibt den Versuch des Generators. Hat der Nutzer das Segment selbst umgebaut, beschreibt sie den Stand nicht mehr — und ein Grund, der nicht mehr stimmt, ist schlechter als keiner. Die Füllstandszeile trägt die Information dann | 2026-10-07 |
+| Die Nachfrage beim Wegnavigieren hängt an den Links der Seite, nicht am Router | Next.js bietet für den App-Router keine Abfangstelle für Seitenwechsel. Ein Mithören auf Klicks auf Verweise deckt alle Ausgänge ab, die der Nutzer tatsächlich benutzt — Kopfzeilen-Navigation, „Zurück zum Generator", die Verweise in den Übungskarten — ohne auf eine fehlende Schnittstelle zu warten. Browser-Zurück und Fenster-Schließen gehen über die Warnung des Browsers | 2026-10-07 |
+| Kein neues Paket | Umsortieren über Hoch/Runter (Produktentscheidung) nimmt den einzigen Grund weg, ein Ziehen-und-Ablegen-Paket aufzunehmen. Alles Übrige deckt der vorhandene Baukasten ab | 2026-10-07 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+**Erstellt:** 2026-10-07
+
+### Die Grundidee in drei Sätzen
+
+Der Editor ist ein zweiter Zustand derselben Seite. Solange er offen ist, arbeitet der Nutzer an
+einer **Arbeitsfassung des Plans, die nur in seinem Browser existiert** — jede der sieben
+Operationen ändert diese Fassung, nicht die Datenbank. Erst „Speichern" schickt die fertige
+Fassung in einem Zug an den Server, der sie als eine einzige, nicht teilbare Datenbank-Operation
+ablegt.
+
+Daraus folgt fast alles Übrige: „Rückgängig", „Verwerfen", die Zählung der offenen Änderungen und
+die Nachfrage beim Verlassen sind alle Blicke auf dieselbe Arbeitsfassung. Und das Auswürfeln
+braucht keinen Server, wenn die Kandidaten einmal im Browser liegen.
+
+### A) Komponentenstruktur
+
+Die Leseansicht bleibt, wie sie ist. Was neu entsteht, hängt sich **daneben**, nicht hinein.
+
+```
+/units/[id]  (Seite, lädt die Einheit)
+└── Stundenplan-Ansicht                        [vorhanden, wird erweitert]
+    ├── Kopfbereich                            [vorhanden]
+    │   ├── Titel, Dauer, Gruppe
+    │   ├── „Bearbeiten" / „Fertig"            NEU
+    │   ├── Dreipunkt-Menü (umbenennen, löschen)
+    │   └── „Einheit speichern" (Entwurf)      [vorhanden, Sperre entfällt]
+    │
+    ├── Änderungsleiste                        NEU  — nur im Bearbeiten-Modus
+    │   └── „3 offene Änderungen" · Rückgängig · Verwerfen · Speichern
+    │
+    ├── Lockerungs-Hinweis                     [vorhanden, unverändert]
+    │
+    └── Segmentliste
+        └── Segment-Block                      [vorhanden, wird erweitert]
+            ├── Segmentkopf: Name · Minuten
+            │   └── Füllstandszeile            NEU  — „10 von 12 Min · 2 Min frei"
+            ├── Segment-Notiz                  [vorhanden: Text]
+            │   └── Notizfeld                  NEU  — im Bearbeiten-Modus änderbar
+            ├── Eintrags-Karte                 [vorhanden, Leseansicht unverändert]
+            │   └── Bedienzeile am Eintrag     NEU  — nur im Bearbeiten-Modus
+            │       ├── Plandauer-Feld         NEU  — Minuten, mind. 1, Schätzung daneben
+            │       ├── Hoch / Runter          NEU  — erstes/letztes deaktiviert
+            │       └── Eintrags-Menü          NEU  — Dropdown-Menu
+            │           ├── Neu auswürfeln
+            │           ├── Selbst wählen …
+            │           ├── Variante umschalten …   (entfällt ohne Varianten)
+            │           └── Entfernen
+            ├── Platzhalter „Übung gelöscht"   [vorhanden]
+            │   └── „Auswürfeln" / „Selbst wählen"  NEU  — behebt BUG-5
+            ├── Lückenhinweis                  [vorhanden]
+            │   └── „+ Übung einfügen"         NEU  — neben „Lockern"
+            └── „+ Übung einfügen"             NEU  — am Segmentende
+
+Dialoge (einmal für die ganze Seite, nicht je Eintrag)
+├── Auswahldialog                              NEU
+│   ├── Suchfeld
+│   ├── „Passend (14)"              — Liste, aktueller Eintrag erkennbar
+│   ├── „Auch unpassende anzeigen"  — aufklappbar, je Eintrag die Begründung
+│   └── „Übung fehlt? Schnell anlegen"
+│       └── Kurzformular            NEU  — Name, Dauer, Beschreibung
+├── Variantenwahl                              NEU  — Hauptübung + alle Varianten
+├── „Änderungen speichern?"                    NEU  — Speichern / Verwerfen / Abbrechen,
+│                                                     nennt nicht aufgehende Segmente
+├── „Anderswo geändert"                        NEU  — Neu laden / trotzdem überschreiben
+└── Namensdialog                               [vorhanden, für Entwürfe]
+```
+
+**Warum die Dialoge einmal für die Seite und nicht je Eintrag:** ein Segment kann zwanzig
+Einträge haben. Zwanzig Auswahldialoge im Hintergrund wären zwanzig Mal dieselbe Liste. Der Dialog
+merkt sich stattdessen, für welchen Platz er geöffnet wurde.
+
+### B) Datenmodell — was gespeichert wird
+
+#### Was sich am Datenbestand ändert
+
+| Was | Änderung | Warum |
+|---|---|---|
+| **Einheiten, Segmente, Einträge** | **Keine strukturelle Änderung.** Der Editor füllt die vorhandenen Felder anders, er braucht keine neuen | Das Zeitgerüst bleibt beim Generator; der Editor ändert nur Inhalte, die alle schon ihr Feld haben |
+| **Übung** | **Ein neues Merkmal:** „noch zu ergänzen", ja oder nein, standardmäßig nein | Trägt die Markierung aus dem Schnell-Anlegen. Eine Erweiterung an PROJ-3, in der Spec bewusst vorgezogen |
+| **Übungs-Filter** | Ein zusätzlicher Filter in der Übungsübersicht: „nur noch zu ergänzende" | Damit der Nutzer die dünn ausgefüllten Übungen wiederfindet |
+| **Einheit, Markierung „manuell bearbeitet"** | Vorhanden, wird vom Speichern gesetzt | War für genau diesen Fall angelegt |
+| **Änderungsstempel der Einheit** | Vorhanden, wird von selbst nachgezogen. Wird jetzt **gelesen** | Grundlage des Hinweises auf fremde Änderungen |
+| **Verwendungsnachweise** | Keine strukturelle Änderung, werden bei jedem Speichern neu aufgebaut | Sonst rechnet die Rotation (PROJ-10) falsch und die Löschwarnung nennt die falschen Einheiten |
+| **Eine neue Datenbank-Funktion** | Legt den geänderten Plan in einem Zug ab | Siehe „Wie gespeichert wird" |
+
+Die Markierung „noch zu ergänzen" verschwindet an **einer** Stelle wieder: wenn die Übung über das
+reguläre Formular gespeichert wird. Für Generator und Editor ist eine markierte Übung ein
+vollwertiger Kandidat — die Markierung wird bei der Kandidatensuche gar nicht gelesen.
+
+#### Die Arbeitsfassung im Browser
+
+Solange der Bearbeiten-Modus offen ist, hält der Browser:
+
+```
+Arbeitsfassung
+├── Je Segment
+│   ├── Notiz (Text)
+│   └── Liste der Plätze, in ihrer Reihenfolge
+│       └── Je Platz
+│           ├── welche Übung (und ob eine Variante davon)
+│           ├── Plandauer in Minuten
+│           └── welche Übungen hier schon weggewürfelt wurden
+├── Der Ausgangszustand (wie die Einheit beim Öffnen war)
+├── Die Kette der vorigen Stände   → trägt „Rückgängig"
+└── Der Änderungsstempel beim Öffnen → trägt den Hinweis auf fremde Änderungen
+```
+
+Drei Dinge fallen daraus ab, ohne eigene Rechnung:
+
+- **„3 offene Änderungen"** = Länge der Kette der vorigen Stände
+- **„Rückgängig" deaktiviert** = Kette leer
+- **Nachfrage beim Verlassen nötig** = Kette nicht leer
+
+Die weggewürfelten Übungen hängen **am Platz**, nicht an der Einheit. Nur so bedeutet „dreimal
+gewürfelt, keine Wiederholung" das, was die Spec verlangt: ein zweiter Platz im selben Segment
+fängt bei null an.
+
+**Was nicht in der Arbeitsfassung steht:** Segmentnamen, Minutenlängen, Phasenfolge, der
+Lockerungs-Hinweis. Die liegen beim Generator und werden vom Speichern nicht angefasst.
+
+### C) Wie gespeichert wird
+
+Das Speichern schickt die ganze Arbeitsfassung in **einem** Aufruf an den Server. Dieser legt sie
+als **eine nicht teilbare Datenbank-Operation** ab — in einem Schritt:
+
+1. gehört die Einheit dem Angemeldeten? Gehört jede eingesetzte Übung ihm?
+2. stimmt der mitgebrachte Änderungsstempel noch?
+3. Einträge aller Segmente ersetzen, Notizen setzen, veraltete Lückenbegründungen verwerfen
+4. Verwendungsnachweise aus dem neuen Inhalt neu aufbauen
+5. „manuell bearbeitet" setzen, bei einem Entwurf zusätzlich Name und Aufnahme in die Übersichten
+
+Entweder passiert das alles oder nichts davon. Das ist der Unterschied zum „Lockern", das heute in
+Einzelschritten arbeitet: dort betrifft ein Abbruch ein Segment, hier den ganzen Plan.
+
+Schlägt etwas fehl, bleibt die Seite im Bearbeiten-Modus und die Arbeitsfassung unangetastet — der
+Nutzer kann es erneut versuchen, ohne etwas zu verlieren.
+
+**Nebenbei behoben:** ein Schreibvorgang, der keine Zeile trifft, meldet auf diesem Weg keinen
+Erfolg. Das ist BUG-16, allerdings nur für den neuen Weg; am bestehenden „Einheit speichern"
+bleibt er offen und gehört weiter zu `/backend`.
+
+### D) Woher die Übungen kommen
+
+Beim **ersten** Auswürfeln oder Öffnen des Auswahldialogs in einem Segment holt die Seite einmal
+die Kandidatenliste **dieses** Segments. Der Server liefert eine schlanke Fassung:
+
+| Je Kandidat | Wofür |
+|---|---|
+| Name, geschätzte Dauer, Variantentitel | Liste und Suche |
+| eine Materialzeile | damit der Nutzer vor dem Einsetzen sieht, was er braucht |
+| passt / passt nicht | die Zweiteilung im Dialog |
+| falls nicht: woran es scheitert | die Begründung je Eintrag |
+
+Beschreibungen, Bilder, Links und Notizen bleiben auf dem Server. Danach laufen **alle** weiteren
+Würfel, Dialoge und Variantenwechsel in diesem Segment ohne Server — unter 500 ms ist damit keine
+Zielgröße mehr, sondern sofort.
+
+**Wer rechnet was:** welche Kriterien eine Übung verfehlt, rechnet der Server aus — aus derselben
+Kriterienliste, die der Generator benutzt. Der Browser bekommt das Ergebnis, nicht die Regeln.
+Damit stehen die Filterregeln weiterhin an genau einer Stelle, so wie die Spec es verlangt.
+
+**Das Auswürfeln selbst** zieht aus dieser Liste und lässt weg: was in der Einheit schon steht und
+was in diesem Platz schon weggewürfelt wurde. Ist nichts mehr übrig, erscheint die Aufschlüsselung
+der Ursachen, die der Generator schon formuliert — kein zweiter Satz von Meldungen.
+
+**Preis dieser Entscheidung:** eine Übung, die während des Bearbeitens in einem anderen Tab
+entsteht, taucht erst nach dem Verlassen des Bearbeiten-Modus auf. Eine schnell angelegte Übung
+dagegen wird in die gemerkte Liste eingereiht und ist sofort da.
+
+### E) Schnell anlegen
+
+Das Kurzformular legt die Übung **sofort** in der Datenbank an — über denselben Weg wie das
+reguläre Formular, nur mit weniger Feldern und der Markierung dazu. Vorbelegt werden Sportart,
+Phase, Schwierigkeit und Altersgruppen aus Segment und Gruppe, damit die Übung ein gültiger
+Kandidat ist und nicht beim nächsten Generieren durch jeden Filter fällt.
+
+Weil sie sofort angelegt wird, bleibt sie erhalten, wenn der Nutzer seine Planänderungen verwirft
+— genau wie die Spec es verlangt. Der Verwerfen-Dialog sagt das.
+
+Den Namensabgleich („gibt es die schon?") macht der Server beim Anlegen, nicht der Browser: die
+gemerkte Kandidatenliste enthält nur die Übungen, die zu **diesem** Segment gehören, eine
+Namensgleiche könnte also außerhalb liegen.
+
+### F) Zwei Tabs auf derselben Einheit
+
+Der Bearbeiten-Modus merkt sich den Änderungsstempel, den er beim Öffnen gesehen hat, und bringt
+ihn beim Speichern mit. Weicht er ab, wird nicht geschrieben, sondern gefragt: **Neu laden** (die
+eigenen Änderungen sind dann verloren, das sagt der Dialog) oder **trotzdem überschreiben**.
+
+Das ist ein Hinweis, keine Sperre. Er greift bei Änderungen, die über die App selbst liefen — und
+das sind alle, die es gibt.
+
+### G) Nachfrage beim Verlassen
+
+Drei Ausgänge, drei Mittel:
+
+| Ausgang | Mittel |
+|---|---|
+| „Fertig" oder „Verwerfen" | der eigene Dialog der Seite |
+| Ein Verweis auf eine andere Seite — Kopfzeile, „Zurück zum Generator", die Verweise in den Übungskarten | die Seite hört auf Klicks auf Verweise und hält den Wechsel an, solange Änderungen offen sind |
+| Browser-Zurück, Neuladen, Tab schließen | die eingebaute Warnung des Browsers |
+
+Der mittlere Weg ist nötig, weil Next.js für den App-Router keine Stelle anbietet, an der sich ein
+Seitenwechsel abfangen ließe. Auf Klicks zu hören deckt alle Ausgänge ab, die der Nutzer wirklich
+benutzt, und kommt ohne Warten auf eine fehlende Schnittstelle aus.
+
+### H) Was an Vorhandenem angefasst wird
+
+| Ort | Änderung | Grund |
+|---|---|---|
+| Stundenplan-Ansicht | Zweiter Zustand, Änderungsleiste, Dialoge | Der Editor ist ein Modus dieser Seite |
+| Segment-Block | Füllstandszeile, änderbare Notiz, Einfügen-Knöpfe | |
+| Eintrags-Karte | Leseansicht **unverändert**; die Bedienzeile kommt daneben | Die Leseansicht trägt später den Live-Modus und bleibt ruhig |
+| Platzhalter „Übung gelöscht" | Nachbesetzen möglich | **BUG-5** |
+| Lückenhinweis | „+ Übung einfügen" neben „Lockern" | |
+| „Einheit speichern" | **Sperre bei Lücken entfällt**, stattdessen Nachfrage mit Nennung der Segmente | Produktentscheidung; gilt auch außerhalb des Bearbeiten-Modus |
+| Leseansicht frei gelassener Segmente | zeigt Einträge, sobald welche da sind — nicht mehr pauschal „— Lücke —" | Ein selbst gefülltes „frei lassen"-Segment muss seinen Inhalt zeigen |
+| Übung anlegen / ändern | Markierung setzen bzw. beim regulären Speichern löschen | |
+| Übungsübersicht und Filter | Markierung sichtbar, Filter dafür | |
+| Kriterienprüfung im Generator | wird so geöffnet, dass sie **je Kandidat** Auskunft gibt, nicht nur je Kriterium zählt | Für die Begründung im Dialog. Keine neue Regel, dieselbe Liste |
+
+### I) Pakete
+
+**Keine neuen.** Alles Benötigte ist vorhanden:
+
+| Baustein | Wofür |
+|---|---|
+| Dialog | Auswahldialog, Variantenwahl |
+| Alert-Dialog | „Änderungen speichern?", „Anderswo geändert" |
+| Dropdown-Menu | Eintrags-Menü |
+| Command | Suche im Auswahldialog |
+| Collapsible | „Auch unpassende anzeigen" |
+| Input, Textarea, Badge, Button | Plandauer, Notiz, Markierung, Bedienelemente |
+| Toast | Fehlermeldungen, Bestätigungen |
+| Zod | Prüfung der Arbeitsfassung auf dem Server |
+
+Ziehen und Ablegen hätte ein Paket gekostet — die Produktentscheidung für Hoch/Runter nimmt diesen
+Grund weg.
+
+### J) Mobil, Tastatur, Screenreader
+
+Die Bedienelemente sitzen in einer Zeile unter dem Eintrag, nicht in einer schmalen Spalte
+daneben: auf dem Telefon ist das der Unterschied zwischen treffbar und nicht treffbar. Hoch und
+Runter sind eigene Knöpfe mit sprechenden Beschriftungen („Nach oben, derzeit Platz 2 von 4"), das
+Übrige liegt im Menü. Alles ist mit der Tastatur erreichbar, weil keines der verwendeten Elemente
+eigene Mausgesten braucht.
+
+### K) Reihenfolge des Bauens
+
+Diese Reihenfolge hält den Stand jederzeit prüfbar — jeder Schritt ist für sich testbar, bevor der
+nächste darauf aufsetzt.
+
+1. **Arbeitsfassung und die sieben Operationen** als reine Umformungen, mit Tests. Keine
+   Oberfläche, keine Datenbank. Hier steckt die Logik, die später schwer nachzuprüfen wäre
+2. **Datenbank:** Merkmal „noch zu ergänzen", Funktion für das Speichern
+3. **Serverseite:** Kandidatenliste je Segment, Speichern, Schnell-Anlegen
+4. **Oberfläche:** Bearbeiten-Modus, Änderungsleiste, Bedienelemente, Füllstand, Notiz
+5. **Dialoge:** Auswahl mit Begründungen, Variantenwahl, Schnell-Anlegen
+6. **Ränder:** Nachfrage beim Verlassen, Hinweis auf fremde Änderungen, Platzhalter-Nachbesetzen
+   (BUG-5), Wegfall der Lücken-Sperre
+
+Schritt 2 betrifft die Datenbank und läuft über den SQL-Editor des Dashboards, mit Eintrag im
+Migrationsregister — so wie es am 2026-10-06 festgelegt wurde.
+
+### L) Was dieses Design offen lässt
+
+- **Der Zwischenstand überlebt kein Neuladen.** Bewusst so. Weil die offenen Änderungen als ein
+  zusammenhängender Stand vorliegen, wäre ein späteres Ablegen im Browser eine Ergänzung an einer
+  Stelle
+- **Die gemerkte Kandidatenliste veraltet**, wenn parallel in einem anderen Tab Übungen entstehen.
+  Betrifft nur das laufende Bearbeiten
+- **Keine Obergrenze für Einträge je Segment.** Nichts bricht, es wird nur lang
+- **BUG-16 bleibt am bestehenden „Einheit speichern"** offen; der neue Speicherweg hat das Problem
+  nicht
 
 ## QA Test Results
 _To be added by /qa_
