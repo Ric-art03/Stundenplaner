@@ -25,11 +25,15 @@ In derselben Auslieferung gehärtet:
 
 ### Was offen bleibt
 
-1. **Schutz gegen geleakte Passwörter** — der vierte Supabase-Hinweis, nur im Dashboard einschaltbar: Authentication → Policies
-2. **BUG-16** — ein Speichern, dessen Update keine Zeile trifft, meldet Erfolg (`units.ts:578`). Gehört zu `/backend`
-3. **Prüfung in echtem WebKit** — braucht eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright`, und die muss in **Avast** stehen: Windows Defender ist auf diesem Rechner abgeschaltet, eine Ausnahme im Windows-Sicherheitscenter wirkt nicht
-4. **Das Migrationsregister ist unvollständig** — drei Dateien fehlen dort, das Schema ist aber vollständig. Ein `supabase db push` würde über `20261003120000` stolpern. Details im Deployment-Abschnitt der PROJ-6-Spec
-5. **Die 40 Testübungen** stecken weiter in der Datenbank — Rohmasse für PROJ-4, erst übernehmen, dann löschen
+1. **BUG-16** — ein Speichern, dessen Update keine Zeile trifft, meldet Erfolg (`units.ts:578`). Gehört zu `/backend`
+2. **Prüfung in echtem WebKit** — braucht eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright`, und die muss in **Avast** stehen: Windows Defender ist auf diesem Rechner abgeschaltet, eine Ausnahme im Windows-Sicherheitscenter wirkt nicht
+3. **Die 40 Testübungen** stecken weiter in der Datenbank — Rohmasse für PROJ-4, erst übernehmen, dann löschen
+
+### Am 2026-10-06 abgeräumt
+
+- **Das Migrationsregister** stimmt jetzt mit den Dateien überein. Es waren zwei Fehler, nicht einer: drei Dateien fehlten ganz, und drei weitere standen unter einer anderen Version als ihr Dateiname (`create_units_tables` etwa unter `20261004062433` statt `20261004140000`). Vor dem Eintragen Spalte für Spalte geprüft, dass die drei fehlenden Migrationen wirklich im Schema stecken — `schedule_type` und `date` an `group_schedules`, `groups.participants` statt `participants_min`/`_max`, `groups.primary_sport`. Danach `diff` zwischen Dateiliste und Register: **13 zu 13, keine Abweichung**. `supabase db push` stolpert nicht mehr
+- **BUG-4** — siehe unten
+- **Schutz gegen geleakte Passwörter** ist **kein offener Punkt mehr, sondern eine Tarifentscheidung** und steht jetzt in der Pre-Launch-Checkliste des PRD. Die Funktion setzt den **Pro-Plan** voraus, der Schalter ist auf dem kostenlosen Plan nicht benutzbar. Die frühere Notiz hier war doppelt falsch: der Pfad (nicht Authentication → Policies, sondern Authentication → Sign In / Providers → Email) und die Annahme, es sei ein Klick. Stattdessen am 2026-10-06 gesetzt, was ohne Pro geht: **Mindestlänge erhöht und erforderliche Zeichenarten verlangt**. Das ersetzt den Abgleich gegen HaveIBeenPwned nicht, verkleinert aber dasselbe Risiko. `get_advisors` meldet den Hinweis weiterhin — das ist erwartet und kein Versäumnis
 
 **PROJ-7 (Einheiten-Editor) hat seit dem 2026-10-06 eine Spec** — [PROJ-7-einheiten-editor.md](PROJ-7-einheiten-editor.md). Der Editor ist ein Modus auf der Detailseite, keine eigene Seite; er ändert Inhalte innerhalb eines Segments (tauschen, auswürfeln, Variante, entfernen, Plandauer, umsortieren, einfügen), während das Zeitgerüst beim Generator bleibt. Zwei Dinge aus PROJ-6 sind dort mitentschieden: **BUG-5** (Nachbesetzen des Platzhalters) wird hier behoben, und die **Lücken-Sperre beim Speichern fällt weg** — ersetzt durch eine Nachfrage, die die betroffenen Segmente benennt. **BUG-4 (Eigentumsprüfung in der Datenbank) ist am 2026-10-06 erledigt** — bewusst vor dem Entwurf, weil der Editor neue Schreibwege bringt. Dabei kam heraus, dass der Befund größer war als gemeldet: **fünf** Richtlinien statt zwei, darunter der UPDATE-Weg auf `unit_items`, den das Tauschen benutzt. Angewendet über den SQL-Editor des Dashboards (`apply_migration` über MCP wurde ohne Dialog abgelehnt), Migration `20261006090000_harden_unit_write_policies.sql`, im Register eingetragen, am lebenden System in zurückgerollten Transaktionen nachgewiesen.
 

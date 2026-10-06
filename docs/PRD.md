@@ -57,6 +57,7 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 
 ## Pre-Launch Checklist
 - [ ] **E-Mail-Templates anpassen** — Supabase erfordert Custom SMTP (z.B. Resend, kostenlos bis 3.000 Mails/Monat). Dann: Absendername auf "Stundenplaner" ändern, Bestätigungs- und Reset-E-Mails auf Deutsch umschreiben. Ort: Supabase Dashboard → Authentication → Email Templates.
+- [ ] **Schutz gegen geleakte Passwörter** — braucht den **Pro-Plan**, auf dem kostenlosen Plan ist der Schalter nicht benutzbar. Supabase prüft Passwörter dann gegen HaveIBeenPwned und weist bekannte ab. Eine Tarif-, keine Umsetzungsfrage: vor der Marktreife zu entscheiden, ob echte Nutzerkonten das rechtfertigen. Ort: Authentication → Sign In / Providers → Email. Was ohne Pro geht, ist am 2026-10-06 gesetzt — erhöhte Mindestlänge und erforderliche Zeichenarten. Solange der Schutz aus ist, meldet `get_advisors` erwartungsgemäß einen Sicherheitshinweis; der ist kein Versäumnis.
 
 ## Non-Goals (v1)
 - Keine Community-/Sharing-Features

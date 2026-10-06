@@ -26,7 +26,7 @@ ausgeliefert**: kein kritischer, kein hoher, kein mittlerer Fehler am Produkt,
 | Offen | Wo es hingehört |
 |---|---|
 | **BUG-16** — ein Speichern ohne getroffene Zeile meldet Erfolg (`units.ts:578`) | `/backend` |
-| **Schutz gegen geleakte Passwörter** — der vierte Supabase-Hinweis, nur im Dashboard einschaltbar | Nutzer, einmalig |
+| **Schutz gegen geleakte Passwörter** — braucht den **Pro-Plan**, auf dem kostenlosen Plan nicht schaltbar | ✅ geklärt am 2026-10-06, als Tarifentscheidung in die Pre-Launch-Checkliste des PRD verschoben |
 | **Einmal in der Produktion anmelden** und eine Einheit generieren — der letzte Schritt, den keine automatische Prüfung ersetzt | Nutzer, einmalig |
 | **Prüfung in echtem WebKit** — die Ordner-Ausnahme muss in **Avast** stehen, nicht im Windows-Sicherheitscenter | Nutzer, einmalig |
 | **Die 40 Testübungen** in der Datenbank — Rohmasse für PROJ-4, erst übernehmen, dann löschen | PROJ-4 |
@@ -2227,10 +2227,15 @@ Header in `next.config.ts` erhalten.
 
 ### Was nach der Auslieferung offen bleibt
 
-1. **Schutz gegen geleakte Passwörter** — der vierte Supabase-Hinweis, und der
-   einzige, der nicht per SQL geht. Supabase Dashboard → Authentication →
-   Policies → „Leaked password protection" einschalten. Prüft Passwörter gegen
-   HaveIBeenPwned
+1. **Schutz gegen geleakte Passwörter** — am 2026-10-06 geklärt und **in die
+   Pre-Launch-Checkliste des PRD verschoben**: die Funktion setzt den
+   **Pro-Plan** voraus, auf dem kostenlosen Plan ist der Schalter nicht
+   benutzbar. Es ist also eine Tarif-, keine Umsetzungsfrage. Die Wegbeschreibung
+   hier war zudem falsch — nicht Authentication → Policies (dort liegen die
+   RLS-Richtlinien), sondern Authentication → Sign In / Providers → Email.
+   Gesetzt wurde stattdessen, was ohne Pro geht: erhöhte Mindestlänge und
+   erforderliche Zeichenarten. `get_advisors` meldet den Hinweis weiterhin, das
+   ist erwartet
 2. **BUG-16** — ein Speichern, dessen Update keine Zeile trifft, meldet Erfolg
    (`units.ts:578`). Gehört zu `/backend`
 3. **Prüfung in echtem WebKit** — braucht die Ordner-Ausnahme im Virenschutz,
@@ -2268,4 +2273,25 @@ nicht**: `ALTER TABLE groups RENAME COLUMN participants_max TO participants` in
 `db push` also entweder das Register nachziehen oder diese Migration gegen
 Wiederholung absichern. Der Dateibestand im Repo ist korrekt und bildet ein
 neues Schema richtig auf — irreführend ist allein das Register.
+
+**✅ Behoben am 2026-10-06.** Der Weg war „das Register nachziehen", nicht „die
+Migration absichern" — die Dateinamen stehen in dieser Spec und in der
+PROJ-7-Spec, Umbenennen hätte diese Verweise ungültig gemacht.
+
+Vor dem Eintragen wurde die Prüfung dieses Abschnitts wiederholt, Spalte für
+Spalte über `information_schema.columns`, damit „als angewendet eintragen" eine
+Tatsache bleibt und keine Annahme: `group_schedules.schedule_type` und `.date`
+vorhanden, `weekday` nullable, `groups.participants` vorhanden ohne
+`participants_min`/`participants_max`, `groups.primary_sport` vorhanden.
+
+Dann im SQL-Editor: die drei Registerzeilen gelöscht, deren Version zu keiner
+Datei passt (`20261004062433`, `20261004105914`, `20261004170255`), und die sechs
+fehlenden Dateiversionen eingetragen. Der offizielle Weg
+`supabase migration repair` stand nicht offen — ohne `supabase/config.toml` ist
+das Projekt lokal nicht verknüpft, das hätte `init`, `link` und das
+Datenbank-Passwort gebraucht.
+
+**Nachgeprüft:** `diff` zwischen Dateiliste und Register ergibt **13 zu 13, keine
+Abweichung**. Die Falle mit `20261003120000` ist damit entschärft, ohne die
+Migration anzufassen.
 

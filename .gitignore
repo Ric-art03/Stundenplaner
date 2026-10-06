@@ -41,3 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 tests/.auth/
+
+# Supabase CLI (lokaler Arbeitsstand, nicht versionieren)
+supabase/.temp/
+supabase/.branches/
