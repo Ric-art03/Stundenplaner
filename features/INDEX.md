@@ -45,7 +45,22 @@ In derselben Auslieferung gehärtet:
 
 **Keine neuen Pakete.** Hoch/Runter statt Ziehen-und-Ablegen nimmt den einzigen Grund dafür weg. An der Datenbank ändert sich nur **ein** Merkmal an der Übung („noch zu ergänzen" für das Schnell-Anlegen, eine Erweiterung an PROJ-3) plus die Funktion fürs Speichern.
 
-**Nächster Schritt:** `/frontend PROJ-7`, oder PROJ-4 (Starter-Datenbank), die die Testübungen mit abräumt. Der Entwurf schlägt allerdings vor, mit der Arbeitsfassung und den sieben Operationen als reiner, testbarer Logik anzufangen — siehe „Reihenfolge des Bauens" in der Spec.
+**Die Oberfläche von PROJ-7 steht seit dem 2026-10-07** — Abschnitt „Implementation Notes (Frontend)" in der Spec. Gebaut in der Reihenfolge des Entwurfs: erst die Logik als reine Umformungen mit Tests, dann die Komponenten. **342 Unit-Tests grün** (249 aus PROJ-6 plus 93 neue), Typprüfung, Lint und Produktionsbuild sauber.
+
+Drei neue Logikbausteine tragen den Editor, alle ohne Oberfläche und ohne Datenbank prüfbar: die **Arbeitsfassung** mit den sieben Operationen (`draft.ts`), der **Verlauf** für Rückgängig und Verwerfen (`draft-history.ts`) und die **Kandidatenfassung** mit Auswürfeln und Dialogaufteilung (`editor-pool.ts`). Die Arbeitsfassung trägt bewusst keine Segmentnamen und Minutenlängen — dass sie fehlen, setzt „das Zeitgerüst bleibt beim Generator" durch, statt es nur zu behaupten.
+
+Zwei Dinge sind dabei schon abgeräumt:
+
+- **BUG-5 ist behoben** — am Platzhalter „Übung gelöscht" stehen im Bearbeiten-Modus „Auswürfeln" und „Selbst wählen"
+- **Die Lücken-Sperre ist weg** — der Speichern-Knopf ist nicht mehr ausgegraut, der Hinweis verweist auf „Bearbeiten" statt in den Generator zurück
+
+### Was PROJ-7 noch fehlt
+
+Der Editor braucht den Server an **drei** Stellen, zusammengefasst als ein Vertrag (`UnitEditorActions`): die **Kandidatenliste je Segment**, das **Speichern als eine nicht teilbare Datenbank-Operation** und das **Schnell-Anlegen**. Solange die Seite den Vertrag nicht mitgibt, melden die betroffenen Knöpfe das ehrlich, statt ins Leere zu laufen. Dazu an der Datenbank: das Merkmal „noch zu ergänzen" an der Übung, die Funktion fürs Speichern, der Filter in der Übungsübersicht.
+
+**Im Browser schon prüfbar:** Bearbeiten betreten und verlassen, Entfernen, Umsortieren, Plandauer samt Mindestdauer-Korrektur, Segment-Notiz, Füllstandszeile, Rückgängig, Verwerfen, die Nachfrage beim Verlassen und beim Schließen des Tabs.
+
+**Nächster Schritt:** `/backend PROJ-7` — die drei Server-Stellen und die Datenbank. Danach `/qa PROJ-7`.
 
 ## Features
 
@@ -57,7 +72,7 @@ In derselben Auslieferung gehärtet:
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
-| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Architected | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
+| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | In Progress | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
 | PROJ-9 | Kalenderansicht & Langzeitplanung | P1 | PROJ-6, PROJ-7 | Roadmap | — | 2026-09-28 |
 | PROJ-10 | Übungsrotation (Abwechslung über Wochen) | P1 | PROJ-6, PROJ-9 | Roadmap | — | 2026-09-28 |
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |

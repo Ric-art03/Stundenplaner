@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, TriangleAlert, Unlock } from 'lucide-react'
+import { Loader2, Plus, TriangleAlert, Unlock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { GapCriterion, GapDetail } from '@/lib/units/generator'
 
@@ -11,6 +11,8 @@ interface GapNoticeProps {
   detail: GapDetail | null
   singleSportGroup: boolean
   relaxing: boolean
+  /** Nur im Bearbeiten-Modus gesetzt: die Lücke an dieser Stelle selbst füllen. */
+  onInsert?: () => void
   onRelax: () => void
 }
 
@@ -81,6 +83,7 @@ export function GapNotice({
   singleSportGroup,
   relaxing,
   onRelax,
+  onInsert,
 }: GapNoticeProps) {
   const missing = segmentMinutes - filledMinutes
   const canRelax = relaxCanHelp(detail)
@@ -147,28 +150,40 @@ export function GapNotice({
             </p>
           )}
 
-          {canRelax ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onRelax}
-              disabled={relaxing}
-            >
-              {relaxing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Unlock className="mr-2 h-4 w-4" />
-              )}
-              Mit gelockerten Kriterien erneut versuchen
-            </Button>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              {detail?.relaxed
-                ? 'Die Kriterien sind für dieses Segment bereits gelockert.'
-                : 'Lockern würde hier nichts bringen: Es gibt nur Sportart und Schwierigkeitsgrad frei, und daran liegt es nicht.'}
-            </p>
-          )}
+          {/* Im Bearbeiten-Modus steht die Lücke selbst zu füllen gleich neben dem
+              Lockern: beides nebeneinander ist womöglich eine Wahl zu viel, aber
+              das zeigt sich erst im Gebrauch (offene Frage in der Spec). */}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {onInsert && (
+              <Button type="button" size="sm" onClick={onInsert}>
+                <Plus className="mr-2 h-4 w-4" />
+                Übung einfügen
+              </Button>
+            )}
+
+            {canRelax ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRelax}
+                disabled={relaxing}
+              >
+                {relaxing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Unlock className="mr-2 h-4 w-4" />
+                )}
+                Mit gelockerten Kriterien erneut versuchen
+              </Button>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {detail?.relaxed
+                  ? 'Die Kriterien sind für dieses Segment bereits gelockert.'
+                  : 'Lockern würde hier nichts bringen: Es gibt nur Sportart und Schwierigkeitsgrad frei, und daran liegt es nicht.'}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

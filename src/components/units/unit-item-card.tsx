@@ -1,26 +1,68 @@
 'use client'
 
 import Link from 'next/link'
-import { ExternalLink, Layers, Music, Package, TriangleAlert } from 'lucide-react'
+import { Dices, ExternalLink, Layers, Loader2, Music, Package, Search, TriangleAlert } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import type { UnitItem } from '@/lib/types/unit'
+import { Button } from '@/components/ui/button'
+import type { DraftItemExercise } from '@/lib/units/draft'
 
 interface UnitItemCardProps {
-  item: UnitItem
+  /**
+   * Nur was die Karte anzeigt. Dadurch rendern geladene Einträge und die im
+   * Bearbeiten-Modus eingesetzten durch dieselbe Karte — die Beschreibung
+   * fehlt in beiden Fällen, weil die Karte sie nicht zeigt.
+   */
+  item: {
+    plannedDuration: number
+    exercise: DraftItemExercise | null
+  }
+  /**
+   * Nachbesetzen am Platzhalter einer gelöschten Übung. Nur im
+   * Bearbeiten-Modus gesetzt — behebt BUG-5.
+   */
+  refill?: {
+    rolling: boolean
+    onReroll: () => void
+    onChoose: () => void
+  }
 }
 
-export function UnitItemCard({ item }: UnitItemCardProps) {
+export function UnitItemCard({ item, refill }: UnitItemCardProps) {
   if (!item.exercise) {
     return (
       <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 p-3">
         <div className="flex items-start gap-2">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">Übung gelöscht</p>
-            <p className="text-xs text-muted-foreground">
-              Diese Übung wurde aus deiner Datenbank entfernt. Der Platz von{' '}
-              {item.plannedDuration} Minuten ist noch frei.
-            </p>
+          <div className="space-y-2">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Übung gelöscht</p>
+              <p className="text-xs text-muted-foreground">
+                Diese Übung wurde aus deiner Datenbank entfernt. Der Platz von{' '}
+                {item.plannedDuration} Minuten ist noch frei.
+              </p>
+            </div>
+            {refill && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={refill.onReroll}
+                  disabled={refill.rolling}
+                >
+                  {refill.rolling ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Dices className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  Auswürfeln
+                </Button>
+                <Button variant="outline" size="sm" className="h-8" onClick={refill.onChoose}>
+                  <Search className="mr-2 h-3.5 w-3.5" />
+                  Selbst wählen
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 # PROJ-7: Einheiten-Editor
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-07
 
@@ -648,6 +648,89 @@ Migrationsregister — so wie es am 2026-10-06 festgelegt wurde.
 - **Keine Obergrenze für Einträge je Segment.** Nichts bricht, es wird nur lang
 - **BUG-16 bleibt am bestehenden „Einheit speichern"** offen; der neue Speicherweg hat das Problem
   nicht
+
+## Implementation Notes (Frontend)
+
+**Stand:** 2026-10-07 · Typprüfung, Lint und Produktionsbuild sauber · **342 Unit-Tests grün**
+(249 aus PROJ-6 plus 93 neue)
+
+Gebaut nach der Reihenfolge aus dem Tech Design: zuerst die Logik als reine Umformungen mit
+Tests, danach die Oberfläche.
+
+### Neu: die Logik (ohne Oberfläche, ohne Datenbank)
+
+| Datei | Was drin liegt | Tests |
+|---|---|---|
+| `src/lib/units/draft.ts` | Die Arbeitsfassung und die sieben Operationen als reine Umformungen. Dazu Füllstand, Ausschlüsse beim Auswürfeln und der Vergleich zweier Stände | 54 |
+| `src/lib/units/draft-history.ts` | Ausgangszustand, aktueller Stand, Kette der vorigen Stände. Trägt Rückgängig, Verwerfen, die Anzahl der offenen Änderungen | 15 |
+| `src/lib/units/editor-pool.ts` | Die schlanke Kandidatenfassung (`EditorCandidate`), das Auswürfeln, die Zweiteilung für den Auswahldialog, die Variantenliste | 24 |
+
+Die Arbeitsfassung trägt **bewusst keine** Segmentnamen, Minutenlängen und Phasenfolge. Dass sie
+fehlen, setzt die Regel „das Zeitgerüst bleibt beim Generator" durch, statt sie nur zu behaupten:
+die Oberfläche legt die Arbeitsfassung über die geladene Einheit und nimmt den Rahmen von dort.
+
+### Neu: die Oberfläche
+
+| Datei | Was es ist |
+|---|---|
+| `src/hooks/use-unsaved-changes.ts` | Die Nachfrage beim Verlassen: Browser-Warnung plus Mithören auf Klicks auf Verweise |
+| `src/components/units/unit-item-controls.tsx` | Die Bedienzeile am Eintrag: Plandauer, Hoch/Runter, Menü |
+| `src/components/units/segment-fill-status.tsx` | „10 von 12 Min · 2 Min frei" |
+| `src/components/units/segment-note-field.tsx` | Die änderbare Segment-Notiz |
+| `src/components/units/edit-change-bar.tsx` | Die Änderungsleiste, oben klebend |
+| `src/components/units/save-changes-prompt.tsx` | Die Nachfrage vor dem Speichern, nennt nicht aufgehende Segmente namentlich |
+| `src/components/units/discard-changes-dialog.tsx` | „Verwerfen", mit dem Hinweis auf schnell angelegte Übungen |
+| `src/components/units/exercise-picker-dialog.tsx` | Der Auswahldialog mit allen vier Zuständen: lädt, Fehler mit erneutem Versuch, keine Übungen, keine Treffer |
+| `src/components/units/variant-switch-dialog.tsx` | Variante umschalten |
+| `src/components/units/quick-create-exercise-form.tsx` | „Schnell anlegen" im Auswahldialog |
+
+### Geändert an Vorhandenem
+
+- **`unit-plan-view.tsx`** — der Bearbeiten-Modus als zweiter Zustand, die ganze Verdrahtung, und
+  der **Wegfall der Lücken-Sperre**: der Speichern-Knopf ist nicht mehr ausgegraut, der Hinweis
+  verweist auf „Bearbeiten" statt in den Generator zurück
+- **`unit-item-card.tsx`** — nimmt jetzt nur noch, was die Karte anzeigt. Dadurch rendern geladene
+  Einträge und die im Editor eingesetzten durch dieselbe Karte. Am Platzhalter „Übung gelöscht"
+  stehen im Bearbeiten-Modus „Auswürfeln" und „Selbst wählen" — **BUG-5 behoben**
+- **`gap-notice.tsx`** — bekommt im Bearbeiten-Modus „Übung einfügen" neben „Lockern"
+- **`candidates.ts` / `actions/units.ts`** — `candidateKey` liegt jetzt bei den Kandidaten und
+  nicht zweimal. Der Editor merkt sich darüber, was an einem Platz weggewürfelt wurde
+
+### Entscheidungen, die beim Bauen fielen
+
+| Entscheidung | Begründung |
+|---|---|
+| Eine eingefügte Übung startet mit **ihrer Schätzdauer** als Plandauer | Beim Tausch behält der Platz seine Minuten, beim Einfügen gibt es keine, die er behalten könnte. Die Schätzung ist der einzige Wert, der nicht geraten ist. Dass damit ein volles Segment überfüllt werden kann, ist laut Spec zugelassen und wird ausgewiesen |
+| Ein folgenloser Klick zählt **nicht** als offene Änderung | „Nach oben" am ersten Platz, dieselbe Plandauer erneut eingetragen, die schon eingesetzte Übung noch einmal gewählt. Sonst stünde „1 offene Änderung" da, und „Rückgängig" täte danach scheinbar nichts |
+| Wegwürfeln und über Umwege zur ursprünglichen Übung zurück gilt als **unverändert** | Am Plan hat sich nichts geändert, also soll beim Verlassen nicht gefragt werden. Verglichen wird, was gespeichert würde — nicht, was der Nutzer unterwegs angeklickt hat |
+| Ein Segment auf „frei lassen" **behält** diese Einstellung, auch wenn es gefüllt wird | Sie hält fest, was im Generator gewählt wurde, und „Zurück zum Generator" braucht sie unverändert. Was die Leseansicht zeigt, hängt jetzt daran, ob Einträge **da** sind |
+| Der Lückenhinweis bleibt im Bearbeiten-Modus sichtbar | Seine Aufschlüsselung sagt, **warum** das Segment leer ist — das ist genau die Auskunft, die beim Füllen hilft. „Übung einfügen" steht daneben, „Lockern" bleibt. Die offene Frage, ob beides nebeneinander eine Wahl zu viel ist, bleibt damit offen und beobachtbar |
+| Die Bedienzeile sitzt **unter** der Karte, nicht in einer Spalte daneben | Auf dem Telefon der Unterschied zwischen treffbar und nicht treffbar. Hoch/Runter liegen außerhalb des Menüs, weil sie in der Halle gebraucht werden |
+
+### Was noch fehlt — alles davon ist `/backend`
+
+Der Editor hat drei Stellen, an denen er den Server braucht. Sie sind als **ein** Vertrag
+zusammengefasst — `UnitEditorActions` in `unit-plan-view.tsx` — und die Seite gibt ihn noch nicht
+mit. Solange er fehlt, melden die betroffenen Knöpfe das ehrlich, statt ins Leere zu laufen:
+
+1. **`loadPool(segmentId)`** — die Kandidatenliste eines Segments, mit der Eignung je Kandidat.
+   Die Kriterienprüfung muss aus derselben Kriterienliste des Generators kommen, **nicht** neu
+   formuliert werden
+2. **`savePlan(draft, { expectedUpdatedAt, force, name? })`** — die eine nicht teilbare
+   Datenbank-Operation. `stale: true` zurückgeben, wenn der Änderungsstempel abweicht; der Dialog
+   dafür steht schon
+3. **`quickCreate(segmentId, input)`** — Übung sofort anlegen, mit Vorbelegung und Markierung,
+   samt Namensabgleich. Gibt den neuen Kandidaten zurück, damit er sich in die gemerkte Liste
+   einreiht
+
+Dazu an der Datenbank: das Merkmal **„noch zu ergänzen"** an der Übung, die Funktion fürs
+Speichern, der Filter in der Übungsübersicht und das Löschen der Markierung beim regulären
+Speichern einer Übung.
+
+**Was schon ohne Server funktioniert und im Browser geprüft werden kann:** Bearbeiten-Modus
+betreten und verlassen, Entfernen, Umsortieren, Plandauer samt Mindestdauer-Korrektur,
+Segment-Notiz, Füllstandszeile, Rückgängig, Verwerfen, die Nachfrage beim Verlassen und beim
+Schließen des Tabs, und der Wegfall der Lücken-Sperre.
 
 ## QA Test Results
 _To be added by /qa_

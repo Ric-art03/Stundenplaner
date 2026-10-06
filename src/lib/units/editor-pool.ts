@@ -1,0 +1,159 @@
+import { candidateKey, type Candidate } from './candidates'
+import type { GapCriterion } from './generator'
+import type { DrawExclusions, DraftPlacement } from './draft'
+
+/**
+ * Die Kandidatenliste eines Segments, wie der Editor sie braucht — die
+ * „schlanke Fassung" aus dem Entwurf.
+ *
+ * Sie wird beim ersten Auswürfeln oder Öffnen des Auswahldialogs **einmal je
+ * Segment** geladen und für die Dauer des Bearbeiten-Modus behalten. Danach
+ * laufen Würfeln, Auswahl und Variantenwechsel ohne Server.
+ *
+ * Was die Liste **nicht** trägt: Beschreibung, Bilder, Links, Notizen. Die
+ * Eintragskarte zeigt sie nicht an, und sie wären der größte Teil der Daten.
+ */
+export interface EditorCandidate extends Candidate {
+  musicRequired: boolean
+  musicLink: string | null
+  /** Varianten der Hauptübung — für „2 Varianten verfügbar" auf der Karte. */
+  variantCount: number
+  /**
+   * Leer = erfüllt alle Kriterien dieses Segments. Sonst die Kriterien, an denen
+   * der Kandidat scheitert. Ausgerechnet hat das der Server aus derselben
+   * Kriterienliste, die der Generator benutzt — der Browser bekommt das
+   * Ergebnis, nicht die Regeln.
+   */
+  failedCriteria: GapCriterion[]
+  /** Markierung „noch zu ergänzen" aus dem Schnell-Anlegen. */
+  needsCompletion: boolean
+}
+
+/** Kurze Beschriftung je Kriterium, für die Begründung am einzelnen Kandidaten.
+ *
+ * Bewusst andere Texte als im Lückenhinweis: dort stehen sie in einem Satz
+ * („erfüllt nicht das Material in deiner Halle"), hier als Merkmal an einer
+ * Zeile. Dieselben Wörter würden an einer der beiden Stellen falsch klingen. */
+export const CRITERION_LABELS: Record<GapCriterion, string> = {
+  age: 'Altersgruppe',
+  material: 'Material',
+  participants: 'Teilnehmerzahl',
+  sport: 'Sportart',
+  difficulty: 'Schwierigkeit',
+}
+
+export function passes(candidate: EditorCandidate): boolean {
+  return candidate.failedCriteria.length === 0
+}
+
+/** „passt nicht: Material, Altersgruppe" */
+export function failureLabel(candidate: EditorCandidate): string {
+  return candidate.failedCriteria.map((criterion) => CRITERION_LABELS[criterion]).join(', ')
+}
+
+export function keyOf(candidate: EditorCandidate): string {
+  return candidateKey(candidate.exerciseId, candidate.variantId)
+}
+
+/** Die Übung in der Form, in der sie in einen Platz gesetzt wird. */
+export function placementFrom(candidate: EditorCandidate): DraftPlacement {
+  return {
+    exerciseId: candidate.exerciseId,
+    variantId: candidate.variantId,
+    exercise: {
+      id: candidate.exerciseId,
+      name: candidate.name,
+      estimatedDuration: candidate.duration,
+      sports: candidate.sports,
+      difficulty: candidate.difficulty,
+      organizationForms: candidate.organizationForms,
+      materials: candidate.materials.map((material) => ({
+        name: material.name,
+        quantity: material.quantity,
+        mode: material.mode,
+      })),
+      musicRequired: candidate.musicRequired,
+      musicLink: candidate.musicLink,
+      variantCount: candidate.variantCount,
+      variantTitle: candidate.variantTitle,
+    },
+  }
+}
+
+/**
+ * Was an diesem Platz noch gezogen werden darf: passend, nicht schon in der
+ * Einheit, an diesem Platz noch nicht weggewürfelt.
+ */
+export function drawablePool(
+  pool: EditorCandidate[],
+  exclusions: DrawExclusions
+): EditorCandidate[] {
+  return pool.filter(
+    (candidate) =>
+      passes(candidate) &&
+      !exclusions.exerciseIds.has(candidate.exerciseId) &&
+      !exclusions.keys.has(keyOf(candidate))
+  )
+}
+
+/**
+ * Eine Übung auswürfeln, oder `null`, wenn der Vorrat erschöpft ist. Dann
+ * erscheint die Aufschlüsselung der Ursachen, die der Generator schon
+ * formuliert — es gibt hier keinen zweiten Satz von Meldungen.
+ *
+ * Gleichverteilt gezogen, ohne die Gewichtung des Generators: „diese Gruppe
+ * hatte das letzte Woche schon" gehört laut Spec zu PROJ-10, das die Regel für
+ * Generator und Editor gemeinsam setzen soll.
+ */
+export function drawCandidate(
+  pool: EditorCandidate[],
+  exclusions: DrawExclusions,
+  random: () => number = Math.random
+): EditorCandidate | null {
+  const drawable = drawablePool(pool, exclusions)
+  if (drawable.length === 0) return null
+
+  const index = Math.min(drawable.length - 1, Math.floor(random() * drawable.length))
+  return drawable[index]
+}
+
+/**
+ * Hauptübung und alle Varianten einer Übung, für das Umschalten. Kommt aus
+ * derselben geladenen Liste — Varianten sind darin eigene Kandidaten, es gibt
+ * also keinen zweiten Ladeweg.
+ *
+ * Eignung spielt hier keine Rolle: wer bewusst auf eine Variante umschaltet,
+ * entscheidet das selbst, so wie bei der eigenen Auswahl.
+ */
+export function variantsOf(pool: EditorCandidate[], exerciseId: string): EditorCandidate[] {
+  return pool
+    .filter((candidate) => candidate.exerciseId === exerciseId)
+    .sort((a, b) => {
+      // Die Hauptübung zuerst, danach die Varianten in ihrer Reihenfolge.
+      if (a.variantId === null) return -1
+      if (b.variantId === null) return 1
+      return 0
+    })
+}
+
+/**
+ * Teilt die Liste für den Auswahldialog: oben die passenden, darunter
+ * aufklappbar die übrigen. Ein Suchbegriff filtert in beiden Gruppen.
+ */
+export function splitForPicker(
+  pool: EditorCandidate[],
+  search: string
+): { fitting: EditorCandidate[]; others: EditorCandidate[] } {
+  const term = search.trim().toLowerCase()
+  const matches = (candidate: EditorCandidate) =>
+    term === '' ||
+    candidate.name.toLowerCase().includes(term) ||
+    (candidate.variantTitle?.toLowerCase().includes(term) ?? false)
+
+  const found = pool.filter(matches)
+
+  return {
+    fitting: found.filter(passes),
+    others: found.filter((candidate) => !passes(candidate)),
+  }
+}

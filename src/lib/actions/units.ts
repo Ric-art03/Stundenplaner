@@ -22,7 +22,12 @@ import type {
   SegmentConfig,
   SegmentFillMode,
 } from '@/lib/types/unit'
-import { buildCandidates, type Candidate, type CandidateSource } from '@/lib/units/candidates'
+import {
+  buildCandidates,
+  candidateKey,
+  type Candidate,
+  type CandidateSource,
+} from '@/lib/units/candidates'
 import {
   generateUnitPlan,
   planSegment,
@@ -758,10 +763,9 @@ function segmentRowToConfig(row: SegmentRow): SegmentConfig {
   }
 }
 
-/** Schlüssel, unter dem eine Hauptübung bzw. eine ihrer Varianten liegt. */
-function candidateKey(exerciseId: string, variantId: string | null): string {
-  return `${exerciseId}:${variantId ?? ''}`
-}
+// `candidateKey` liegt bei den Kandidaten selbst — der Editor aus PROJ-7 merkt
+// sich darüber, was an einem Platz weggewürfelt wurde, und zwei Fassungen
+// desselben Schlüssels würden lautlos auseinanderlaufen.
 
 export async function getUnit(id: string): Promise<Unit | null> {
   const { supabase, user } = await getAuthUser()

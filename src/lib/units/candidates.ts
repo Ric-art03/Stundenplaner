@@ -140,3 +140,12 @@ export function buildCandidates(exercises: CandidateSource[]): Candidate[] {
 
   return candidates
 }
+
+/**
+ * Der Schlüssel, unter dem eine Hauptübung bzw. eine ihrer Varianten liegt.
+ * Eine Stelle für beide Seiten: der Generator schlägt darüber Kandidaten nach,
+ * der Editor merkt sich darüber, was an einem Platz weggewürfelt wurde.
+ */
+export function candidateKey(exerciseId: string, variantId: string | null): string {
+  return `${exerciseId}:${variantId ?? ''}`
+}
