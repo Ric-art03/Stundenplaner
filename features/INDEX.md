@@ -54,6 +54,14 @@ Zwei Dinge sind dabei schon abgeräumt:
 - **BUG-5 ist behoben** — am Platzhalter „Übung gelöscht" stehen im Bearbeiten-Modus „Auswürfeln" und „Selbst wählen"
 - **Die Lücken-Sperre ist weg** — der Speichern-Knopf ist nicht mehr ausgegraut, der Hinweis verweist auf „Bearbeiten" statt in den Generator zurück
 
+**Am 2026-10-08 nach dem Test im Browser nachgeschärft** — alles Oberfläche, in der Spec nachgezogen:
+
+- **Ein Hauptknopf in der Änderungsleiste** statt „Fertig" oben und „Speichern" in der Leiste: ohne Änderungen „Fertig", mit Änderungen „Speichern", und Speichern verlässt den Modus. Im Bearbeiten-Modus verschwinden „Bearbeiten", „Gespeichert", „Einheit speichern" und „Neu generieren" aus dem Kopf der Seite
+- **Die Leiste passt auf 375 px** — Zählung in eigener Zeile, Knöpfe ohne Symbole
+- **Der Hinweis zur Mindestdauer bleibt stehen** — er verschwand, sobald die Korrektur den Wert tatsächlich änderte
+- **Schnell-Anlegen hat ein Feld „Arbeitsnotizen"** (optional) — das Backend muss es mit übernehmen
+- **Der Hinweis auf gelockerte Kriterien** steht nur noch an ungespeicherten Einheiten
+
 ### Was PROJ-7 noch fehlt
 
 Der Editor braucht den Server an **drei** Stellen, zusammengefasst als ein Vertrag (`UnitEditorActions`): die **Kandidatenliste je Segment**, das **Speichern als eine nicht teilbare Datenbank-Operation** und das **Schnell-Anlegen**. Solange die Seite den Vertrag nicht mitgibt, melden die betroffenen Knöpfe das ehrlich, statt ins Leere zu laufen. Dazu an der Datenbank: das Merkmal „noch zu ergänzen" an der Übung, die Funktion fürs Speichern, der Filter in der Übungsübersicht.

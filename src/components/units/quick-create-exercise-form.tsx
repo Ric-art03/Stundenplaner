@@ -23,6 +23,8 @@ export interface QuickCreateInput {
   name: string
   duration: number
   description: string
+  /** Leer, wenn der Nutzer nichts eingetragen hat. */
+  workNotes: string
 }
 
 export interface QuickCreateResult {
@@ -45,7 +47,8 @@ interface QuickCreateExerciseFormProps {
 /**
  * „Übung fehlt? Schnell anlegen" — das Kurzformular im Auswahldialog.
  *
- * Getippt werden nur Name, Dauer und Beschreibung. Sportart, Phase,
+ * Getippt werden nur Name, Dauer und Beschreibung, wahlweise dazu die
+ * Arbeitsnotizen — das eine Feld, das in der Halle neben der Übung steht. Sportart, Phase,
  * Schwierigkeit und Altersgruppen kommen aus Segment und Gruppe und werden
  * **angezeigt**, nicht abgefragt: der Nutzer soll sehen, dass die Übung
  * eingeordnet ist, ohne sie einordnen zu müssen.
@@ -64,6 +67,7 @@ export function QuickCreateExerciseForm({
   const [name, setName] = React.useState(initialName)
   const [duration, setDuration] = React.useState('10')
   const [description, setDescription] = React.useState('')
+  const [workNotes, setWorkNotes] = React.useState('')
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [duplicate, setDuplicate] = React.useState<EditorCandidate | null>(null)
@@ -87,6 +91,7 @@ export function QuickCreateExerciseForm({
         name: name.trim(),
         duration: Number.isFinite(parsed) && parsed >= 1 ? parsed : 10,
         description: description.trim(),
+        workNotes: workNotes.trim(),
       })
 
       if (result.duplicate) {
@@ -136,6 +141,22 @@ export function QuickCreateExerciseForm({
           onChange={(event) => setDescription(event.target.value.slice(0, 5000))}
           placeholder="Wie läuft die Übung ab?"
           rows={3}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="schnell-arbeitsnotizen">
+          Arbeitsnotizen <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
+        <p className="text-xs text-muted-foreground">
+          Werden angezeigt, wenn die Übung in der fertigen Stunde dran ist.
+        </p>
+        <Textarea
+          id="schnell-arbeitsnotizen"
+          value={workNotes}
+          onChange={(event) => setWorkNotes(event.target.value.slice(0, 2000))}
+          placeholder="Hinweise zur Durchführung, Aufbau-Details..."
+          rows={2}
         />
       </div>
 

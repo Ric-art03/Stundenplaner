@@ -71,11 +71,18 @@ export function UnitItemControls({
   const fieldId = `dauer-${itemKey}`
   const [raw, setRaw] = React.useState(String(plannedDuration))
   const [corrected, setCorrected] = React.useState(false)
+  /** Der Wert, den dieses Feld zuletzt selbst übernommen hat. */
+  const committed = React.useRef(plannedDuration)
 
-  // Nach „Rückgängig" oder einem Tausch steht ein anderer Wert im Platz.
+  // Nach „Rückgängig" oder einem Tausch steht ein anderer Wert im Platz. Der
+  // Korrektur-Hinweis verschwindet nur dann — kommt der neue Wert aus der
+  // eigenen Korrektur (5 → 0 → 1), muss er stehen bleiben.
   React.useEffect(() => {
     setRaw(String(plannedDuration))
-    setCorrected(false)
+    if (plannedDuration !== committed.current) {
+      committed.current = plannedDuration
+      setCorrected(false)
+    }
   }, [plannedDuration])
 
   /** Übernommen wird beim Verlassen des Feldes, nicht bei jedem Tastendruck:
@@ -87,6 +94,7 @@ export function UnitItemControls({
 
     setCorrected(!Number.isFinite(parsed) || parsed < MIN_ITEM_MINUTES)
     setRaw(String(safe))
+    committed.current = safe
     if (safe !== plannedDuration) onDurationChange(safe)
   }
 

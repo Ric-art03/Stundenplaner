@@ -30,7 +30,8 @@ Nutzer dafür nur ein Werkzeug — neu würfeln, also alles verwerfen. Der Edito
 stattdessen den Zugriff auf den einzelnen Platz im Plan.
 
 Der Editor ist **ein Modus auf der Detailseite** `/units/[id]`, kein eigener Ort. Ein Knopf
-„Bearbeiten" schaltet die Bedienelemente ein, „Fertig" wieder aus. Die Leseansicht bleibt damit
+„Bearbeiten" schaltet die Bedienelemente ein, der Hauptknopf der Änderungsleiste („Fertig" ohne,
+„Speichern" mit offenen Änderungen) wieder aus. Die Leseansicht bleibt damit
 ruhig und lesbar — sie ist das, was der Übungsleiter in der Halle vor sich hat, und sie trägt
 später den Live-Modus.
 
@@ -70,7 +71,7 @@ Minutenlängen, die Phasenfolge — bleibt Sache des Generators.
 | | |
 |---|---|
 | **Betreten** | Knopf „Bearbeiten" im Kopf der Detailseite. Verfügbar für Entwürfe **und** für gespeicherte Einheiten |
-| **Verlassen** | „Fertig" bei unveränderter Einheit. Bei offenen Änderungen eine Nachfrage „Änderungen speichern?" mit den drei Wegen Speichern / Verwerfen / Abbrechen — auch beim Wegnavigieren und beim Schließen des Browserfensters |
+| **Verlassen** | **Ein** Hauptknopf in der Änderungsleiste (geändert am 2026-10-08): bei unveränderter Einheit heißt er „Fertig" und verlässt den Modus, bei offenen Änderungen heißt er „Speichern", speichert und verlässt den Modus danach. Einen eigenen „Fertig"-Knopf im Kopf der Seite gibt es nicht mehr. Die Nachfrage „Änderungen speichern?" mit den drei Wegen Speichern / Verwerfen / Abbrechen bleibt für das Wegnavigieren und das Schließen des Browserfensters |
 | **Zustand** | Offene Änderungen leben nur im Browser. Ein Neuladen verwirft sie (siehe Produktentscheidungen) |
 
 ### Die sieben Operationen
@@ -88,7 +89,8 @@ Minutenlängen, die Phasenfolge — bleibt Sache des Generators.
 ### Schnell anlegen
 
 Findet die Suche im Auswahldialog nichts Passendes, steht dort „Übung fehlt? Schnell anlegen":
-Name, Dauer und eine kurze Beschreibung tippt der Nutzer, **Sportart, Phase, Schwierigkeit und
+Name, Dauer und eine kurze Beschreibung tippt der Nutzer, wahlweise dazu Arbeitsnotizen (dasselbe
+Feld wie im regulären Übungsformular, ergänzt am 2026-10-08), **Sportart, Phase, Schwierigkeit und
 Altersgruppen sind aus dem Segment und der Gruppe vorbelegt**. Damit ist die neue Übung sofort
 ein gültiger Kandidat und nicht nur ein Eintrag, der beim nächsten Generieren durch jeden Filter
 fällt. Die Übung landet regulär in der Übungsdatenbank des Nutzers und wird direkt in den Platz
@@ -148,9 +150,10 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 
 ### Bearbeiten-Modus betreten und verlassen
 
-- [ ] Angenommen der Nutzer sieht eine Einheit, wenn er auf „Bearbeiten" klickt, dann erscheinen die Bedienelemente an jedem Eintrag und jedem Segment, und der Knopf wechselt zu „Fertig"
-- [ ] Angenommen der Nutzer ist im Bearbeiten-Modus und hat nichts geändert, wenn er auf „Fertig" klickt, dann kehrt die Seite ohne Nachfrage in die Leseansicht zurück
-- [ ] Angenommen der Nutzer hat offene Änderungen, wenn er auf „Fertig" klickt, dann erscheint eine Nachfrage „Änderungen speichern?" mit den Möglichkeiten Speichern, Verwerfen und Abbrechen
+- [ ] Angenommen der Nutzer sieht eine Einheit, wenn er auf „Bearbeiten" klickt, dann erscheinen die Bedienelemente an jedem Eintrag und jedem Segment, der Knopf „Bearbeiten" verschwindet, und die Änderungsleiste zeigt als Hauptknopf „Fertig"
+- [ ] Angenommen der Nutzer ist im Bearbeiten-Modus und hat nichts geändert, wenn er in der Änderungsleiste auf „Fertig" klickt, dann kehrt die Seite ohne Nachfrage in die Leseansicht zurück
+- [ ] Angenommen der Nutzer hat offene Änderungen, wenn er die Änderungsleiste ansieht, dann heißt der Hauptknopf „Speichern" statt „Fertig"
+- [ ] Angenommen der Nutzer hat offene Änderungen, wenn er auf „Speichern" klickt und das Speichern gelingt, dann kehrt die Seite in die Leseansicht zurück
 - [ ] Angenommen der Nutzer hat offene Änderungen, wenn er auf einen Link zu einer anderen Seite klickt, dann erscheint dieselbe Nachfrage, bevor die Seite verlassen wird
 - [ ] Angenommen der Nutzer hat offene Änderungen, wenn er den Browser-Tab schließt, dann warnt der Browser vor dem Verlassen
 - [ ] Angenommen der Nutzer hat offene Änderungen, wenn er in der Nachfrage „Abbrechen" wählt, dann bleibt er im Bearbeiten-Modus und alle Änderungen bleiben erhalten
@@ -203,6 +206,7 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 - [ ] Angenommen die Suche im Auswahldialog findet keine Treffer, wenn der Nutzer sucht, dann wird „Übung fehlt? Schnell anlegen" angeboten
 - [ ] Angenommen der Nutzer öffnet „Schnell anlegen" aus einem Segment, wenn das Formular erscheint, dann sind Sportart, Phase, Schwierigkeit und Altersgruppen aus Segment und Gruppe vorbelegt
 - [ ] Angenommen der Nutzer füllt Name, Dauer und Beschreibung aus, wenn er „Anlegen und einsetzen" wählt, dann steht die Übung in seiner Übungsdatenbank und im Platz
+- [ ] Angenommen der Nutzer trägt beim Schnell-Anlegen Arbeitsnotizen ein, wenn er „Anlegen und einsetzen" wählt, dann stehen sie an der angelegten Übung; lässt er das Feld leer, wird die Übung ohne Arbeitsnotizen angelegt
 - [ ] Angenommen der Nutzer lässt den Namen leer, wenn er „Anlegen und einsetzen" wählt, dann erscheint eine Validierungsmeldung und die übrigen Eingaben bleiben erhalten
 - [ ] Angenommen eine Übung mit demselben Namen existiert bereits, wenn der Nutzer sie schnell anlegen will, dann weist ein Hinweis darauf hin und bietet die vorhandene Übung zur Auswahl an
 - [ ] Angenommen der Nutzer hat eine Übung schnell angelegt, wenn er die Nachfrage beim Verlassen mit „Verwerfen" beantwortet, dann bleibt die angelegte Übung in seiner Datenbank, nur der Einsatz im Plan wird verworfen
@@ -367,6 +371,8 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 | Ein Segment auf „frei lassen" behält diese Einstellung, auch wenn der Nutzer es füllt | Die Einstellung hält fest, was im Generator gewählt wurde — „Zurück zum Generator" muss die Maske so öffnen, wie der Nutzer sie verlassen hat. Was die Leseansicht zeigt, hängt künftig daran, ob Einträge **da** sind, nicht an der Einstellung | 2026-10-07 |
 | Die Lückenbegründung des Generators wird beim Speichern für jedes geänderte Segment verworfen | Sie beschreibt den Versuch des Generators. Hat der Nutzer das Segment selbst umgebaut, beschreibt sie den Stand nicht mehr — und ein Grund, der nicht mehr stimmt, ist schlechter als keiner. Die Füllstandszeile trägt die Information dann | 2026-10-07 |
 | Die Nachfrage beim Wegnavigieren hängt an den Links der Seite, nicht am Router | Next.js bietet für den App-Router keine Abfangstelle für Seitenwechsel. Ein Mithören auf Klicks auf Verweise deckt alle Ausgänge ab, die der Nutzer tatsächlich benutzt — Kopfzeilen-Navigation, „Zurück zum Generator", die Verweise in den Übungskarten — ohne auf eine fehlende Schnittstelle zu warten. Browser-Zurück und Fenster-Schließen gehen über die Warnung des Browsers | 2026-10-07 |
+| Ein Hauptknopf statt „Fertig" und „Speichern" nebeneinander | Bei offenen Änderungen führte „Fertig" nur über eine Nachfrage zum selben Ziel wie „Speichern". Jetzt heißt der eine Knopf je nach Stand „Fertig" oder „Speichern", und Speichern verlässt den Modus. Er sitzt in der Änderungsleiste, weil sie beim Scrollen oben klebt — im Kopf der Seite müsste man auf dem Telefon erst nach oben scrollen. Preis: Speichern und Weiterbearbeiten kostet einen erneuten Klick auf „Bearbeiten" | 2026-10-08 |
+| Im Bearbeiten-Modus verschwinden „Gespeichert", „Einheit speichern" und „Neu generieren" aus dem Kopf der Seite | „Neu generieren" würde offene Änderungen ohne Nachfrage überschreiben. „Gespeichert" stünde sonst neben offenen Änderungen und wäre falsch. „Einheit speichern" liefe am Editor vorbei und würde den Entwurf ohne die offenen Änderungen sichern. In der Leseansicht bleiben beide: wer eine frisch generierte Einheit so nimmt, wie sie ist, speichert sie ohne Umweg über „Bearbeiten" | 2026-10-08 |
 | Kein neues Paket | Umsortieren über Hoch/Runter (Produktentscheidung) nimmt den einzigen Grund weg, ein Ziehen-und-Ablegen-Paket aufzunehmen. Alles Übrige deckt der vorhandene Baukasten ab | 2026-10-07 |
 
 ---
@@ -397,7 +403,7 @@ Die Leseansicht bleibt, wie sie ist. Was neu entsteht, hängt sich **daneben**, 
 └── Stundenplan-Ansicht                        [vorhanden, wird erweitert]
     ├── Kopfbereich                            [vorhanden]
     │   ├── Titel, Dauer, Gruppe
-    │   ├── „Bearbeiten" / „Fertig"            NEU
+    │   ├── „Bearbeiten"                       NEU  — „Fertig" sitzt seit 2026-10-08 in der Änderungsleiste
     │   ├── Dreipunkt-Menü (umbenennen, löschen)
     │   └── „Einheit speichern" (Entwurf)      [vorhanden, Sperre entfällt]
     │
@@ -433,7 +439,7 @@ Dialoge (einmal für die ganze Seite, nicht je Eintrag)
 │   ├── „Passend (14)"              — Liste, aktueller Eintrag erkennbar
 │   ├── „Auch unpassende anzeigen"  — aufklappbar, je Eintrag die Begründung
 │   └── „Übung fehlt? Schnell anlegen"
-│       └── Kurzformular            NEU  — Name, Dauer, Beschreibung
+│       └── Kurzformular            NEU  — Name, Dauer, Beschreibung, Arbeitsnotizen (optional)
 ├── Variantenwahl                              NEU  — Hauptübung + alle Varianten
 ├── „Änderungen speichern?"                    NEU  — Speichern / Verwerfen / Abbrechen,
 │                                                     nennt nicht aufgehende Segmente
@@ -546,7 +552,8 @@ dagegen wird in die gemerkte Liste eingereiht und ist sofort da.
 ### E) Schnell anlegen
 
 Das Kurzformular legt die Übung **sofort** in der Datenbank an — über denselben Weg wie das
-reguläre Formular, nur mit weniger Feldern und der Markierung dazu. Vorbelegt werden Sportart,
+reguläre Formular, nur mit weniger Feldern und der Markierung dazu. Mitgeschickt werden Name,
+Dauer, Beschreibung und die Arbeitsnotizen (`workNotes`, leer wenn nicht ausgefüllt). Vorbelegt werden Sportart,
 Phase, Schwierigkeit und Altersgruppen aus Segment und Gruppe, damit die Übung ein gültiger
 Kandidat ist und nicht beim nächsten Generieren durch jeden Filter fällt.
 
@@ -572,7 +579,7 @@ Drei Ausgänge, drei Mittel:
 
 | Ausgang | Mittel |
 |---|---|
-| „Fertig" oder „Verwerfen" | der eigene Dialog der Seite |
+| „Verwerfen" | der eigene Dialog der Seite |
 | Ein Verweis auf eine andere Seite — Kopfzeile, „Zurück zum Generator", die Verweise in den Übungskarten | die Seite hört auf Klicks auf Verweise und hält den Wechsel an, solange Änderungen offen sind |
 | Browser-Zurück, Neuladen, Tab schließen | die eingebaute Warnung des Browsers |
 

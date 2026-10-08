@@ -285,14 +285,6 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
     setPrompt({ mode: 'leave', proceed })
   })
 
-  function finishEditing() {
-    if (!dirty) {
-      setEditing(false)
-      return
-    }
-    setPrompt({ mode: 'leave', proceed: () => setEditing(false) })
-  }
-
   function requestSave() {
     if (mismatches.length > 0) {
       setPrompt({ mode: 'confirm' })
@@ -334,6 +326,8 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
 
       setPrompt(null)
       setQuickCreated([])
+      // Speichern beendet das Bearbeiten — es gibt keinen zweiten Knopf dafür.
+      setEditing(false)
       toast({ title: 'Änderungen gespeichert' })
       router.refresh()
     } catch {
@@ -510,26 +504,23 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
         <div className="flex flex-col gap-2 sm:flex-row">
           {/* Bearbeiten steht für Entwürfe genauso zur Verfügung wie für
               gespeicherte Einheiten. */}
-          <Button
-            variant={editing ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => (editing ? finishEditing() : setEditing(true))}
-            disabled={busy !== null}
-          >
-            {editing ? (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                Fertig
-              </>
-            ) : (
-              <>
-                <Pencil className="mr-2 h-4 w-4" />
-                Bearbeiten
-              </>
-            )}
-          </Button>
+          {/* Im Bearbeiten-Modus führt der Hauptknopf der Leiste wieder hinaus. */}
+          {!editing && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditing(true)}
+              disabled={busy !== null}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Bearbeiten
+            </Button>
+          )}
 
-          {unit.saved ? (
+          {/* Im Bearbeiten-Modus sagt die Leiste, was offen ist, und ihr Hauptknopf
+              speichert. „Gespeichert" stünde dort neben ungespeicherten Änderungen,
+              und „Einheit speichern" würde den Entwurf ohne sie sichern. */}
+          {editing ? null : unit.saved ? (
             <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
               <Check className="h-4 w-4 text-primary" />
               Gespeichert
@@ -550,7 +541,8 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
             </Button>
           )}
 
-          {unit.manuallyEdited && !unit.saved ? (
+          {/* Neu generieren würde offene Änderungen ohne Nachfrage überschreiben. */}
+          {editing ? null : unit.manuallyEdited && !unit.saved ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" disabled={busy !== null}>
@@ -617,6 +609,7 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
           onUndo={() => setHistory((current) => undoChange(current))}
           onDiscard={() => setDiscardOpen(true)}
           onSave={requestSave}
+          onDone={() => setEditing(false)}
         />
       )}
 
@@ -631,7 +624,7 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
         onConfirm={save}
       />
 
-      {unit.relaxedNote && (
+      {!unit.saved && unit.relaxedNote && (
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription className="text-xs">{unit.relaxedNote}</AlertDescription>
