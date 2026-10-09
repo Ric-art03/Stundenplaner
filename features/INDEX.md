@@ -79,16 +79,23 @@ Dabei mit abgeräumt: **BUG-16** (`saveUnit` und `renameUnit` melden jetzt, wenn
 - **Auswürfeln ohne Reaktion:** zwei stille Wege im Code belegt, dazu „Lockern" im Bearbeiten-Modus, das offene Änderungen ohne Nachfrage verwirft. Nachgestellt ist die Beobachtung nicht — `/qa` soll nach weiteren suchen
 - **Kleineres:** ein Knopf „Übung einfügen" je Segment, Trennung nach der Bedienzeile statt davor
 
-Der Technikentwurf vom 2026-10-07 deckt das nicht ab. Sechs Punkte dafür stehen in der Spec unter „Was die Überarbeitung vom 2026-10-09 noch braucht".
+**Der Technikentwurf dazu steht seit dem 2026-10-09** — Abschnitt „Tech Design — Nachtrag zur Überarbeitung vom 2026-10-09" in der Spec. Die tragenden Entscheidungen:
+
+- **Die geplante Lücke ist eine Zahl am Segment** („bis zu n freie Minuten sind geplant"). Werden später mehr Minuten frei, ist die Lücke von selbst wieder offen — ohne Logik, die der Erklärung nachläuft
+- **Ein Speicherweg statt zwei.** „Einheit speichern" am Entwurf läuft über dieselbe Datenbank-Funktion wie der Editor, und die prüft die Lückenregel mit
+- **Organisationsform in der einen Kriterienliste** des Generators, mit einer Lockerungsstufe mehr
+- **Zwei gemeinsame Bausteine** tragen die Einheitlichkeit: die Übungszeile (Material · Organisationsform · Varianten) und die Arbeitsnotiz
+- **Die Arbeitsfassung wird nicht mehr bei jedem Nachladen der Seite verworfen** — die Absicherung gegen das folgenlose Auswürfeln, auch für Ursachen, die noch nicht gefunden sind
+- **Eine Migration**, rein hinzufügend: zwei Felder am Segment, neue Fassung der Speicher-Funktion. **Keine neuen Pakete**
 
 ### Was PROJ-7 noch fehlt
 
-0. **Nachtrag in `/architecture`** für die Überarbeitung vom 2026-10-09, danach `/frontend` und `/backend`. Erst dann lohnt `/qa`
+0. **Die Überarbeitung vom 2026-10-09 bauen** — `/frontend`, dann `/backend` (mit der Migration über den SQL-Editor). Erst dann lohnt `/qa`
 1. **Im Browser durchspielen.** Nachgewiesen ist die Datenbank-Funktion, nicht das Zusammenspiel Browser → Server Action → Funktion: Auswürfeln, Auswahldialog, Variante umschalten, Schnell-Anlegen, Speichern von gespeicherter Einheit und Entwurf, zwei Tabs
 2. **Eine bekannte Abweichung:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen — sie ist für die Funktion von einer gelöschten nicht unterscheidbar. Am lebenden System bestätigt: der fremde Verweis wird nicht geschrieben. In der Spec begründet, für `/qa` zu bewerten
 3. **Beim Ausrollen:** die Migration ist schon in der Datenbank, der Code kann also jederzeit folgen
 
-**Nächster Schritt:** `/architecture PROJ-7` (Nachtrag zur Überarbeitung vom 2026-10-09).
+**Nächster Schritt:** `/frontend PROJ-7` (Überarbeitung vom 2026-10-09 nach dem Nachtrag zum Tech Design).
 
 ## Features
 
