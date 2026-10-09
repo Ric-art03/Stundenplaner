@@ -287,6 +287,7 @@ async function writeUnitContents(
     sports: entry.segment.sports as unknown as Json,
     primary_sport: entry.segment.primarySport,
     difficulties: entry.segment.difficulties as unknown as Json,
+    organization_forms: entry.segment.organizationForms as unknown as Json,
     notes: entry.segment.notes || null,
     gap_reason: entry.gapReason,
     gap_detail: (entry.gapDetail ?? null) as unknown as Json,
@@ -597,46 +598,6 @@ export async function deleteUnit(
 }
 
 /**
- * Nimmt den Entwurf in die Übersichten auf. Bis hierhin war die Einheit nur
- * ein Vorschlag, den der Nutzer auch verwerfen kann, indem er einfach neu
- * generiert.
- */
-export async function saveUnit(
-  unitId: string,
-  name: string
-): Promise<{ success?: boolean; error?: string }> {
-  const { supabase, user } = await getAuthUser()
-  if (!user) return { error: 'Nicht angemeldet.' }
-
-  // Name und Ablage in einem Schritt: Der Nutzer benennt die Einheit genau
-  // dann, wenn sie in den Ordner wandert — dort braucht er sie wiederzufinden.
-  const checked = checkUnitName(name)
-  if ('error' in checked) return { error: checked.error }
-
-  const { data, error } = await supabase
-    .from('units')
-    .update({ name: checked.name, saved: true })
-    .eq('id', unitId)
-    .eq('user_id', user.id)
-    .select('id, group_id')
-
-  if (error) return { error: 'Einheit konnte nicht gespeichert werden.' }
-
-  // Ein Update, das keine Zeile trifft, ist in Supabase kein Fehler — der
-  // Entwurf kann inzwischen von einem zweiten Generieren ersetzt worden sein.
-  // Ohne diese Prüfung stünde „Einheit gespeichert" da, und geschrieben wäre
-  // nichts (BUG-16).
-  const saved = (data ?? [])[0]
-  if (!saved) return { error: UNIT_GONE }
-
-  // Die Verwendungsnachweise entstehen beim Speichern neu: ihr Zeitpunkt ist
-  // dann der des Speicherns, nicht der des Generierens (BUG-6).
-  await rewriteUsages(supabase, user.id, saved.id, saved.group_id)
-
-  return { success: true }
-}
-
-/**
  * Lockert die Kriterien **nur für dieses eine Segment** und füllt es neu.
  * Alle übrigen Segmente bleiben unangetastet — auch solche, die ebenfalls eine
  * Lücke haben. Der Nutzer entscheidet pro Segment, wo er nachgeben will.
@@ -731,6 +692,9 @@ export async function relaxSegment(
     .update({
       gap_reason: plan.gapReason,
       gap_detail: (plan.gapDetail ?? null) as unknown as Json,
+      // Lockern füllt das Segment neu. Eine frühere Erklärung „geplante Lücke"
+      // galt dem alten Inhalt und fällt damit weg.
+      planned_gap_minutes: 0,
     })
     .eq('id', segmentId)
 
@@ -870,6 +834,12 @@ function savePlanError(message: string): string {
     return 'Der Zeitverlauf dieser Einheit wurde inzwischen neu erzeugt. Lade die Seite neu — deine Änderungen hier passen nicht mehr dazu.'
   }
   if (message.includes('not_authenticated')) return 'Nicht angemeldet.'
+  // Die Oberfläche fragt vor dem Speichern nach offenen Lücken und bietet an,
+  // sie als geplant zu übernehmen. Hier landet nur, wer daran vorbei speichert
+  // — oder dessen Stand sich zwischen Nachfrage und Speichern geändert hat.
+  if (message.includes('open_gaps')) {
+    return 'In dieser Einheit ist noch eine Lücke offen. Fülle sie, oder lass sie als geplante Lücke stehen — dann lässt sie sich speichern.'
+  }
   return 'Speichern fehlgeschlagen, bitte erneut versuchen. Deine Änderungen sind noch da.'
 }
 
@@ -992,6 +962,12 @@ export async function quickCreateExercise(
       sports: segment.sports as unknown as Json,
       age_groups: group.ageGroups as unknown as Json,
       phases: [segment.name] as unknown as Json,
+      // Nur bei genau einer gewählten Organisationsform ist klar, welche gemeint
+      // ist. Bei mehreren müsste geraten werden — und eine falsch eingeordnete
+      // Übung ist schlechter als eine, die „noch zu ergänzen" ist.
+      organization_forms: (segment.organizationForms.length === 1
+        ? segment.organizationForms
+        : []) as unknown as Json,
       difficulty: segment.difficulties[0] ?? 'Mittel',
       duration: data.duration,
       needs_completion: true,
@@ -1023,9 +999,8 @@ function segmentRowToConfig(row: SegmentRow): SegmentConfig {
     sports: (row.sports as string[]) ?? [],
     primarySport: row.primary_sport,
     difficulties: ((row.difficulties as string[]) ?? []) as DifficultyLevel[],
-    // Das Feld am Segment kommt mit der Migration aus /backend. Bis dahin gilt
-    // „keine Einschränkung".
-    organizationForms: [],
+    // Leer = keine Einschränkung.
+    organizationForms: (row.organization_forms as string[] | null) ?? [],
     notes: row.notes ?? '',
   }
 }
@@ -1102,8 +1077,7 @@ export async function getUnit(id: string): Promise<Unit | null> {
 
   const segments: UnitSegment[] = segmentRows.map((row) => ({
     ...segmentRowToConfig(row),
-    // Kommt mit der Migration aus /backend; bis dahin ist keine Lücke geplant.
-    plannedGapMinutes: 0,
+    plannedGapMinutes: row.planned_gap_minutes ?? 0,
     gapReason: row.gap_reason,
     gapDetail: (row.gap_detail as unknown as GapDetail | null) ?? null,
     position: row.position,

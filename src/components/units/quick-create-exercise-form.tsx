@@ -18,6 +18,8 @@ export interface QuickCreateDefaults {
   phase: string
   difficulty: string
   ageGroups: string[]
+  /** Nur gefüllt, wenn die Phase genau eine Organisationsform vorgibt. */
+  organizationForms: string[]
 }
 
 export interface QuickCreateInput {
@@ -167,6 +169,9 @@ export function QuickCreateExerciseForm({
           ))}
           {defaults.ageGroups.map((group) => (
             <Badge key={group} variant="outline" className="text-xs">{group}</Badge>
+          ))}
+          {defaults.organizationForms.map((form) => (
+            <Badge key={form} variant="secondary" className="text-xs">{form}</Badge>
           ))}
         </div>
         <p className="text-xs text-muted-foreground">

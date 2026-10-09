@@ -1422,6 +1422,91 @@ Der Nutzer hat die Oberfläche im Browser angesehen und abgenommen. Dabei geänd
 gibt weder einen Schalter noch folgt die App der Systemeinstellung. Als eigenes Feature auf der
 Roadmap: PROJ-18.
 
+## Implementation Notes (Backend) — Überarbeitung vom 2026-10-09
+
+**Stand:** 2026-10-09 · Typprüfung, Lint und Produktionsbuild sauber · **420 Unit-Tests grün** ·
+**Migration angewendet und am lebenden System nachgewiesen** · Register 15 zu 15
+
+Damit sind die drei Stellen geschlossen, die die Oberfläche offen gelassen hatte: die geplante
+Lücke wird gespeichert und am Server geprüft, die Organisationsform der Phase wird abgelegt, und
+„Schnell anlegen" belegt sie vor.
+
+### Datenbank
+
+Migration `20261009150000_unit_planned_gaps_and_organization_forms.sql`, angewendet über den
+SQL-Editor des Dashboards, im Register eingetragen:
+
+| Was | Einzelheiten |
+|---|---|
+| `unit_segments.planned_gap_minutes` | Ganzzahl, Standard 0, nicht negativ. Bestehende Segmente haben 0 — nichts ist rückwirkend geplant |
+| `unit_segments.organization_forms` | Liste, Standard leer — bestehende Einheiten sind nicht eingeschränkt |
+| Funktion `save_unit_plan`, neue Fassung | Legt die geplanten Minuten je Segment ab und weist mit `open_gaps` ab, wenn in einem Segment, das gefüllt werden soll, mehr frei bleibt als geplant. Signatur, Rechte und alles Übrige unverändert |
+
+Keine Richtlinie wurde angefasst, keine Tabelle ist dazugekommen. Die Prüfung läuft am
+**geschriebenen** Stand am Ende der Funktion; schlägt sie an, rollt die Ausnahme alles Vorige
+zurück.
+
+### Serverseite
+
+Alle in `src/lib/actions/units.ts`:
+
+- **Organisationsform** wird beim Generieren am Segment abgelegt und überall gelesen, wo ein
+  Segment zur Konfiguration wird — „Neu generieren", „Lockern", „Zurück zum Generator" und die
+  Kandidatenliste des Editors kennen sie damit
+- **Geplante Minuten** werden mit der Einheit gelesen. „Lockern" setzt sie für sein Segment auf 0:
+  die Erklärung galt dem alten Inhalt. „Neu generieren" schreibt die Segmente neu und beginnt
+  damit ebenfalls bei 0
+- **`open_gaps`** bekommt eine Meldung in Worten. Die Oberfläche fragt vorher nach; hier landet
+  nur, wer daran vorbei speichert
+- **„Schnell anlegen"** übernimmt die Organisationsform der Phase, wenn dort **genau eine**
+  gewählt ist, und zeigt sie im Formular unter dem Vorbelegten
+- **Der alte Speicherweg `saveUnit` ist entfernt.** „Einheit speichern" läuft über
+  `saveUnitPlan` — die Lückenregel steht damit an genau einer Stelle
+- `database.types.ts` von Hand um die zwei Spalten ergänzt
+
+### Nachweis am lebenden System (2026-10-09)
+
+Vorab: beide Spalten mit Standardwert und ohne NULL vorhanden, die Prüfregel `>= 0` gesetzt, die
+Funktion in **einer** Fassung, mit den Rechten des Aufrufers, festem `search_path`, ausführbar
+für `authenticated`, nicht für `anon`.
+
+Dann ein Block in einer zurückgerollten Transaktion unter der Rolle `authenticated`: ein Entwurf
+mit vier Segmenten — Restlücke (8 von 10), leer (0 von 10), im Generator frei gelassen, voll.
+
+| Fall | Ergebnis |
+|---|---|
+| Neue Segmente | Organisationsform leer, 0 Minuten geplant |
+| Speichern mit zwei offenen Lücken | `open_gaps`, **nichts geschrieben** — Einheit bleibt Entwurf, die mitgeschickte Notiz ist nicht abgelegt |
+| Beide Lücken erklärt, das frei gelassene Segment ohne Erklärung | `ok`, gespeichert, „manuell bearbeitet" gesetzt, abgelegt 2 / 10 / 0 / 0 |
+| Danach das Segment mit der Restlücke geleert (10 frei, 2 geplant) | `open_gaps`, der Eintrag steht noch — nichts halb geschrieben |
+| Lücke kleiner als geplant (1 frei, 2 geplant) | `ok` |
+| Überfüllung (9 Minuten in 5) | `ok` |
+| Angabe fehlt bei einem leeren Segment | gilt als 0, `open_gaps`, die abgelegte Zahl bleibt 10 |
+| Negative Zahl | `invalid_plan` |
+| Unveränderter Stand mit passendem Stempel / mit veraltetem | `ok` / `stale` |
+| Verwendungsnachweise | 2, wie Übungen im Plan |
+
+Danach geprüft: nichts zurückgeblieben, kein bestehendes Segment hat geplante Minuten bekommen.
+`get_advisors` (Sicherheit) meldet weiterhin nur den bekannten Hinweis zum Schutz gegen geleakte
+Passwörter.
+
+### Entscheidungen, die beim Bauen fielen
+
+| Entscheidung | Begründung |
+|---|---|
+| Die Lückenprüfung gilt bei **jedem** Speichern über die Funktion, auch an einer früher gespeicherten Einheit | So verlangt es Edge Case 16: die alte Einheit behält ihr gelbes Feld, bis sie das nächste Mal gespeichert wird — dann greift die Regel |
+| Ein Platzhalter „Übung gelöscht" zählt mit seiner Plandauer als gefüllt | So rechnet ihn die Oberfläche. Zwei Rechnungen für dieselbe Lücke würden Fälle erzeugen, in denen der Dialog nichts meldet und der Server trotzdem abweist |
+| Die geplanten Minuten werden abgelegt, wie sie kommen, nicht auf die tatsächlich freien gekürzt | Die Zahl ist eine Obergrenze. Sie zu kürzen hieße, dass ein Rückgängig-Schritt nach dem Speichern eine andere Zahl vorfände als vorher |
+| „Schnell anlegen" belegt die Organisationsform nur bei genau einer gewählten vor | Bei mehreren müsste geraten werden, und eine falsch eingeordnete Übung ist schlechter als eine, die „noch zu ergänzen" ist |
+| Kein Index auf den neuen Spalten | Keine Abfrage filtert oder sortiert danach; sie werden nur mit ihrem Segment gelesen |
+
+### Was dieser Nachweis nicht abdeckt
+
+Nachgewiesen ist die Datenbank-Funktion. **Nicht durchgespielt** ist der Weg Browser → Server
+Action → Funktion mit den neuen Feldern: eine Lücke im Bearbeiten-Modus erklären, speichern, neu
+laden und sie ruhig wiederfinden; eine Phase mit Organisationsform generieren, zurück in den
+Generator gehen und die Auswahl wiederfinden; „Lockern" an einer Phase mit Organisationsform.
+
 ## QA Test Results
 _To be added by /qa_
 

@@ -400,7 +400,9 @@ export type Database = {
           sports: Json
           primary_sport: string | null
           difficulties: Json
+          organization_forms: Json
           notes: string | null
+          planned_gap_minutes: number
           gap_reason: string | null
           gap_detail: Json | null
           position: number
@@ -414,7 +416,9 @@ export type Database = {
           sports?: Json
           primary_sport?: string | null
           difficulties?: Json
+          organization_forms?: Json
           notes?: string | null
+          planned_gap_minutes?: number
           gap_reason?: string | null
           gap_detail?: Json | null
           position?: number
@@ -428,7 +432,9 @@ export type Database = {
           sports?: Json
           primary_sport?: string | null
           difficulties?: Json
+          organization_forms?: Json
           notes?: string | null
+          planned_gap_minutes?: number
           gap_reason?: string | null
           gap_detail?: Json | null
           position?: number

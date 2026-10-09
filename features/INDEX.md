@@ -92,14 +92,18 @@ Dabei mit abgeräumt: **BUG-16** (`saveUnit` und `renameUnit` melden jetzt, wenn
 
 Drei Dinge tragen erst mit der Migration aus `/backend`: die **geplante Lücke wird noch nicht gespeichert** (nach dem Neuladen wieder gelb), die **Organisationsform der Phase wirkt nur beim ersten Generieren**, und „Schnell anlegen" belegt sie noch nicht vor.
 
+**Die Serverseite der Überarbeitung steht seit dem 2026-10-09** — Abschnitt „Implementation Notes (Backend) — Überarbeitung vom 2026-10-09" in der Spec. Migration `20261009150000_unit_planned_gaps_and_organization_forms.sql` angewendet, **Register 15 zu 15**. Die drei offenen Stellen der Oberfläche sind geschlossen: die geplante Lücke wird gespeichert und **in der Datenbank geprüft** (`open_gaps`), die Organisationsform der Phase wird abgelegt, „Schnell anlegen" belegt sie vor. Der alte Speicherweg `saveUnit` ist entfernt.
+
+Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, zehn Fälle: offene Lücke abgewiesen und nichts halb geschrieben, erklärte Lücke gespeichert, größere Lücke wieder offen, kleinere bleibt geplant, Überfüllung sperrt nicht, frei gelassenes Segment sperrt nicht. Nichts zurückgeblieben; `get_advisors` meldet weiter nur den bekannten Hinweis zum Passwortschutz.
+
 ### Was PROJ-7 noch fehlt
 
-0. **`/backend` für die Überarbeitung vom 2026-10-09** — die Migration (zwei Felder am Segment, neue Fassung der Speicher-Funktion mit Lückenprüfung) über den SQL-Editor, Organisationsform lesen und schreiben, alten Speicherweg entfernen. Erst dann lohnt `/qa`
+0. **Die neuen Wege im Browser durchspielen** — Lücke erklären, speichern, neu laden; Phase mit Organisationsform generieren und über „Zurück zum Generator" wiederfinden; „Lockern" an einer solchen Phase
 1. **Im Browser durchspielen.** Nachgewiesen ist die Datenbank-Funktion, nicht das Zusammenspiel Browser → Server Action → Funktion: Auswürfeln, Auswahldialog, Variante umschalten, Schnell-Anlegen, Speichern von gespeicherter Einheit und Entwurf, zwei Tabs
 2. **Eine bekannte Abweichung:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen — sie ist für die Funktion von einer gelöschten nicht unterscheidbar. Am lebenden System bestätigt: der fremde Verweis wird nicht geschrieben. In der Spec begründet, für `/qa` zu bewerten
 3. **Beim Ausrollen:** die Migration ist schon in der Datenbank, der Code kann also jederzeit folgen
 
-**Nächster Schritt:** Oberfläche im Browser ansehen, dann `/backend PROJ-7` (Überarbeitung vom 2026-10-09).
+**Nächster Schritt:** `/qa PROJ-7`.
 
 ## Features
 

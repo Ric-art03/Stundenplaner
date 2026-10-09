@@ -556,6 +556,8 @@ export function UnitPlanView({
     phase: pickerSegment?.name ?? '',
     difficulty: pickerSegment?.difficulties[0] ?? 'Mittel',
     ageGroups: groupAgeGroups,
+    organizationForms:
+      pickerSegment?.organizationForms.length === 1 ? pickerSegment.organizationForms : [],
   }
 
   return (
