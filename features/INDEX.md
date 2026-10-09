@@ -96,6 +96,15 @@ Drei Dinge tragen erst mit der Migration aus `/backend`: die **geplante Lücke w
 
 Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, zehn Fälle: offene Lücke abgewiesen und nichts halb geschrieben, erklärte Lücke gespeichert, größere Lücke wieder offen, kleinere bleibt geplant, Überfüllung sperrt nicht, frei gelassenes Segment sperrt nicht. Nichts zurückgeblieben; `get_advisors` meldet weiter nur den bekannten Hinweis zum Passwortschutz.
 
+**PROJ-7 ist seit dem 2026-10-09 in der QA — nicht bereit für die Auslieferung.** Abschnitt „QA Test Results" in der Spec. 110 von 115 Akzeptanzkriterien bestanden, keine Regression in PROJ-3, PROJ-5 und PROJ-6, kein neuer Sicherheitsbefund. 30 neue Browser-Tests für den Editor, je am Rechner und in Handybreite.
+
+- **BUG-17 (hoch): die App zeigt nirgends eine Meldung an** — weder „gespeichert" noch Fehler. Elf Stellen im Code melden über die eine Bibliothek, im Seitengerüst ist die Anzeige der anderen eingebunden. Besteht seit PROJ-1, betrifft alle Features und ist auch in Produktion so. **Das ist die eigentliche Ursache des „Auswürfeln, nichts passiert"** — die Begründung wurde jedes Mal erzeugt und nie gezeigt. Alle fünf nicht bestandenen Kriterien hängen daran
+- **BUG-18 (niedrig):** „Speichern" in der Nachfrage beim Verlassen speichert, wechselt die Seite aber nicht
+- **BUG-20 (mittel, am 2026-10-09 vom Nutzer als Fehler bestätigt):** steht eine Variante im Platz, werden die übrigen Formen derselben Übung nicht gewürfelt — das Auswürfeln meldet „nichts mehr frei", obwohl eine Variante nie gezeigt wurde. Jede Variante ist eine vollwertige Übung; dass eine weggewürfelte Grundübung als Variante wiederkommt, ist dagegen richtig
+- **BUG-19 (niedrig, Frage an den Nutzer):** eine gefüllte und wieder geleerte Lücke gilt als geplant, ohne dass der Nutzer sie noch einmal dazu erklärt
+
+Die Browser-Tests laufen auf diesem Rechner stabil mit `--workers=2` (rund 12 Minuten).
+
 ### Was PROJ-7 noch fehlt
 
 0. **Die neuen Wege im Browser durchspielen** — Lücke erklären, speichern, neu laden; Phase mit Organisationsform generieren und über „Zurück zum Generator" wiederfinden; „Lockern" an einer solchen Phase
@@ -103,7 +112,7 @@ Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, zehn Fäl
 2. **Eine bekannte Abweichung:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen — sie ist für die Funktion von einer gelöschten nicht unterscheidbar. Am lebenden System bestätigt: der fremde Verweis wird nicht geschrieben. In der Spec begründet, für `/qa` zu bewerten
 3. **Beim Ausrollen:** die Migration ist schon in der Datenbank, der Code kann also jederzeit folgen
 
-**Nächster Schritt:** `/qa PROJ-7`.
+**Nächster Schritt:** BUG-17 und BUG-20 über `/frontend PROJ-7` beheben, danach `/qa PROJ-7` erneut.
 
 ## Features
 
@@ -115,7 +124,7 @@ Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, zehn Fäl
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
-| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | In Progress | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
+| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | In Review | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
 | PROJ-9 | Kalenderansicht & Langzeitplanung | P1 | PROJ-6, PROJ-7 | Roadmap | — | 2026-09-28 |
 | PROJ-10 | Übungsrotation (Abwechslung über Wochen) | P1 | PROJ-6, PROJ-9 | Roadmap | — | 2026-09-28 |
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |

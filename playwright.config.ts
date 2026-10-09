@@ -42,6 +42,9 @@ const mobileBrowser = channel ? { channel, browserName: 'chromium' as const } : 
  *   PLAYWRIGHT_PORT=3100 npm run test:e2e
  */
 const port = process.env.PLAYWRIGHT_PORT ?? '3000'
+
+/** Die Tests des Einheiten-Editors — sie laufen in einer eigenen Stufe, siehe unten. */
+const EDITOR_TESTS = /PROJ-7-.*\.spec\.ts/
 const baseURL = `http://localhost:${port}`
 
 export default defineConfig({
@@ -96,7 +99,7 @@ export default defineConfig({
     // geschützte Seiten auf /login umleiten.
     {
       name: 'chromium',
-      testIgnore: [/.*\.anon\.spec\.ts/, /.*\.exklusiv\.spec\.ts/],
+      testIgnore: [/.*\.anon\.spec\.ts/, /.*\.exklusiv\.spec\.ts/, EDITOR_TESTS],
       use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
     },
@@ -114,9 +117,29 @@ export default defineConfig({
         /.*\.anon\.spec\.ts/,
         /.*\.exklusiv\.spec\.ts/,
         /PROJ-6-einheiten-generator\.spec\.ts/,
+        EDITOR_TESTS,
       ],
       use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
+    },
+
+    // Der Editor (PROJ-7) in einer eigenen Stufe, **nach** den übrigen Tests.
+    // Er arbeitet an fertig aufgebauten, gespeicherten Einheiten — und die
+    // stünden sonst in „Meine Einheiten", während die PROJ-6-Tests dort den
+    // Leerzustand erwarten. Jedes der beiden Projekte hat seine eigene Gruppe,
+    // seine eigenen Übungen und je Test eine eigene Einheit; nebeneinander
+    // dürfen sie deshalb laufen.
+    {
+      name: 'editor',
+      testMatch: EDITOR_TESTS,
+      use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
+      dependencies: ['chromium', 'Mobile Safari', 'abgemeldet'],
+    },
+    {
+      name: 'editor mobil',
+      testMatch: EDITOR_TESTS,
+      use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
+      dependencies: ['chromium', 'Mobile Safari', 'abgemeldet'],
     },
 
     // Tests, die den Bestand des Testkontos leerräumen und deshalb niemanden
@@ -126,7 +149,7 @@ export default defineConfig({
       name: 'exklusiv',
       testMatch: /.*\.exklusiv\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
-      dependencies: ['chromium', 'Mobile Safari', 'abgemeldet'],
+      dependencies: ['chromium', 'Mobile Safari', 'abgemeldet', 'editor', 'editor mobil'],
     },
   ],
   // Produktionsbuild statt Entwicklungsserver: Letzterer übersetzt jede Route

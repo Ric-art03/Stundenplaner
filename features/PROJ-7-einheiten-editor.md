@@ -1,6 +1,6 @@
 # PROJ-7: Einheiten-Editor
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-09
 
@@ -467,7 +467,7 @@ Am 2026-10-09 neu gefasst: das Umschalten sitzt auf der Karte, nicht mehr im Men
 | 14 | Ein Segment enthält sehr viele Einträge (zwanzig und mehr) | Funktioniert, nur lang. Keine Obergrenze im MVP — siehe Offene Fragen |
 | 15 | Die Einheit war über „Lockern" entstanden und trägt einen Lockerungs-Hinweis | Der Hinweis bleibt sichtbar und wird vom Bearbeiten nicht gelöscht; er beschreibt, wie der Vorschlag zustande kam |
 | 16 | Eine bereits gespeicherte Einheit aus der Zeit vor dem 2026-10-09 hat eine offene Lücke | Sie bleibt, wie sie ist, und zeigt ihren gelben Hinweis weiter. Beim nächsten Speichern aus dem Bearbeiten-Modus greift die Regel. Kein rückwirkendes Umschreiben |
-| 17 | Im Platz steht eine Variante, und der Nutzer würfelt neu aus | Wie bei jeder Übung: die ganze Übung — Grundübung und alle ihre Varianten — scheidet für diese Einheit aus, gemerkt wird die weggewürfelte Form |
+| 17 | Im Platz steht eine Variante, und der Nutzer würfelt neu aus | **Am 2026-10-09 neu gefasst (BUG-20):** jede Variante ist eine vollwertige Übung. Gemerkt wird die weggewürfelte **Form**; die übrigen Formen derselben Übung bleiben für diesen Platz ziehbar, und eine weggewürfelte Grundübung darf als Variante wiederkommen. Ausgeschlossen bleibt mit allen Formen, was in einem **anderen** Platz der Einheit steht |
 | 18 | In der Phase ist eine Organisationsform gewählt, und der Nutzer wählt im Dialog bewusst eine Übung mit anderer | Erlaubt, ohne zweite Bestätigung, mit der Begründung an der Zeile — wie bei jedem anderen verfehlten Kriterium |
 | 19 | Eine Phase steht auf „frei lassen" und hat eine Organisationsform aus einer früheren Einstellung | Die Auswahl wird im Generator nur bei Phasen angeboten, die gefüllt werden, und spielt bei „frei lassen" keine Rolle |
 | 20 | Die Arbeitsnotiz einer Übung ist sehr lang | Sie wird im Stundenverlauf vollständig gezeigt. Der Schalter „Arbeitsnotizen anzeigen" ist das Mittel gegen Überlänge, kein Abschneiden |
@@ -565,6 +565,7 @@ Am 2026-10-09 neu gefasst: das Umschalten sitzt auf der Karte, nicht mehr im Men
 | Rotation über Wochen gehört nicht hierher | PROJ-10 soll die Regel für Generator und Editor gemeinsam setzen. Vorzuziehen hieße, sie später an zwei Stellen zu haben | 2026-10-06 |
 | Hoch/Runter statt Ziehen und Ablegen | Auf dem Handy in der Halle treffsicher, mit Tastatur und Screenreader ohne Zusatzarbeit bedienbar, kein weiteres Paket. Bei drei bis fünf Übungen je Segment — dem Normalfall — reicht es. Damit ist auch die offene Frage aus PROJ-6 beantwortet, ob der Zeitverlauf-Baustein PROJ-7 tragen muss: er muss nicht | 2026-10-06 |
 | Kein „als neue Einheit speichern" | Überschneidet sich mit PROJ-17 (Stundenmuster), das für wiederverwendbare Konfigurationen gedacht ist. Zwei Wege zum selben Ziel würden beide halb benutzt | 2026-10-06 |
+| Beim Auswürfeln schließt nur aus, was in **anderen** Plätzen steht; die übrigen Formen der Übung im eigenen Platz bleiben ziehbar | Vom Nutzer entschieden, nachdem die QA es gefunden hatte (BUG-20): jede Variante ist eine vollwertige Übung. Bisher galt die Übung im eigenen Platz als „schon in der Einheit", und das Auswürfeln meldete „nichts mehr frei", obwohl eine Variante nie gezeigt worden war | 2026-10-09 |
 | BUG-5 wird hier behoben | Der Platzhalter „Übung gelöscht" ohne Möglichkeit zum Nachbesetzen war von PROJ-6 ausdrücklich hierher verwiesen | 2026-10-06 |
 | **Gespeichert wird nur ohne offene Lücke; jede freie Minute ist gefüllt oder als geplant erklärt.** Hebt „nicht aufgehende Segmente dürfen gespeichert werden" und „die Lücken-Sperre fällt ganz weg" vom 2026-10-06 für freie Minuten auf | Im Browsertest zeigte sich: eine fertige Stunde mit gelbem Warnfeld sieht unfertig aus, und der Übungsleiter kann nicht unterscheiden, ob die Lücke Absicht oder Versäumnis war. Die Sperre von damals war falsch, weil sie keinen Ausweg bot — jetzt gibt es zwei: füllen oder erklären | 2026-10-09 |
 | Die Regel gilt für jede freie Minute, auch Restlücken; Überfüllung sperrt nicht | Vom Nutzer so entschieden. Eine Restlücke von zwei Minuten ist dieselbe Frage wie eine leere Phase, nur kleiner. Ein überzogener Hauptteil dagegen ist eine Planung und kein Loch | 2026-10-09 |
@@ -1508,7 +1509,175 @@ laden und sie ruhig wiederfinden; eine Phase mit Organisationsform generieren, z
 Generator gehen und die Auswahl wiederfinden; „Lockern" an einer Phase mit Organisationsform.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Getestet:** 2026-10-09
+**App:** Produktionsbuild auf http://localhost:3100 (`PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100`)
+**Tester:** QA Engineer (AI)
+
+### Ergebnis in einem Satz
+
+Der Editor und die Überarbeitung vom 2026-10-09 tun, was die Spec verlangt — **mit einer
+Ausnahme, die schwer wiegt und nicht aus PROJ-7 stammt: die App zeigt nirgends eine Meldung an**
+(BUG-17). Daran scheitern 5 der 115 Akzeptanzkriterien. **Nicht bereit für die Auslieferung.**
+
+### Was gelaufen ist
+
+| Prüfung | Ergebnis |
+|---|---|
+| Unit-Tests (`npm test`) | **420 von 420 grün** |
+| Typprüfung, Lint, Produktionsbuild | sauber (Lint: 4 bekannte Warnungen zu `<img>`, keine Fehler) |
+| Browser-Tests, bestehende Suite (PROJ-3, PROJ-5, PROJ-6) | **alle grün** — keine Regression. Ein erster Lauf brachte 3 Fehlschläge (einmal `fetch failed` zu Supabase, zweimal eine Antwort jenseits des Zeitfensters unter Last); mit zwei statt vier gleichzeitigen Arbeitern liefen dieselben Tests zweimal hintereinander durch |
+| Browser-Tests, neu für PROJ-7 | 30 Tests, je einmal am Rechner und in Handybreite (iPhone 13): **56 von 60 grün**, 4 rot — zwei Tests in beiden Breiten, beide wegen BUG-17 |
+| Gesamtlauf | 149 bestanden, 4 fehlgeschlagen, 1 nicht gelaufen (der Leerzustand-Test aus PROJ-6 hängt als letzte Stufe hinter den Editor-Tests und läuft nicht, solange dort etwas rot ist; im ersten Lauf des Tages war er grün) |
+| Datenbank-Funktion am lebenden System | 10 Fälle in zurückgerollter Transaktion, alle wie erwartet (siehe Implementation Notes Backend, 2026-10-09) |
+
+**Neu im Repository:** `tests/PROJ-7-einheiten-editor.spec.ts`, `tests/editor-fixtures.ts`, zwei
+Projekte „editor" und „editor mobil" in `playwright.config.ts`. Die Editor-Tests bauen sich je
+Test eine eigene Einheit und laufen in einer eigenen Stufe **nach** den übrigen: ihre gespeicherten
+Einheiten stünden sonst in „Meine Einheiten", während die PROJ-6-Tests dort den Leerzustand
+erwarten.
+
+**Was nicht geprüft ist:** Firefox und echtes Safari/WebKit (auf diesem Rechner nicht
+installierbar, siehe INDEX — die Handybreite lief in einem Chromium-Motor), die Tablet-Breite 768 px
+als eigener Lauf, und die Anmutung der Oberfläche (Farben, Abstände) — die hat der Nutzer am
+2026-10-09 selbst durchgesehen.
+
+### Akzeptanzkriterien
+
+115 Kriterien, **110 bestanden, 5 nicht bestanden.** „Browser" heißt: durch einen Browser-Test
+belegt. „Logik" heißt: durch Unit-Tests oder den Nachweis an der Datenbank belegt. „Durchsicht"
+heißt: nur am Code nachvollzogen, nicht im Browser gelaufen.
+
+| Gruppe | Kriterien | Bestanden | Belegt durch |
+|---|---|---|---|
+| Bearbeiten-Modus betreten und verlassen | 9 | 9 | Browser; die Warnung beim Schließen des Tabs nur Durchsicht |
+| Übung neu auswürfeln | 11 | **8** | Browser und Logik — **3 scheitern an BUG-17** |
+| Übung selbst wählen | 6 | 6 | Browser; „aktuelle Übung als gewählt erkennbar" nur Durchsicht |
+| Variante umschalten | 7 | 7 | Browser |
+| Die einheitliche Übungszeile | 5 | 5 | Browser |
+| Organisationsform im Generator | 8 | 8 | Logik; die Auswahl selbst im Browser. „Zurück zum Generator erhält die Auswahl" und „Lockern gibt sie als Erstes frei" nur Logik und Durchsicht, nicht als Klickweg |
+| Entfernen, Dauer, Reihenfolge | 7 | 7 | Browser |
+| Lücken, Platzhalter und Einfügen | 8 | 8 | Browser; das Nachbesetzen des Platzhalters „Übung gelöscht" nur Logik und Durchsicht |
+| Geplante Lücke | 9 | 9 | Browser, Logik und Datenbank |
+| Schnell anlegen | 10 | 10 | Browser; der Namensabgleich und das Verschwinden der Markierung nur Durchsicht |
+| Arbeitsnotiz | 12 | 12 | Browser; der Wizard nur Durchsicht |
+| Speichern, Verwerfen, Rückgängig | 16 | 16 | Browser und Datenbank |
+| Fehlerfälle | 4 | **2** | **2 scheitern an BUG-17** |
+| Datentrennung | 3 | 3 | Datenbank und die bestehenden Tests ohne Anmeldung |
+
+**Die fünf nicht bestandenen Kriterien — alle aus demselben Grund:**
+
+- [ ] BUG-17: Ist der Kandidatenvorrat erschöpft, erscheint **keine** Meldung mit den Ursachen
+- [ ] BUG-17: Ein Klick auf „neu auswürfeln" endet **nicht** in jedem Fall sichtbar — bei erschöpftem Vorrat und bei einem Fehler ist nichts zu sehen
+- [ ] BUG-17: Lässt sich die Kandidatenliste beim Auswürfeln nicht laden, erscheint **keine** Fehlermeldung
+- [ ] BUG-17: Schlägt das Speichern fehl, erscheint **keine** Fehlermeldung (die Änderungen bleiben erhalten, der Nutzer erfährt aber nicht, dass nichts gespeichert wurde)
+- [ ] BUG-17: Bricht die Verbindung beim Auswürfeln ab, erscheint **keine** Fehlermeldung
+
+### Edge Cases
+
+| # | Fall | Ergebnis |
+|---|---|---|
+| 1, 2 | Alle Übungen eines Segments / der Einheit entfernt | bestanden (Logik, Datenbank) |
+| 3 | Übung in anderem Tab gelöscht | bestanden (Datenbank: Platzhalter statt Fehler) |
+| 4 | Zwei Tabs speichern | bestanden (Browser: „Anderswo geändert", Überschreiben wirkt) |
+| 5 | Auswürfeln mit nur einem Kandidaten | **nicht bestanden — BUG-17**: die Übung bleibt stehen, die Meldung fehlt. Genau das „stille Nichts-Passiert", das der Fall ausschließt |
+| 6 | Plandauer größer als die Einheit | bestanden (Browser: Überfüllung ausgewiesen und speicherbar) |
+| 7 | Dieselbe Übung zweimal gewählt | bestanden (Durchsicht: Hinweis im Dialog, kein Verbot) |
+| 8 | Neuladen mit offenen Änderungen | bestanden (Durchsicht: Warnung des Browsers) |
+| 9 | Schnell angelegt, dann verworfen | bestanden (Browser: Übung bleibt, Dialog sagt es) |
+| 10 | Variante gelöscht | wie in den Implementation Notes vom 2026-10-08 beschrieben: Rückfall auf die Grundübung statt Platzhalter — bekannte Abweichung, unverändert |
+| 11 | Nur die Arbeitsnotiz geändert | bestanden (Browser) |
+| 12 | Gruppe gelöscht während des Bearbeitens | bestanden in der Sache (Datenbank: `unit_not_found`), **die Meldung dazu fehlt — BUG-17** |
+| 13 | Zweiter Wurf während eines laufenden | bestanden (Durchsicht: Anzeige auf der Karte, übrige Würfel ausgegraut) |
+| 14 | Sehr viele Einträge | nicht eigens geprüft |
+| 15 | Lockerungs-Hinweis bleibt | bestanden (Durchsicht) |
+| 16 | Früher gespeicherte Einheit mit offener Lücke | bestanden (Browser: gelber Hinweis bleibt, Verweis auf „Bearbeiten") |
+| 17 | Variante im Platz wird neu ausgewürfelt | bestanden nach dem Wortlaut — siehe aber BUG-20 |
+| 18 | Unpassende Organisationsform bewusst gewählt | bestanden (Browser: unpassende Übung ohne Nachfrage einsetzbar) |
+| 19 | Frei gelassene Phase mit Organisationsform | bestanden (Logik) |
+| 20 | Sehr lange Arbeitsnotiz | bestanden (Durchsicht: kein Abschneiden) |
+
+### Sicherheit
+
+- [x] **Anmeldung:** ohne Sitzung leitet jede geschützte Seite auf den Login um (bestehende Tests, grün)
+- [x] **Fremde Einheit:** die Speicher-Funktion meldet `unit_not_found`; sie läuft mit den Rechten des Aufrufers, die Richtlinien aus BUG-4 liegen darunter
+- [x] **Fremde Übung:** wird nie geschrieben (Platzhalter) — die bekannte Abweichung vom 2026-10-08, unverändert und weiter vertretbar
+- [x] **Lückenregel nicht umgehbar:** wer an der Oberfläche vorbei speichert, scheitert in der Datenbank an `open_gaps`; nichts wird halb geschrieben
+- [x] **Eingaben:** die Arbeitsfassung, die Organisationsformen und das Schnell-Anlegen laufen durch Zod; negative geplante Minuten weist zusätzlich die Datenbank ab. Texte werden überall als Text ausgegeben, nicht als HTML
+- [x] **Keine Geheimnisse im Browser:** die Kandidatenliste trägt nur die eigenen Übungen in der schlanken Fassung
+- [x] **Supabase-Hinweise:** unverändert nur der bekannte zum Schutz gegen geleakte Passwörter
+- [ ] **Kein Rate Limiting** an den Server Actions — wie am 2026-10-08 festgehalten, für das MVP hingenommen (alle verlangen eine Anmeldung und schreiben nur ins eigene Konto)
+
+Kein neuer Sicherheitsbefund.
+
+### Gefundene Fehler
+
+#### BUG-17: Die App zeigt keine Meldungen an — weder Bestätigungen noch Fehler
+
+- **Schwere:** **Hoch**
+- **Betrifft:** die ganze App, nicht nur PROJ-7 — Übungen, Gruppen, Hallen, Generator, Editor. Besteht seit PROJ-1 und ist damit auch in Produktion so
+- **Ursache:** Elf Stellen im Code melden über `useToast` aus `@/hooks/use-toast`. Im Seitengerüst (`src/app/layout.tsx`) ist aber die Anzeige der **anderen** Meldungs-Bibliothek eingebunden (`@/components/ui/sonner`), die niemand benutzt. Die Anzeige zu `useToast` (`@/components/ui/toaster`) ist nirgends eingebunden — jede Meldung wird erzeugt und nie gezeigt
+- **Nachstellen:**
+  1. Eine Einheit öffnen, „Bearbeiten", eine Übung verschieben, „Speichern"
+  2. Erwartet: „Änderungen gespeichert"
+  3. Tatsächlich: die Seite kehrt in die Leseansicht zurück, eine Meldung erscheint nicht
+  4. Ebenso: in einer Phase auswürfeln, in der nichts mehr frei ist — erwartet „Keine weitere passende Übung" mit den Ursachen, tatsächlich passiert sichtbar nichts
+- **Das ist die Ursache der Beobachtung vom 2026-10-09** („beim Auswürfeln ist manchmal einfach nichts passiert, ohne Begründung"). Die Begründung wurde jedes Mal erzeugt. Die Abhilfen aus dem Nachtrag N8 bleiben richtig, treffen aber nicht den Kern
+- **Belegt durch:** zwei Browser-Tests in `tests/PROJ-7-einheiten-editor.spec.ts` („nach dem Speichern erscheint eine Bestätigung", „ist der Vorrat erschöpft, erscheint eine Meldung …"), rot in beiden Breiten
+- **Priorität:** vor der Auslieferung beheben. Voraussichtlich eine Zeile im Seitengerüst; danach die beiden Tests erneut laufen lassen und die Meldungen einmal auf dem Handy ansehen (sie erscheinen dort oben und könnten die Änderungsleiste verdecken)
+
+#### BUG-18: „Speichern" in der Nachfrage beim Verlassen wechselt die Seite nicht
+
+- **Schwere:** Niedrig
+- **Nachstellen:**
+  1. Im Bearbeiten-Modus etwas ändern
+  2. Auf „Zurück zum Generator" oder einen Punkt der Kopfzeile klicken
+  3. In der Nachfrage „Speichern" wählen
+  4. Erwartet: gespeichert, dann die angeklickte Seite
+  5. Tatsächlich: gespeichert, die Seite bleibt in der Leseansicht der Einheit stehen — der Nutzer muss ein zweites Mal klicken
+- **Belegt durch:** Durchsicht (`savePlan` in `unit-plan-view.tsx` ruft den gemerkten Seitenwechsel nach dem Speichern nicht auf; „Verwerfen" tut es)
+- **Priorität:** kann nach der Auslieferung
+
+#### BUG-19: Eine gefüllte und wieder geleerte Lücke gilt ohne neue Erklärung als geplant
+
+- **Schwere:** Niedrig
+- **Nachstellen:**
+  1. Eine Lücke von 5 Minuten als geplant erklären
+  2. Eine Übung von 5 Minuten einfügen — die Phase geht auf
+  3. Dieselbe Übung wieder entfernen
+  4. Erwartet nach dem Satz der Spec („werden danach weitere Minuten frei, ist die Lücke wieder offen"): offene Lücke
+  5. Tatsächlich: geplante Lücke, weil wieder genau so viel frei ist wie einmal erklärt
+- **Einordnung:** Folge der Entscheidung im Nachtrag, die Erklärung als Zahl zu speichern („nichts frei → die Zahl bleibt ohne Wirkung"). Die Akzeptanzkriterien decken nur den Fall „mehr frei als erklärt" ab, und der stimmt. Eher eine Frage an den Nutzer als ein Fehler
+- **Priorität:** entscheiden, dann ggf. nach der Auslieferung
+
+#### BUG-20: Auswürfeln und Varianten — zwei Folgen der Regeln, die überraschen können
+
+- **Schwere:** Niedrig (Frage an den Nutzer)
+- **Beobachtung 1:** Eine weggewürfelte Grundübung kann später **als eine ihrer Varianten** wieder im Platz erscheinen. Gemerkt wird die weggewürfelte Form, nicht die Übung
+- **Beobachtung 2:** Steht eine Variante im Platz, gilt die ganze Übung als „schon in dieser Einheit" — ihre übrigen Formen werden nicht gezogen. Je nach Reihenfolge der Würfe meldet das Auswürfeln deshalb „nichts mehr frei", obwohl eine Variante nie gezeigt wurde. Im Test waren es bei vier ziehbaren Formen je nach Lauf zwei, drei oder vier Würfe
+- **Einordnung:** beides folgt aus Edge Case 17 und der Regel „keine Übung zweimal in einer Stunde"
+- **Vom Nutzer am 2026-10-09 entschieden:** jede Variante ist eine vollwertige Übung. **Beobachtung 1 ist richtig so** und bleibt. **Beobachtung 2 ist ein Fehler und wird behoben:** die übrigen Formen der Übung, die gerade **in diesem Platz** steht, müssen ziehbar sein — der Tausch im selben Platz bringt die Übung ja nicht ein zweites Mal in die Stunde. Was in **anderen** Plätzen der Einheit steht, bleibt mit allen Formen ausgeschlossen
+- **Schwere damit:** Mittel
+- **Priorität:** zusammen mit BUG-17 beheben
+
+### Hinweis zur Testumgebung
+
+Mit vier gleichzeitigen Arbeitern scheitern auf diesem Rechner einzelne Tests an Zeitfenstern und
+an der Verbindung zu Supabase, ohne dass die App einen Fehler hat. Mit `--workers=2` läuft die
+Suite stabil und braucht rund 12 Minuten:
+
+```
+PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npx playwright test --workers=2
+```
+
+### Zusammenfassung
+
+- **Akzeptanzkriterien:** 110 von 115 bestanden
+- **Fehler:** 4 — 0 kritisch, **1 hoch** (BUG-17), 1 mittel (BUG-20, vom Nutzer am 2026-10-09 als Fehler bestätigt), 2 niedrig (BUG-18, BUG-19; BUG-19 ist eine Frage an den Nutzer)
+- **Sicherheit:** bestanden, kein neuer Befund
+- **Regression:** keine
+- **Bereit für die Auslieferung:** **NEIN**
+- **Empfehlung:** BUG-17 und BUG-20 über `/frontend` beheben, danach `/qa PROJ-7` erneut — es genügt dann der Lauf der Browser-Tests und ein Blick auf die Meldungen am Handy
 
 ## Deployment
 _To be added by /deploy_

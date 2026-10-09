@@ -152,6 +152,9 @@ export async function cleanup(admin: SupabaseClient, userId: string): Promise<vo
   // Einheiten zuerst: Sie verweisen auf Gruppe und Übungen.
   await admin.from('units').delete().eq('user_id', userId)
   await admin.from('exercises').delete().eq('user_id', userId).eq('work_notes', MARKER)
+  // Die Übungen der Editor-Tests (PROJ-7) räumen sich selbst weg; das hier
+  // fängt einen abgebrochenen Durchlauf ab.
+  await admin.from('exercises').delete().eq('user_id', userId).like('work_notes', 'E2E-Testdaten (PROJ-7)%')
   await admin.from('groups').delete().eq('user_id', userId).like('name', `${FIXTURE_GROUP_NAME}%`)
 }
 
