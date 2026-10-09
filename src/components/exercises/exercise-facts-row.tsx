@@ -65,8 +65,14 @@ export function ExerciseFactsRow({
     (material) => material.name.trim().toLowerCase() !== 'kein material'
   )
 
+  // Die Grundübung steht nur dort mit in der Liste, wo es um die Wahl zwischen
+  // den Formen geht: im Stundenverlauf und im Auswahldialog. Im Übungsordner
+  // wird nichts gewählt und nichts gilt gerade — dort ist die Zeile selbst die
+  // Grundübung, und ein Eintrag „Grundübung" wäre nur Füllung.
+  const listsBase = onSelect !== undefined || currentVariantId !== undefined
+
   const forms: { id: string | null; title: string; note?: string }[] = [
-    { id: null, title: 'Grundübung', note: baseNote },
+    ...(listsBase ? [{ id: null, title: 'Grundübung', note: baseNote }] : []),
     ...variants,
   ]
 
@@ -130,12 +136,16 @@ export function ExerciseFactsRow({
               const current = currentVariantId !== undefined && form.id === currentVariantId
               const content = (
                 <>
-                  <Check
-                    className={cn('h-3.5 w-3.5 shrink-0 text-primary', !current && 'invisible')}
-                    aria-hidden
-                  />
+                  {/* Der Platz für den Haken bleibt nur dort frei, wo eine Form
+                      markiert sein kann — sonst wäre die Liste grundlos eingerückt. */}
+                  {listsBase && (
+                    <Check
+                      className={cn('h-3.5 w-3.5 shrink-0 text-primary', !current && 'invisible')}
+                      aria-hidden
+                    />
+                  )}
                   <span className="min-w-0 flex-1">
-                    <span className={cn('text-sm', current && 'font-medium text-foreground')}>
+                    <span className={cn('text-sm text-foreground', current && 'font-medium')}>
                       {form.title}
                     </span>
                     {form.note && (
