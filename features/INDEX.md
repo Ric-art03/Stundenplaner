@@ -25,7 +25,7 @@ In derselben Auslieferung gehärtet:
 
 ### Was offen bleibt
 
-1. **BUG-16** — ein Speichern, dessen Update keine Zeile trifft, meldet Erfolg (`units.ts:578`). Gehört zu `/backend`
+1. ~~**BUG-16**~~ — am 2026-10-08 mit dem Backend von PROJ-7 behoben, siehe unten
 2. **Prüfung in echtem WebKit** — braucht eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright`, und die muss in **Avast** stehen: Windows Defender ist auf diesem Rechner abgeschaltet, eine Ausnahme im Windows-Sicherheitscenter wirkt nicht
 3. **Die 40 Testübungen** stecken weiter in der Datenbank — Rohmasse für PROJ-4, erst übernehmen, dann löschen
 
@@ -62,13 +62,33 @@ Zwei Dinge sind dabei schon abgeräumt:
 - **Schnell-Anlegen hat ein Feld „Arbeitsnotizen"** (optional) — das Backend muss es mit übernehmen
 - **Der Hinweis auf gelockerte Kriterien** steht nur noch an ungespeicherten Einheiten
 
+**Die Serverseite von PROJ-7 ist seit dem 2026-10-08 gebaut** — Abschnitt „Implementation Notes (Backend)" in der Spec. **375 Unit-Tests grün** (342 plus 33 neue), Typprüfung, Lint und Produktionsbuild sauber. Die drei Stellen des Vertrags sind angeschlossen: Kandidatenliste je Segment (`getEditorPool`), Speichern in einem Zug (`saveUnitPlan` über die Datenbank-Funktion `save_unit_plan`), Schnell-Anlegen (`quickCreateExercise`). Dazu die Erweiterung an PROJ-3: Markierung „noch zu ergänzen", Filter in der Übungsübersicht, Löschen der Markierung beim regulären Speichern.
+
+Dabei mit abgeräumt: **BUG-16** (`saveUnit` und `renameUnit` melden jetzt, wenn das Update keine Zeile trifft) und **BUG-6** (der Verwendungszeitpunkt steht auf „gespeichert"). Offen bleibt aus BUG-16 nur, dass `generateUnit` Entwürfe kontoweit löscht — das ist die Regel „ein Entwurf je Nutzer" und damit eine Produktfrage.
+
+**Migration angewendet und am lebenden System nachgewiesen (2026-10-08)** — Register 14 zu 14. Vierzehn Fälle in einer zurückgerollten Transaktion unter der Rolle `authenticated`: Speichern, Hinweis auf fremde Änderungen, Unteilbarkeit bei einem Fehler mitten im Plan, Verwendungsnachweise, fremde Einheit, fremde Übung, fehlende Anmeldung. Alle wie erwartet, nichts zurückgeblieben. `get_advisors` meldet weiter nur den bekannten Hinweis zum Passwortschutz.
+
+**PROJ-7 ist am 2026-10-09 nach dem Test im Browser überarbeitet** (`/refine`) — acht Punkte, alle in der Spec, noch **nichts davon gebaut**. Was sich ändert:
+
+- **Gespeichert wird nur noch ohne offene Lücke.** Jede freie Minute ist gefüllt oder als **geplante Lücke** erklärt; der Speichern-Dialog bietet „Alle als geplant übernehmen und speichern". Das dreht die Entscheidung vom 2026-10-06 um, die Lücken-Sperre ganz fallen zu lassen. Überfüllung sperrt weiter nicht
+- **Varianten werden auf der Karte umgeschaltet**, über ein aufklappbares „Varianten (n)". Der Menüpunkt war gebaut, wurde aber nicht gefunden
+- **Material, Organisationsform und Varianten stehen überall am selben Platz** — Stundenverlauf, Dialog „Übung einfügen", Übungsordner (Erweiterung an PROJ-3)
+- **Organisationsform je Phase im Generator**, als weiches Kriterium, das beim Lockern als Erstes fällt (Erweiterung an PROJ-6, braucht eine Migration)
+- **Das Auswürfeln gewichtet wie der Generator** — Hauptsportart doppelt, kürzlich Verwendetes zuletzt
+- **„Arbeitsnotiz" heißt überall gleich**, mit einem Erklärtext und hellgrünem Feld; die Arbeitsnotiz der Übung erscheint im Stundenverlauf, abschaltbar über einen Schalter
+- **Auswürfeln ohne Reaktion:** zwei stille Wege im Code belegt, dazu „Lockern" im Bearbeiten-Modus, das offene Änderungen ohne Nachfrage verwirft. Nachgestellt ist die Beobachtung nicht — `/qa` soll nach weiteren suchen
+- **Kleineres:** ein Knopf „Übung einfügen" je Segment, Trennung nach der Bedienzeile statt davor
+
+Der Technikentwurf vom 2026-10-07 deckt das nicht ab. Sechs Punkte dafür stehen in der Spec unter „Was die Überarbeitung vom 2026-10-09 noch braucht".
+
 ### Was PROJ-7 noch fehlt
 
-Der Editor braucht den Server an **drei** Stellen, zusammengefasst als ein Vertrag (`UnitEditorActions`): die **Kandidatenliste je Segment**, das **Speichern als eine nicht teilbare Datenbank-Operation** und das **Schnell-Anlegen**. Solange die Seite den Vertrag nicht mitgibt, melden die betroffenen Knöpfe das ehrlich, statt ins Leere zu laufen. Dazu an der Datenbank: das Merkmal „noch zu ergänzen" an der Übung, die Funktion fürs Speichern, der Filter in der Übungsübersicht.
+0. **Nachtrag in `/architecture`** für die Überarbeitung vom 2026-10-09, danach `/frontend` und `/backend`. Erst dann lohnt `/qa`
+1. **Im Browser durchspielen.** Nachgewiesen ist die Datenbank-Funktion, nicht das Zusammenspiel Browser → Server Action → Funktion: Auswürfeln, Auswahldialog, Variante umschalten, Schnell-Anlegen, Speichern von gespeicherter Einheit und Entwurf, zwei Tabs
+2. **Eine bekannte Abweichung:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen — sie ist für die Funktion von einer gelöschten nicht unterscheidbar. Am lebenden System bestätigt: der fremde Verweis wird nicht geschrieben. In der Spec begründet, für `/qa` zu bewerten
+3. **Beim Ausrollen:** die Migration ist schon in der Datenbank, der Code kann also jederzeit folgen
 
-**Im Browser schon prüfbar:** Bearbeiten betreten und verlassen, Entfernen, Umsortieren, Plandauer samt Mindestdauer-Korrektur, Segment-Notiz, Füllstandszeile, Rückgängig, Verwerfen, die Nachfrage beim Verlassen und beim Schließen des Tabs.
-
-**Nächster Schritt:** `/backend PROJ-7` — die drei Server-Stellen und die Datenbank. Danach `/qa PROJ-7`.
+**Nächster Schritt:** `/architecture PROJ-7` (Nachtrag zur Überarbeitung vom 2026-10-09).
 
 ## Features
 

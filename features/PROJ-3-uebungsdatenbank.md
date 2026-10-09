@@ -53,6 +53,13 @@ Festgehaltene Eckpunkte für die Spec:
 **Backend-Anforderung: Eigene Kategorien persistent machen**
 Beim Speichern einer Übung sollen alle nicht-vordefinierten Einträge (eigene Sportarten, Materialien, Phasen, Organisationsformen, Altersgruppen) automatisch in die `custom_categories`-Tabelle geschrieben werden. Beim Laden des Wizards sollen die eigenen Kategorien des Nutzers abgerufen und in die Auswahllisten eingefügt werden (zusammen mit den vordefinierten). Das Frontend (`multi-select.tsx`) unterstützt bereits eigene Einträge — es müssen nur die gespeicherten eigenen Kategorien beim Laden übergeben werden.
 
+> **Erweiterung über PROJ-7, beschlossen am 2026-10-09, noch nicht gebaut:** Material,
+> Organisationsform und Varianten bekommen in Listen- und Kartenansicht denselben festen Platz wie
+> im Stundenverlauf (Varianten aufklappbar, nur zum Ansehen), und das Feld „Arbeitsnotizen" heißt
+> künftig „Arbeitsnotiz", ist hellgrün hinterlegt und trägt überall denselben Erklärtext.
+> Anforderungen und Akzeptanzkriterien stehen in
+> [PROJ-7-einheiten-editor.md](PROJ-7-einheiten-editor.md).
+
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Datenbank und Storage
 - Requires: PROJ-2 (Benutzerregistrierung & Login) — Nur eingeloggte Nutzer können Übungen verwalten

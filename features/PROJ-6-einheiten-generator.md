@@ -534,6 +534,13 @@ Der gesperrte Knopf allein wäre eine Sackgasse: Bei kleiner Übungsdatenbank k�
 - `npm run lint` — 0 Fehler, 4 vorbestehende `<img>`-Warnungen
 - `npm run test:pruefplan` — 15 Fälle weiterhin grün
 
+> **Erweiterung über PROJ-7, beschlossen am 2026-10-09, noch nicht gebaut:** jede Phase bekommt
+> in den Generator-Einstellungen eine optionale Auswahl der Organisationsform — ein weiches
+> Kriterium, das beim Lockern als Erstes fällt. Die Arbeitsnotiz der Phase bekommt Erklärtext und
+> hellgrünes Feld wie bei den Übungen. Und gespeichert wird nur noch ohne offene Lücke: jede freie
+> Minute ist gefüllt oder als geplante Lücke erklärt. Anforderungen und Akzeptanzkriterien stehen
+> in [PROJ-7-einheiten-editor.md](PROJ-7-einheiten-editor.md).
+
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Datenbank
 - Requires: PROJ-2 (Benutzerregistrierung & Login) — Nur eingeloggte Nutzer generieren Einheiten

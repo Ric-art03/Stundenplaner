@@ -2,7 +2,14 @@
 
 ## Status: In Progress
 **Created:** 2026-10-06
-**Last Updated:** 2026-10-07
+**Last Updated:** 2026-10-09
+
+> **Überarbeitet am 2026-10-09 nach dem Test im Browser** (`/refine`). Acht Punkte, alle unten
+> eingearbeitet und im Decision Log begründet. Zwei Entscheidungen vom 2026-10-06 sind dabei
+> umgedreht: gespeichert wird nur noch **ohne offene Lücke**, und „Variante umschalten" wandert aus
+> dem Menü auf die Karte. Der Technikentwurf und der gebaute Stand decken das noch nicht ab —
+> **nächster Schritt ist ein Nachtrag in `/architecture`**, siehe „Was die Überarbeitung vom
+> 2026-10-09 noch braucht" am Ende des Funktionsumfangs.
 
 ## Dependencies
 - **Benötigt:** PROJ-6 (Einheiten-Generator) — der Editor arbeitet auf der gespeicherten
@@ -14,6 +21,14 @@
   „noch zu ergänzen", und die Übungsübersicht muss danach filtern können. Eine kleine
   Erweiterung an einem ausgelieferten Feature, am 2026-10-06 bewusst vorgezogen: später
   nachgerüstet wären es eine zweite Migration und ein erneuter Eingriff in eine deployte Maske
+- **Ändert:** PROJ-3 (Übungsdatenbank), ergänzt am 2026-10-09 — Material, Organisationsform und
+  Varianten bekommen in Listen- und Kartenansicht des Übungsordners denselben festen Platz wie im
+  Stundenverlauf, und das Feld „Arbeitsnotizen" heißt überall „Arbeitsnotiz" mit einheitlichem
+  Erklärtext und hellgrünem Feld
+- **Ändert:** PROJ-6 (Einheiten-Generator), ergänzt am 2026-10-09 — jede Phase bekommt in den
+  Generator-Einstellungen eine optionale Auswahl der Organisationsform (weiches, lockerbares
+  Kriterium), die Arbeitsnotiz der Phase bekommt Erklärtext und Feld wie bei den Übungen, und die
+  Lücken-Sperre beim Speichern kehrt in neuer Form zurück („geplante Lücke")
 - **Benötigt:** PROJ-5 (Gruppenprofile) — Halle, Material, Teilnehmerzahl und Altersgruppen
   bestimmen, welche Übungen überhaupt in Frage kommen
 - **Ermöglicht:** PROJ-14 (Live-Modus) — setzt auf der ruhigen Leseansicht auf, die dieser
@@ -78,13 +93,82 @@ Minutenlängen, die Phasenfolge — bleibt Sache des Generators.
 
 | Operation | Verhalten |
 |---|---|
-| **Neu auswürfeln** | Zieht eine andere Übung aus dem Kandidatenpool desselben Segments. Ausgeschlossen: alles, was in dieser Einheit schon steht, und alles, was in diesem Platz bereits weggewürfelt wurde. Der Platz behält seine Minuten |
+| **Neu auswürfeln** | Zieht eine andere Übung aus dem Kandidatenpool desselben Segments. Ausgeschlossen: alles, was in dieser Einheit schon steht, und alles, was in diesem Platz bereits weggewürfelt wurde. Der Platz behält seine Minuten. **Seit 2026-10-09 nach den Regeln des Generators gewichtet:** die Hauptsportart der Phase zählt doppelt, und Übungen aus den letzten zwei gespeicherten Einheiten der Gruppe kommen erst dran, wenn sonst nichts frei ist. Varianten sind dabei — wie im Generator — eigene, vollwertige Kandidaten. **Jeder Klick endet sichtbar:** neue Übung, Begründung oder Fehlermeldung |
 | **Selbst wählen** | Dialog mit Suche. Oben die passenden Kandidaten des Segments, darunter aufklappbar „auch unpassende anzeigen" — jede mit der Begründung, woran sie scheitert. Der Platz behält seine Minuten |
-| **Variante umschalten** | Bei einer Übung mit Varianten lässt sich zwischen Hauptübung und jeder Variante umschalten. Material, Beschreibung und Dauer der Variante gelten dann (die gemeinsame Auflösung aus PROJ-6) |
+| **Variante umschalten** | Bei einer Übung mit Varianten lässt sich zwischen Grundübung und jeder Variante umschalten. Material, Organisationsform, Beschreibung und Dauer der Variante gelten dann (die gemeinsame Auflösung aus PROJ-6). **Seit 2026-10-09 direkt auf der Karte** über das Element „Varianten (n)" statt über einen Menüpunkt mit eigenem Dialog — siehe „Die einheitliche Übungszeile" |
 | **Entfernen** | Der Eintrag verschwindet, die Minuten werden im Segment frei und als Lücke ausgewiesen |
 | **Plandauer ändern** | Frei einstellbar, mindestens 1 Minute. Die Schätzdauer der Übung steht als Hinweis daneben und bleibt unberührt |
 | **Umsortieren** | Hoch/Runter je Eintrag, innerhalb des Segments. Beim ersten Eintrag ist „hoch" aus, beim letzten „runter" |
-| **Einfügen** | „+ Übung einfügen" am Ende jedes Segments, zusätzlich direkt am Lückenhinweis und am Platzhalter einer gelöschten Übung. Öffnet denselben Auswahldialog |
+| **Einfügen** | „+ Übung einfügen" am Ende jedes Segments, am Lückenhinweis und am Platzhalter einer gelöschten Übung. Öffnet denselben Auswahldialog. **Je Segment nur ein solcher Knopf** (seit 2026-10-09): steht ein Lückenhinweis da, trägt er den Knopf, und der breite Knopf am Segmentende entfällt |
+
+Die Bedienzeile unter einem Eintrag (Plandauer, Hoch/Runter, Menü) gehört sichtbar zu der Karte
+**über** ihr: Karte und Bedienzeile bilden einen Block, die Trennung liegt **nach** der
+Bedienzeile, nicht zwischen Karte und Bedienzeile (geändert am 2026-10-09).
+
+### Die einheitliche Übungszeile (neu am 2026-10-09)
+
+Material, Organisationsform und Varianten haben **überall denselben festen Platz in derselben
+Reihenfolge** — ein Baustein, vier Orte:
+
+| Ort | Material | Organisationsform | Varianten |
+|---|---|---|---|
+| Karte im Stundenverlauf (Lesen und Bearbeiten) | ja | ja | ja |
+| Dialog „Übung einfügen" | ja | ja | ja |
+| Übungsordner, Listen- und Kartenansicht (PROJ-3) | ja | ja | ja |
+| Detailseite der Übung (PROJ-3) | unverändert, dort stehen alle drei schon ausführlich | | |
+
+- Fehlt eine Organisationsform oder gibt es keine Varianten, bleibt der Platz leer — die übrigen
+  Angaben rücken nicht an eine andere Stelle
+- **„Varianten (n)" ist klickbar** und klappt die Namen der Varianten auf, darüber immer die
+  Grundübung. Die gerade geltende Form ist markiert
+- **Im Übungsordner** ist die aufgeklappte Liste nur zum Ansehen
+- **Im Bearbeiten-Modus** wählt ein Klick auf einen Namen diese Form: sie ersetzt den ganzen
+  Eintrag mit Material, Organisationsform, Dauerschätzung und Variantentitel. Der Platz behält
+  seine Minuten. Öffnet man die Liste erneut, steht die Grundübung wieder zur Wahl
+- **In der Leseansicht** des Stundenverlaufs ist die Liste wie im Übungsordner nur zum Ansehen
+- **Im Dialog „Übung einfügen"** setzt ein Klick auf einen Variantennamen diese Variante ein
+
+Der Menüpunkt „Variante umschalten …" und der eigene Dialog dafür entfallen.
+
+### Geplante Lücke (neu am 2026-10-09)
+
+Jede freie Minute in einem Segment ist entweder **offen** oder **geplant**:
+
+| | Offene Lücke | Geplante Lücke |
+|---|---|---|
+| Entsteht | der Generator konnte nicht füllen, oder der Nutzer hat entfernt oder gekürzt | der Nutzer erklärt sie dazu, oder das Segment stand im Generator auf „frei lassen" |
+| Aussehen | gelber Hinweis mit Begründung | ruhig, wie die „— Lücke —" eines frei gelassenen Segments, mit Minutenangabe |
+| Speichern | **sperrt** | erlaubt |
+
+- Am gelben Hinweis steht im Bearbeiten-Modus neben „Übung einfügen" der Knopf **„Als geplante
+  Lücke stehen lassen"**. Das ist eine Änderung wie jede andere: sie zählt in der Leiste und
+  lässt sich rückgängig machen
+- An einer geplanten Lücke steht im Bearbeiten-Modus „Übung einfügen" und „Wieder öffnen"
+- **Die Erklärung gilt für den Stand, an dem sie gegeben wurde.** Werden danach im selben Segment
+  weitere Minuten frei (entfernt, gekürzt), ist die Lücke wieder offen
+- Ein im Generator auf „frei lassen" gestelltes Segment gilt mit allen freien Minuten als geplant,
+  auch wenn der Nutzer es teilweise füllt
+- **Überfüllte Segmente** sind keine Lücke und sperren nicht — sie werden wie bisher im
+  Speichern-Dialog genannt
+- **„Mit gelockerten Kriterien erneut versuchen" wird im Bearbeiten-Modus nicht angeboten.** Es
+  lädt die Einheit neu und würde die offenen Änderungen ohne Nachfrage verwerfen. In der
+  Leseansicht bleibt es
+
+### Organisationsform im Generator (Erweiterung an PROJ-6, neu am 2026-10-09)
+
+In den Einstellungen jeder Phase im Generator steht eine optionale Mehrfachauswahl
+**„Organisationsform(en)"** — nicht im Gruppenprofil. Leer heißt: keine Einschränkung.
+
+- Ist etwas gewählt, kommen nur Übungen (und Varianten) in Frage, die mindestens eine der
+  gewählten Organisationsformen tragen. Eine Übung ohne Organisationsform passt dann nicht
+- **Weiches Kriterium**, wie Sportart und Schwierigkeit: „Mit gelockerten Kriterien erneut
+  versuchen" gibt es **als Erstes** frei, vor Schwierigkeit und Sportart
+- Der Lückenhinweis nennt es als eigene Ursache mit Anzahl, und der Auswahldialog des Editors als
+  eigene Begründung „passt nicht: Organisationsform"
+- Eine Variante zählt mit ihrer eigenen Organisationsform, wenn sie eine angibt, sonst mit der der
+  Grundübung (die gemeinsame Auflösung aus PROJ-6)
+- „Schnell anlegen" belegt die Organisationsform aus der Phase vor, wenn dort genau eine gewählt
+  ist
 
 ### Schnell anlegen
 
@@ -103,21 +187,69 @@ nur zulassen. Die Markierung verschwindet, sobald der Nutzer die Übung im regul
 speichert. Sie ist ein Hinweis, keine Einschränkung: eine markierte Übung ist ein vollwertiger
 Kandidat und wird überall normal eingesetzt.
 
-### Segment-Notiz
+### Arbeitsnotiz (am 2026-10-09 vereinheitlicht, vorher „Segment-Notiz")
 
-Die Notiz jedes Segments ist im Bearbeiten-Modus änderbar. Sie ist der Ort für alles, was keine
-Übung ist — Organisatorisches, Hinweise an sich selbst, der Grund, warum ein Abschnitt frei
-bleibt.
+Es gibt zwei Arbeitsnotizen, und beide heißen überall genau so — **„Arbeitsnotiz"**, Einzahl:
+
+| | Gehört zu | Eingegeben in |
+|---|---|---|
+| Arbeitsnotiz der Übung | einer Übung (PROJ-3) | Übungs-Wizard, „Schnell anlegen" |
+| Arbeitsnotiz der Phase | einem Segment (PROJ-6) | Generator-Einstellungen der Phase, Bearbeiten-Modus |
+
+- **Ein Name.** „Arbeitsnotizen", „Notiz hinzufügen" und „Notiz zum Abschnitt" verschwinden
+- **Ein Erklärtext am Eingabefeld**, an allen vier Eingabestellen und immer sichtbar: die
+  Arbeitsnotiz erscheint im fertigen Stundenverlauf — bei dieser Übung bzw. an dieser Stelle
+- **Ein Aussehen.** Das Feld ist beim Eingeben und beim Anzeigen leicht hellgrün hinterlegt, so
+  wie heute schon auf der Detailseite der Übung
+- **Die Arbeitsnotiz der Phase** ist im Bearbeiten-Modus änderbar. Sie ist der Ort für alles, was
+  keine Übung ist — Organisatorisches, der Grund, warum ein Abschnitt frei bleibt
+- **Die Arbeitsnotiz der Übung erscheint im Stundenverlauf** unter ihrer Karte. Oben in der
+  Leseansicht steht ein Schalter **„Arbeitsnotizen anzeigen"**, der für alle Einträge zugleich
+  gilt, standardmäßig an ist und sich im Browser merkt. Er betrifft nur die Notizen der Übungen;
+  die der Phasen stehen immer da
+- **Im Bearbeiten-Modus** werden die Arbeitsnotizen der Übungen nicht angezeigt — geändert werden
+  sie an der Übung, nicht am Plan
+- Das zweite Notizfeld der Übung, **„Anmerkungen"** (persönliche Tipps), bleibt getrennt und
+  taucht nie im Stundenverlauf auf
+- **Für später festgehalten:** jede Arbeitsnotiz hat den besonderen Rang, im Live-Modus
+  (PROJ-14) aufzutauchen. Deshalb ein Name und ein Aussehen
 
 ### Was nicht aufgeht
 
 Jedes Segment zeigt im Bearbeiten-Modus seinen Stand: „10 von 12 Min · 2 Min frei" oder
-„15 von 12 Min · 3 Min über". Gespeichert werden darf trotzdem. Der Speichern-Dialog nennt die
-betroffenen Segmente namentlich, damit die Abweichung eine Entscheidung ist und kein Versehen.
+„15 von 12 Min · 3 Min über".
 
-**Das ersetzt die bisherige Sperre.** Bis jetzt war der Speichern-Knopf bei einer Lücke
-ausgegraut. Diese Sperre fällt weg — auch für frisch generierte Entwürfe, auch außerhalb des
-Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt hat er eine.
+**Seit 2026-10-09 gilt: in einer gespeicherten Einheit steht kein gelbes Warnfeld.** Gespeichert
+wird nur, wenn jede freie Minute entweder gefüllt oder als geplante Lücke erklärt ist (siehe
+„Geplante Lücke"). Das gilt für jeden Speicherweg — im Bearbeiten-Modus und beim „Einheit
+speichern" eines frisch generierten Entwurfs.
+
+Damit die Regel keine Sackgasse wird, nennt der Speichern-Dialog die offenen Lücken namentlich
+und bietet **„Alle als geplant übernehmen und speichern"** an. Eine Überfüllung sperrt nicht; der
+Dialog nennt sie wie bisher und lässt das Speichern nach Bestätigung zu.
+
+**Das ersetzt die Regelung vom 2026-10-06**, nach der mit offenen Lücken gespeichert werden
+durfte. Die Sperre aus PROJ-6 kommt damit zurück, aber nicht als ausgegrauter Knopf ohne Ausweg:
+der Nutzer hat jetzt zwei Handhaben, füllen oder erklären.
+
+### Was die Überarbeitung vom 2026-10-09 noch braucht
+
+Der Technikentwurf vom 2026-10-07 und der gebaute Stand decken Folgendes nicht ab — zu klären im
+Nachtrag von `/architecture`:
+
+1. **Wo „geplante Lücke" gespeichert wird.** Die Füllart „frei lassen" gilt für ein ganzes Segment
+   und soll laut Entwurf unangetastet bleiben; die neue Erklärung braucht ein eigenes Merkmal am
+   Segment und muss durch die Speicher-Funktion
+2. **Organisationsform am Segment** — neues Feld, neues Kriterium in der Kriterienliste des
+   Generators, neue Lockerungsstufe, neuer Eintrag im Lückenhinweis
+3. **Gewichtung beim Auswürfeln** — die schlanke Kandidatenfassung muss wissen, welche Übungen
+   kürzlich verwendet wurden; die Hauptsportart der Phase liegt schon vor
+4. **Arbeitsnotiz der Übung im Stundenverlauf** — die schlanke Fassung lässt Notizen bisher
+   bewusst weg
+5. **Varianten im Auswahldialog** — heute eine Zeile je Variante, künftig das Element
+   „Varianten (n)" an der Zeile der Übung. Zu entscheiden: wo die Zeile steht, wenn nur eine
+   ihrer Formen passt (Vorschlag: unter „Passend", mit der Begründung an den einzelnen Formen)
+6. **Die stillen Wege beim Auswürfeln** — siehe Akzeptanzkriterien
 
 ## Out of Scope
 
@@ -134,8 +266,15 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 - **Freitext-Einträge im Plan** (Text + Minuten ohne Übung dahinter) — würde eine zweite Art von
   Eintrag einführen, die PROJ-10, PROJ-14 und die Materialliste je gesondert behandeln müssten.
   Stattdessen: „Schnell anlegen" oder die Segment-Notiz
-- **Rotation über Wochen beim Auswürfeln** — „diese Gruppe hatte das letzte Woche schon" gehört
-  zu PROJ-10, das die Regel für Generator und Editor gemeinsam setzen soll
+- **Eine eigene Rotationsregel fürs Auswürfeln** — der Editor übernimmt seit 2026-10-09 genau die
+  Frische-Regel, die der Generator schon hat (letzte zwei gespeicherte Einheiten der Gruppe),
+  und nichts darüber hinaus. Alles Weitergehende über Wochen gehört zu PROJ-10, das die Regel für
+  Generator und Editor gemeinsam setzen soll
+- **Organisationsform im Gruppenprofil** — sie wird je Phase im Generator gewählt, nicht an der
+  Gruppe (PROJ-5 bleibt unberührt)
+- **Arbeitsnotiz einer Übung vom Plan aus ändern** — geändert wird sie an der Übung
+- **Der Live-Modus selbst** — dass Arbeitsnotizen dort auftauchen, ist hier nur vorbereitet
+  (PROJ-14)
 - **Nur passend lange Übungen zum Tausch anbieten** — würde die Auswahl bei einer kleinen
   Datenbank fast leer räumen
 - **Versionsgeschichte einer Einheit** — Rückgängig gilt für die laufende Bearbeitung, nicht über
@@ -167,6 +306,12 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 - [ ] Angenommen eine Übung steht bereits in einem anderen Segment dieser Einheit, wenn der Nutzer auswürfelt, dann wird sie nicht vorgeschlagen
 - [ ] Angenommen der Kandidatenvorrat eines Segments ist erschöpft, wenn der Nutzer auswürfelt, dann erscheint eine Meldung, die jede Ursache einzeln aufschlüsselt (Sportart, Schwierigkeit, Material, Altersgruppe, Teilnehmerzahl, bereits in der Einheit) mit der jeweiligen Anzahl
 - [ ] Angenommen der Nutzer hat ausgewürfelt, wenn er „Rückgängig" wählt, dann steht die vorherige Übung wieder im Platz
+- [ ] Angenommen der Nutzer klickt auf „neu auswürfeln", wenn der Vorgang endet, dann ist in jedem Fall etwas zu sehen: eine andere Übung im Platz, die Begründung des erschöpften Vorrats oder eine Fehlermeldung — nie nichts (ergänzt am 2026-10-09)
+- [ ] Angenommen die Kandidatenliste lässt sich beim Auswürfeln nicht laden, wenn der Nutzer auswürfelt, dann erscheint die Fehlermeldung an Ort und Stelle und nicht nur im geschlossenen Auswahldialog (ergänzt am 2026-10-09)
+- [ ] Angenommen ein Auswürfeln läuft, wenn der Nutzer auf die Karte schaut, dann ist an der Karte selbst erkennbar, dass gewürfelt wird (ergänzt am 2026-10-09)
+- [ ] Angenommen die Phase hat eine Hauptsportart und zwei Sportarten, wenn der Nutzer viele Male auswürfelt, dann stammt etwa jede zweite gezogene Übung aus der Hauptsportart — dieselbe Gewichtung wie im Generator (ergänzt am 2026-10-09)
+- [ ] Angenommen im Vorrat stehen Übungen, die in den letzten zwei gespeicherten Einheiten der Gruppe vorkamen, und andere, wenn der Nutzer auswürfelt, dann werden zuerst die anderen gezogen und die kürzlich verwendeten erst, wenn sonst nichts frei ist (ergänzt am 2026-10-09)
+- [ ] Angenommen eine Grundübung scheitert am Material der Halle, ihre Variante aber nicht, wenn der Nutzer auswürfelt, dann kann die Variante gezogen werden und die Grundübung nicht (ergänzt am 2026-10-09; für den Generator gilt dasselbe seit PROJ-6)
 
 ### Übung selbst wählen
 
@@ -179,9 +324,34 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 
 ### Variante umschalten
 
-- [ ] Angenommen ein Eintrag verweist auf eine Übung mit zwei Varianten, wenn der Nutzer das Umschalten öffnet, dann stehen die Hauptübung und beide Varianten zur Wahl
-- [ ] Angenommen der Nutzer schaltet auf eine Variante um, wenn die Variante eigenes Material angibt, dann gilt das Material der Variante und nicht das der Hauptübung
-- [ ] Angenommen eine Übung hat keine Varianten, wenn der Nutzer ihr Menü öffnet, dann wird das Umschalten nicht angeboten
+Am 2026-10-09 neu gefasst: das Umschalten sitzt auf der Karte, nicht mehr im Menü.
+
+- [ ] Angenommen ein Eintrag verweist auf eine Übung mit zwei Varianten, wenn der Nutzer auf der Karte „Varianten (2)" anklickt, dann klappen die Grundübung und beide Varianten mit Namen auf und die gerade geltende Form ist markiert
+- [ ] Angenommen der Nutzer ist im Bearbeiten-Modus, wenn er in der aufgeklappten Liste eine Variante anklickt, dann ersetzt sie den ganzen Eintrag — Variantentitel, Material, Organisationsform und Dauerschätzung — und die Plandauer des Platzes bleibt
+- [ ] Angenommen der Nutzer schaltet auf eine Variante um, wenn die Variante eigenes Material angibt, dann gilt das Material der Variante und nicht das der Grundübung
+- [ ] Angenommen im Platz steht eine Variante, wenn der Nutzer „Varianten" erneut aufklappt, dann steht die Grundübung zur Wahl und ein Klick stellt sie wieder her
+- [ ] Angenommen der Nutzer ist in der Leseansicht, wenn er „Varianten (2)" aufklappt, dann sieht er die Namen, kann aber nichts auswählen
+- [ ] Angenommen eine Übung hat keine Varianten, wenn der Nutzer ihre Karte ansieht, dann steht dort kein Varianten-Element und im Menü kein Umschalten
+- [ ] Angenommen der Nutzer öffnet das Menü eines Eintrags, wenn die Übung Varianten hat, dann steht dort kein Punkt „Variante umschalten" mehr
+
+### Die einheitliche Übungszeile (neu am 2026-10-09)
+
+- [ ] Angenommen eine Übung hat Material, eine Organisationsform und Varianten, wenn der Nutzer sie im Stundenverlauf, im Dialog „Übung einfügen" und im Übungsordner (Liste und Karten) sieht, dann stehen die drei Angaben an allen Orten in derselben Reihenfolge und Gestalt
+- [ ] Angenommen eine Übung hat keine Organisationsform, wenn ihre Zeile erscheint, dann bleibt der Platz dafür leer und die übrigen Angaben stehen an ihrer gewohnten Stelle
+- [ ] Angenommen der Nutzer ist im Übungsordner, wenn er an einer Übung „Varianten (n)" anklickt, dann klappen die Namen auf, ohne dass er die Detailseite öffnet, und nichts ist auswählbar
+- [ ] Angenommen der Dialog „Übung einfügen" ist offen, wenn der Nutzer an einer Übung „Varianten (n)" aufklappt und einen Namen anklickt, dann wird diese Variante eingesetzt
+- [ ] Angenommen der Dialog „Übung einfügen" ist offen, wenn der Nutzer die Liste ansieht, dann steht an jeder Übung neben dem Material ihre Organisationsform
+
+### Organisationsform im Generator (neu am 2026-10-09)
+
+- [ ] Angenommen der Nutzer öffnet im Generator die Einstellungen einer Phase, die gefüllt wird, wenn er sie ansieht, dann kann er dort eine oder mehrere Organisationsformen wählen, vordefinierte und eigene
+- [ ] Angenommen in einer Phase ist keine Organisationsform gewählt, wenn generiert wird, dann schränkt die Organisationsform die Auswahl nicht ein
+- [ ] Angenommen in einer Phase ist „Kleingruppen" gewählt, wenn generiert wird, dann stehen in dieser Phase nur Übungen oder Varianten, die „Kleingruppen" tragen
+- [ ] Angenommen eine Phase bleibt wegen der Organisationsform leer, wenn der Lückenhinweis erscheint, dann nennt er die Organisationsform als eigene Ursache mit Anzahl
+- [ ] Angenommen eine Phase bleibt wegen der Organisationsform leer, wenn der Nutzer in der Leseansicht „Mit gelockerten Kriterien erneut versuchen" wählt, dann wird die Organisationsform als Erstes freigegeben
+- [ ] Angenommen der Nutzer öffnet das Gruppenprofil, wenn er es ansieht, dann gibt es dort keine Einstellung zur Organisationsform
+- [ ] Angenommen in der Phase ist eine Organisationsform gewählt, wenn der Nutzer im Editor den Auswahldialog öffnet, dann stehen Übungen mit anderer oder ohne Organisationsform unter den unpassenden mit der Begründung „Organisationsform"
+- [ ] Angenommen der Nutzer kehrt über „Zurück zum Generator" zurück, wenn die Maske erscheint, dann ist die gewählte Organisationsform jeder Phase erhalten
 
 ### Entfernen, Dauer, Reihenfolge
 
@@ -200,6 +370,21 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 - [ ] Angenommen eine im Plan verwendete Übung wurde aus der Datenbank gelöscht, wenn der Nutzer den Bearbeiten-Modus öffnet, dann steht am Platzhalter „Übung gelöscht" eine Möglichkeit zum Nachbesetzen (auswürfeln oder selbst wählen)
 - [ ] Angenommen der Nutzer besetzt einen Platzhalter nach, wenn die neue Übung eingesetzt ist, dann verschwindet der Platzhalter und die Minuten des Platzes bleiben unverändert
 - [ ] Angenommen ein Segment ist vollständig gefüllt, wenn der Nutzer dort zusätzlich eine Übung einfügt, dann wird sie eingesetzt und das Segment weist die Überfüllung in Minuten aus
+- [ ] Angenommen ein Segment zeigt im Bearbeiten-Modus einen Lückenhinweis, wenn der Nutzer das Segment ansieht, dann gibt es dort genau einen Knopf „Übung einfügen" — den am Hinweis — und keinen zweiten am Segmentende (ergänzt am 2026-10-09)
+- [ ] Angenommen ein Segment zeigt keinen Lückenhinweis, wenn der Nutzer im Bearbeiten-Modus ist, dann steht „Übung einfügen" am Segmentende (ergänzt am 2026-10-09)
+- [ ] Angenommen ein Eintrag hat im Bearbeiten-Modus seine Bedienzeile, wenn der Nutzer die Liste ansieht, dann ist die Bedienzeile sichtbar mit der Karte über ihr verbunden und von der nächsten Karte abgesetzt (ergänzt am 2026-10-09)
+
+### Geplante Lücke (neu am 2026-10-09)
+
+- [ ] Angenommen ein Segment hat eine offene Lücke, wenn der Nutzer im Bearbeiten-Modus „Als geplante Lücke stehen lassen" wählt, dann verschwindet der gelbe Hinweis und die Stelle erscheint ruhig mit ihrer Minutenangabe, wie eine im Generator frei gelassene
+- [ ] Angenommen ein Segment ist ganz leer und wurde nicht frei gelassen, wenn der Nutzer es zur geplanten Lücke erklärt, dann gilt dasselbe wie bei einer Restlücke
+- [ ] Angenommen der Nutzer hat eine Lücke als geplant erklärt, wenn er „Rückgängig" wählt, dann steht der gelbe Hinweis wieder da
+- [ ] Angenommen eine Lücke ist geplant, wenn der Nutzer im Bearbeiten-Modus „Wieder öffnen" wählt, dann ist sie wieder eine offene Lücke
+- [ ] Angenommen eine Lücke von 2 Minuten ist geplant, wenn der Nutzer danach im selben Segment eine Übung entfernt, dann ist die nun größere Lücke wieder offen
+- [ ] Angenommen eine Lücke ist geplant, wenn der Nutzer dort eine Übung einfügt und das Segment aufgeht, dann ist keine Lücke mehr ausgewiesen
+- [ ] Angenommen ein Segment stand im Generator auf „frei lassen" und ist teilweise gefüllt, wenn der Nutzer speichert, dann gelten seine freien Minuten als geplant und sperren nicht
+- [ ] Angenommen der Nutzer ist im Bearbeiten-Modus, wenn ein Lückenhinweis erscheint, dann wird „Mit gelockerten Kriterien erneut versuchen" dort nicht angeboten
+- [ ] Angenommen eine gespeicherte Einheit wird in der Leseansicht geöffnet, wenn der Nutzer sie ansieht, dann steht nirgends ein gelbes Warnfeld
 
 ### Schnell anlegen
 
@@ -214,11 +399,20 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 - [ ] Angenommen eine Übung ist als „noch zu ergänzen" markiert, wenn der Nutzer sie im regulären Übungsformular speichert, dann verschwindet die Markierung
 - [ ] Angenommen eine Übung ist als „noch zu ergänzen" markiert, wenn der Generator oder der Editor Kandidaten sucht, dann wird sie wie jede andere Übung behandelt und nicht benachteiligt
 
-### Segment-Notiz
+### Arbeitsnotiz (am 2026-10-09 neu gefasst, vorher „Segment-Notiz")
 
-- [ ] Angenommen ein Segment hat eine Notiz, wenn der Nutzer im Bearbeiten-Modus darauf tippt, dann kann er sie ändern
-- [ ] Angenommen ein Segment hat keine Notiz, wenn der Nutzer im Bearbeiten-Modus ist, dann wird ihm das Hinzufügen einer Notiz angeboten
-- [ ] Angenommen der Nutzer leert eine Notiz vollständig, wenn er speichert, dann verschwindet die Notiz aus der Leseansicht ohne Fehlermeldung
+- [ ] Angenommen ein Segment hat eine Arbeitsnotiz, wenn der Nutzer im Bearbeiten-Modus darauf tippt, dann kann er sie ändern
+- [ ] Angenommen ein Segment hat keine Arbeitsnotiz, wenn der Nutzer im Bearbeiten-Modus ist, dann wird ihm „Arbeitsnotiz hinzufügen" angeboten
+- [ ] Angenommen der Nutzer leert eine Arbeitsnotiz vollständig, wenn er speichert, dann verschwindet sie aus der Leseansicht ohne Fehlermeldung
+- [ ] Angenommen der Nutzer sieht ein Eingabefeld für eine Arbeitsnotiz — im Übungs-Wizard, im Schnell-Anlegen, in den Generator-Einstellungen einer Phase oder im Bearbeiten-Modus —, wenn er es ansieht, dann heißt es „Arbeitsnotiz", ist hellgrün hinterlegt und trägt den Erklärtext, dass sie im fertigen Stundenverlauf erscheint
+- [ ] Angenommen der Nutzer durchsucht die Oberfläche, wenn er auf ein Notizfeld einer Übung oder Phase stößt, dann heißt keines mehr „Arbeitsnotizen", „Notiz" oder „Notiz zum Abschnitt" (das Feld „Anmerkungen" der Übung bleibt, wie es ist)
+- [ ] Angenommen eine Arbeitsnotiz wird angezeigt — auf der Detailseite der Übung oder im Stundenverlauf —, wenn der Nutzer sie sieht, dann ist sie hellgrün hinterlegt und mit „Arbeitsnotiz" überschrieben
+- [ ] Angenommen eine Übung im Plan hat eine Arbeitsnotiz, wenn der Nutzer die Leseansicht öffnet, dann steht die Arbeitsnotiz unter der Karte der Übung
+- [ ] Angenommen der Nutzer ist in der Leseansicht, wenn er den Schalter „Arbeitsnotizen anzeigen" ausschaltet, dann verschwinden die Arbeitsnotizen aller Übungen zugleich, und die der Phasen bleiben stehen
+- [ ] Angenommen der Nutzer hat den Schalter ausgeschaltet, wenn er die Seite später im selben Browser wieder öffnet, dann ist er weiter aus
+- [ ] Angenommen keine Übung im Plan hat eine Arbeitsnotiz, wenn der Nutzer die Leseansicht öffnet, dann wird der Schalter nicht angeboten
+- [ ] Angenommen der Nutzer ist im Bearbeiten-Modus, wenn er die Einträge ansieht, dann werden die Arbeitsnotizen der Übungen nicht angezeigt
+- [ ] Angenommen im Platz steht eine Variante, wenn die Arbeitsnotiz angezeigt wird, dann ist es die der Grundübung — Varianten haben keine eigene
 
 ### Speichern, Verwerfen, Rückgängig
 
@@ -228,9 +422,12 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 - [ ] Angenommen der Nutzer hat Änderungen offen, wenn er „Verwerfen" bestätigt, dann zeigt die Seite wieder den gespeicherten Zustand und die Einheit in der Datenbank ist unberührt
 - [ ] Angenommen eine gespeicherte Einheit wird bearbeitet, wenn der Nutzer speichert, dann wird dieselbe Einheit überschrieben, behält ihren Namen und es entsteht keine zweite Einheit in der Übersicht
 - [ ] Angenommen ein Entwurf wird bearbeitet, wenn der Nutzer speichert, dann wird nach einem Namen gefragt und die Einheit erscheint anschließend in den Übersichten
-- [ ] Angenommen ein Segment geht nicht auf, wenn der Nutzer speichert, dann nennt der Dialog die betroffenen Segmente namentlich mit der Abweichung in Minuten und lässt das Speichern nach Bestätigung zu
-- [ ] Angenommen alle Segmente gehen auf, wenn der Nutzer speichert, dann wird ohne zusätzliche Nachfrage gespeichert
-- [ ] Angenommen eine Einheit hat eine Lücke, wenn der Nutzer sie außerhalb des Bearbeiten-Modus speichert, dann ist der Speichern-Knopf nicht mehr gesperrt, sondern der Dialog nennt die Lücke und verweist auf den Bearbeiten-Modus
+- [ ] Angenommen ein Segment ist überfüllt, wenn der Nutzer speichert, dann nennt der Dialog das Segment namentlich mit der Abweichung in Minuten und lässt das Speichern nach Bestätigung zu (am 2026-10-09 auf Überfüllung eingeengt)
+- [ ] Angenommen ein Segment hat eine offene Lücke, wenn der Nutzer speichert, dann wird nicht gespeichert, sondern der Dialog nennt die Segmente mit offener Lücke namentlich mit ihren Minuten und bietet „Alle als geplant übernehmen und speichern" und „Zurück zum Bearbeiten" an (neu am 2026-10-09)
+- [ ] Angenommen der Dialog nennt offene Lücken, wenn der Nutzer „Alle als geplant übernehmen und speichern" wählt, dann wird gespeichert und die Einheit zeigt danach an diesen Stellen geplante Lücken (neu am 2026-10-09)
+- [ ] Angenommen alle Segmente gehen auf oder haben nur geplante Lücken, wenn der Nutzer speichert, dann wird ohne zusätzliche Nachfrage gespeichert
+- [ ] Angenommen ein frisch generierter Entwurf hat eine offene Lücke, wenn der Nutzer außerhalb des Bearbeiten-Modus „Einheit speichern" wählt, dann gilt dieselbe Regel: der Dialog nennt die Lücken und bietet „Alle als geplant übernehmen und speichern" sowie den Weg in den Bearbeiten-Modus an (am 2026-10-09 neu gefasst)
+- [ ] Angenommen jemand ruft das Speichern an der Oberfläche vorbei auf, wenn die Einheit eine offene Lücke hat, dann weist auch der Server das Speichern ab (neu am 2026-10-09)
 - [ ] Angenommen der Nutzer hat gespeichert, wenn die Seite die Einheit neu lädt, dann steht die Markierung „manuell bearbeitet" an der Einheit
 - [ ] Angenommen eine Einheit ist manuell bearbeitet und noch ein Entwurf, wenn der Nutzer „Neu generieren" wählt, dann warnt die bestehende Nachfrage vor dem Überschreiben der Änderungen
 - [ ] Angenommen der Nutzer hat Übungen getauscht und gespeichert, wenn anschließend eine dieser Übungen gelöscht werden soll, dann nennt die Löschwarnung diese Einheit
@@ -254,7 +451,7 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 | # | Fall | Erwartetes Verhalten |
 |---|------|----------------------|
 | 1 | Der Nutzer entfernt **alle** Übungen eines Segments | Erlaubt. Das Segment steht als vollständige Lücke da und lässt sich wieder füllen. Kein Zwang, etwas drin zu lassen |
-| 2 | Der Nutzer entfernt alle Übungen der **ganzen Einheit** | Erlaubt und speicherbar, mit Nennung aller leeren Segmente im Speichern-Dialog. Eine leere Einheit ist ein zulässiges Gerüst — genau das sieht PROJ-6 für „alle Segmente frei lassen" vor |
+| 2 | Der Nutzer entfernt alle Übungen der **ganzen Einheit** | Erlaubt. Speicherbar, sobald die leeren Segmente als geplante Lücken erklärt sind — einzeln oder über „Alle als geplant übernehmen und speichern" im Speichern-Dialog (am 2026-10-09 angepasst). Eine leere Einheit ist ein zulässiges Gerüst — genau das sieht PROJ-6 für „alle Segmente frei lassen" vor |
 | 3 | Eine Übung wird in einem anderen Tab gelöscht, während hier bearbeitet wird | Beim Speichern erscheint der Platzhalter „Übung gelöscht" statt eines Fehlers; der Nutzer kann nachbesetzen. Das Speichern selbst scheitert nicht |
 | 4 | Dieselbe Einheit wird in zwei Tabs bearbeitet und beide speichern | Das zweite Speichern gewinnt. Ein Hinweis, dass die Einheit zwischenzeitlich anderswo geändert wurde, wäre wünschenswert — siehe Offene Fragen |
 | 5 | Der Nutzer würfelt in einem Segment aus, in dem es nur **einen** Kandidaten gibt | Meldung „keine weitere passende Übung" mit Aufschlüsselung; die Übung bleibt stehen. Kein stilles Nichts-Passiert |
@@ -265,9 +462,14 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 | 10 | Eine Variante wird gelöscht, während sie im Plan steht | Wie bei einer gelöschten Übung: Platzhalter mit Möglichkeit zum Nachbesetzen |
 | 11 | Der Nutzer ändert die Notiz eines Segments, sonst nichts | Zählt als Änderung, löst die Nachfrage beim Verlassen aus und setzt die Markierung „manuell bearbeitet" |
 | 12 | Die Gruppe der Einheit wird gelöscht, während bearbeitet wird | Das Speichern scheitert mit einer verständlichen Meldung. PROJ-6 warnt beim Löschen einer Gruppe bereits vor den betroffenen Einheiten (BUG-1) |
-| 13 | Der Nutzer würfelt aus, während ein anderes Auswürfeln noch läuft | Der zweite Klick wird ignoriert, solange der erste nicht beantwortet ist; der Knopf zeigt den laufenden Vorgang |
+| 13 | Der Nutzer würfelt aus, während ein anderes Auswürfeln noch läuft | Der zweite Klick wird ignoriert, solange der erste nicht beantwortet ist. **Dass gewürfelt wird, ist an der Karte selbst zu sehen** und nicht nur am Drei-Punkte-Knopf — sonst wirkt der ignorierte Klick wie ein kaputter Knopf (am 2026-10-09 geschärft) |
 | 14 | Ein Segment enthält sehr viele Einträge (zwanzig und mehr) | Funktioniert, nur lang. Keine Obergrenze im MVP — siehe Offene Fragen |
 | 15 | Die Einheit war über „Lockern" entstanden und trägt einen Lockerungs-Hinweis | Der Hinweis bleibt sichtbar und wird vom Bearbeiten nicht gelöscht; er beschreibt, wie der Vorschlag zustande kam |
+| 16 | Eine bereits gespeicherte Einheit aus der Zeit vor dem 2026-10-09 hat eine offene Lücke | Sie bleibt, wie sie ist, und zeigt ihren gelben Hinweis weiter. Beim nächsten Speichern aus dem Bearbeiten-Modus greift die Regel. Kein rückwirkendes Umschreiben |
+| 17 | Im Platz steht eine Variante, und der Nutzer würfelt neu aus | Wie bei jeder Übung: die ganze Übung — Grundübung und alle ihre Varianten — scheidet für diese Einheit aus, gemerkt wird die weggewürfelte Form |
+| 18 | In der Phase ist eine Organisationsform gewählt, und der Nutzer wählt im Dialog bewusst eine Übung mit anderer | Erlaubt, ohne zweite Bestätigung, mit der Begründung an der Zeile — wie bei jedem anderen verfehlten Kriterium |
+| 19 | Eine Phase steht auf „frei lassen" und hat eine Organisationsform aus einer früheren Einstellung | Die Auswahl wird im Generator nur bei Phasen angeboten, die gefüllt werden, und spielt bei „frei lassen" keine Rolle |
+| 20 | Die Arbeitsnotiz einer Übung ist sehr lang | Sie wird im Stundenverlauf vollständig gezeigt. Der Schalter „Arbeitsnotizen anzeigen" ist das Mittel gegen Überlänge, kein Abschneiden |
 
 ## Technical Requirements (optional)
 
@@ -312,10 +514,22 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
   kein Umbau
 - [ ] **Braucht es eine Obergrenze für Einträge je Segment?** Unverändert offen. Nichts im Entwurf
   bricht bei zwanzig Einträgen, es wird nur lang
-- [ ] **Soll der Lückenhinweis das „Lockern" weiter anbieten?** Unverändert offen, im Gebrauch zu
-  beobachten. Der Entwurf stellt „Übung einfügen" **neben** „Lockern", nimmt also keines von
-  beiden weg — das lässt sich ohne Umbau wieder ändern
-- [ ] **BUG-6 (Verwendungszeitpunkt steht auf „generiert")** — bleibt bei `/backend`. Der Editor
+- [x] **Soll der Lückenhinweis das „Lockern" weiter anbieten?** → In der Leseansicht ja, im
+  Bearbeiten-Modus nein (2026-10-09). Dort lädt es die Einheit neu und verwirft die offenen
+  Änderungen ohne Nachfrage; an seine Stelle tritt „Als geplante Lücke stehen lassen"
+- [ ] **Ist mit „Trennstrich unterhalb der Bearbeitungsleiste" die Bedienzeile am Eintrag
+  gemeint?** So ist es am 2026-10-09 verstanden und eingearbeitet (Plandauer, Hoch/Runter, Menü
+  unter jeder Karte). Sollte die Änderungsleiste oben gemeint gewesen sein, ist das
+  Akzeptanzkriterium dazu zu tauschen
+- [ ] **Sind alle Ursachen für das folgenlose Auswürfeln gefunden?** Im Code belegt sind zwei
+  stille Wege (Ladefehler der Kandidatenliste wird nur im Auswahldialog gezeigt; ein Klick
+  während eines laufenden Auswürfelns wird fast unsichtbar ignoriert) und ein dritter, der
+  Änderungen verwirft („Lockern" im Bearbeiten-Modus). Nachgestellt wurde die Beobachtung nicht.
+  `/qa` soll gezielt nach weiteren suchen
+- [ ] **Wo steht eine Übung im Auswahldialog, wenn nur eine ihrer Formen passt?** Folge der
+  Entscheidung, Varianten an der Zeile der Übung aufzuklappen statt als eigene Zeilen zu führen.
+  Für den Nachtrag in `/architecture`
+- [x] **BUG-6 (Verwendungszeitpunkt steht auf „generiert")** — am 2026-10-08 in `/backend` behoben: wird ein Entwurf gespeichert, entstehen die Nachweise neu und tragen den Zeitpunkt des Speicherns. Ursprüngliche Notiz: Der Editor
   baut die Verwendungsnachweise bei jedem Speichern neu auf; ob dabei ein sinnvoller Zeitpunkt
   entsteht, entscheidet sich an der Stelle, die sie schreibt
 - [ ] **Soll die Markierung „noch zu ergänzen" auch von Hand gesetzt werden können?** Neu
@@ -350,6 +564,22 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 | Hoch/Runter statt Ziehen und Ablegen | Auf dem Handy in der Halle treffsicher, mit Tastatur und Screenreader ohne Zusatzarbeit bedienbar, kein weiteres Paket. Bei drei bis fünf Übungen je Segment — dem Normalfall — reicht es. Damit ist auch die offene Frage aus PROJ-6 beantwortet, ob der Zeitverlauf-Baustein PROJ-7 tragen muss: er muss nicht | 2026-10-06 |
 | Kein „als neue Einheit speichern" | Überschneidet sich mit PROJ-17 (Stundenmuster), das für wiederverwendbare Konfigurationen gedacht ist. Zwei Wege zum selben Ziel würden beide halb benutzt | 2026-10-06 |
 | BUG-5 wird hier behoben | Der Platzhalter „Übung gelöscht" ohne Möglichkeit zum Nachbesetzen war von PROJ-6 ausdrücklich hierher verwiesen | 2026-10-06 |
+| **Gespeichert wird nur ohne offene Lücke; jede freie Minute ist gefüllt oder als geplant erklärt.** Hebt „nicht aufgehende Segmente dürfen gespeichert werden" und „die Lücken-Sperre fällt ganz weg" vom 2026-10-06 für freie Minuten auf | Im Browsertest zeigte sich: eine fertige Stunde mit gelbem Warnfeld sieht unfertig aus, und der Übungsleiter kann nicht unterscheiden, ob die Lücke Absicht oder Versäumnis war. Die Sperre von damals war falsch, weil sie keinen Ausweg bot — jetzt gibt es zwei: füllen oder erklären | 2026-10-09 |
+| Die Regel gilt für jede freie Minute, auch Restlücken; Überfüllung sperrt nicht | Vom Nutzer so entschieden. Eine Restlücke von zwei Minuten ist dieselbe Frage wie eine leere Phase, nur kleiner. Ein überzogener Hauptteil dagegen ist eine Planung und kein Loch | 2026-10-09 |
+| Der Speichern-Dialog bietet „Alle als geplant übernehmen und speichern" | Sonst müsste der Nutzer für jede Lücke zurück in den Plan. Die Erklärung bleibt eine bewusste Handlung, kostet aber einen Klick statt fünf. Gilt auch für „Einheit speichern" am frischen Entwurf | 2026-10-09 |
+| Die Erklärung „geplant" gilt für den Stand, an dem sie gegeben wurde | Würde sie am Segment kleben, machte ein späteres Entfernen stillschweigend eine größere Lücke „geplant", die niemand geplant hat (Auslegung beim Einarbeiten, vom Nutzer noch zu bestätigen) | 2026-10-09 |
+| „Lockern" wird im Bearbeiten-Modus nicht mehr angeboten | Es lädt die Einheit neu und verwirft dabei die offenen Änderungen ohne Nachfrage. Im Bearbeiten-Modus füllt oder erklärt der Nutzer die Lücke selbst | 2026-10-09 |
+| Ein Knopf „Übung einfügen" je Segment | Steht der grüne Knopf am Lückenhinweis, ist der breite am Segmentende derselbe Knopf ein zweites Mal | 2026-10-09 |
+| Varianten werden auf der Karte umgeschaltet, nicht im Menü | Der Menüpunkt war gebaut, wurde im Browsertest aber nicht gefunden. Was eine Übung an Varianten hat, gehört zu dem, was man an ihr sieht, nicht in ein Menü dahinter | 2026-10-09 |
+| Material, Organisationsform und Varianten stehen an vier Orten in einem Baustein | Stundenverlauf, Auswahldialog und Übungsordner zeigten bisher je eine andere Auswahl dieser Angaben. Derselbe Platz überall heißt: einmal gelernt, überall gefunden | 2026-10-09 |
+| Im Übungsordner sind Varianten aufklappbar, aber nur zum Ansehen | Dort gibt es keinen Platz, in den eine Variante gesetzt werden könnte. Das Element bleibt dasselbe, damit es überall gleich aussieht | 2026-10-09 |
+| Das Auswürfeln übernimmt Hauptsportart-Gewichtung und Frische-Regel des Generators | Vom Nutzer so entschieden: „Auswürfeln" soll dasselbe bedeuten wie „der Generator hätte auch diese nehmen können". Hebt die Entscheidung vom 2026-10-06 teilweise auf, die Rotation ganz bei PROJ-10 zu lassen — übernommen wird nur, was der Generator heute schon tut | 2026-10-09 |
+| Die Organisationsform wird je Phase im Generator gewählt, nicht im Gruppenprofil | Sie hängt am Abschnitt der Stunde (Aufwärmen frei verteilt, Hauptteil in Kleingruppen), nicht an der Gruppe | 2026-10-09 |
+| Die Organisationsform ist ein weiches Kriterium und wird als Erstes gelockert | Vom Nutzer so entschieden. Anders als Material oder Altersgruppe macht eine andere Organisationsform eine Übung nicht undurchführbar. Als Erstes gelockert, weil sie das jüngste und am wenigsten gepflegte Merkmal ist | 2026-10-09 |
+| Ein Name für beide Notizen: „Arbeitsnotiz", mit einem Erklärtext und einem hellgrünen Feld | Fünf Stellen trugen vier Bezeichnungen. Derselbe Begriff soll dasselbe bedeuten — und im Live-Modus (PROJ-14) wird genau diese Notiz einen besonderen Rang haben | 2026-10-09 |
+| Die Arbeitsnotiz der Übung erscheint in der Leseansicht, abschaltbar über einen Schalter, standardmäßig an | Dafür ist sie da — der Wizard verspricht es am Eingabefeld seit PROJ-3, eingelöst war es nicht. Der Schalter fängt den Fall ab, dass ein langer Plan mit vielen Notizen unübersichtlich wird | 2026-10-09 |
+| Im Bearbeiten-Modus bleiben die Arbeitsnotizen der Übungen weg | Dort geht es um den Aufbau des Plans; die Karten tragen schon die Bedienzeile. Geändert wird die Notiz an der Übung | 2026-10-09 |
+| Die Punkte zu PROJ-3 und PROJ-6 werden in dieser Spec geführt | Vom Nutzer so entschieden, wie schon bei „noch zu ergänzen": ein Durchgang Architektur, Bau und QA statt dreier. Preis: PROJ-7 wird größer und geht später in die QA | 2026-10-09 |
 
 ### Technical Decisions
 <!-- Added by /architecture -->
@@ -381,6 +611,13 @@ Bearbeiten-Modus. Sie existierte, weil der Nutzer keine Handhabe hatte; jetzt ha
 ## Tech Design (Solution Architect)
 
 **Erstellt:** 2026-10-07
+
+> **Nachtrag ausstehend (Stand 2026-10-09).** Dieser Entwurf beschreibt den Stand vor der
+> Überarbeitung vom 2026-10-09. Er kennt weder die geplante Lücke noch die Organisationsform am
+> Segment, die Gewichtung beim Auswürfeln, die Arbeitsnotiz im Stundenverlauf oder das Umschalten
+> der Variante auf der Karte. Wo er dem Funktionsumfang oben widerspricht, gilt der
+> Funktionsumfang. Die sechs offenen Punkte stehen unter „Was die Überarbeitung vom 2026-10-09
+> noch braucht".
 
 ### Die Grundidee in drei Sätzen
 
@@ -738,6 +975,129 @@ Speichern einer Übung.
 betreten und verlassen, Entfernen, Umsortieren, Plandauer samt Mindestdauer-Korrektur,
 Segment-Notiz, Füllstandszeile, Rückgängig, Verwerfen, die Nachfrage beim Verlassen und beim
 Schließen des Tabs, und der Wegfall der Lücken-Sperre.
+
+## Implementation Notes (Backend)
+
+**Stand:** 2026-10-08 · Typprüfung, Lint und Produktionsbuild sauber · **375 Unit-Tests grün**
+(342 vorher plus 33 neue)
+
+**Migration am 2026-10-08 angewendet und am lebenden System nachgewiesen** — über den SQL-Editor
+des Dashboards, im Register eingetragen (14 zu 14). Der Nachweis lief als ein Block in einer
+zurückgerollten Transaktion, unter der Rolle `authenticated` und damit mit den Richtlinien; danach
+geprüft, dass nichts zurückgeblieben ist. Siehe „Nachweis am lebenden System" unten.
+
+**Reihenfolge beim Ausrollen: erst die Migration, dann der Code.** Der Code liest die neue Spalte
+`needs_completion` schon beim Laden der Übungen für Generator und Stundenansicht. Läuft er gegen
+eine Datenbank ohne die Spalte, schlägt diese Abfrage fehl — der Generator meldet dann Lücken, und
+gespeicherte Einheiten zeigen Platzhalter statt Übungen. Die Migration ist rein additiv und kann
+gefahrlos vor dem Code angewendet werden. Das gilt auch für die lokale Entwicklung.
+
+### Datenbank
+
+Migration `20261008090000_unit_editor_save_and_needs_completion.sql`:
+
+| Was | Einzelheiten |
+|---|---|
+| `exercises.needs_completion` | Wahrheitswert, Standard `false` — alle bestehenden Übungen gelten als vollständig, ohne dass eine Zeile beschrieben wird. Dazu ein Teilindex nur über die markierten Zeilen |
+| Funktion `save_unit_plan` | Legt den Plan in einem Zug ab. Gibt `ok` oder `stale` zurück, alles andere ist eine Ausnahme und rollt zurück. Läuft mit den Rechten des Aufrufers — die Richtlinien aus BUG-4 bleiben darunter wirksam. Aufrufbar nur für angemeldete Nutzer |
+
+Keine Richtlinie wurde angefasst, keine Tabelle ist dazugekommen.
+
+### Die drei Server-Stellen
+
+Alle in `src/lib/actions/units.ts`, von der Seite `/units/[id]` als `editorActions` mitgegeben:
+
+| Vertrag | Server Action | Was sie tut |
+|---|---|---|
+| `loadPool` | `getEditorPool(segmentId)` | Eigentum über die Einheit prüfen, dann **alle** Übungen des Nutzers samt Varianten liefern, jede mit den Kriterien, an denen sie in diesem Segment scheitert. Wirft bei einem Lesefehler, statt eine leere Liste zu liefern — sonst sähe ein Fehler aus wie „du hast noch keine Übungen" |
+| `savePlan` | `saveUnitPlan(unitId, draft, options)` | Arbeitsfassung prüfen (Zod), dann die Datenbank-Funktion rufen. Anzeigedaten und weggewürfelte Kandidaten fallen bei der Prüfung weg |
+| `quickCreate` | `quickCreateExercise(segmentId, input)` | Namensabgleich über alle Übungen des Nutzers, sonst sofort anlegen — Sportarten, Phase und Schwierigkeit aus dem Segment, Altersgruppen aus der Gruppe, Markierung gesetzt |
+
+Die Kriterienprüfung je Kandidat ist `failedCriteriaOf` in `generator.ts` — sie befragt dieselbe
+Kriterienliste, mit der der Generator den Pool baut. Ein Test hält fest, dass beide gleich
+urteilen: was der Generator einplant, hat kein verfehltes Kriterium.
+
+### Erweiterung an PROJ-3
+
+- `updateExercise` löscht die Markierung — die eine Stelle, an der sie verschwindet
+- `getExercises` kennt den Filter „nur noch zu ergänzende"; in der Werkzeugleiste ein Schalter im
+  Filterbereich samt Chip
+- Die Markierung steht in Listen- und Kartenansicht und auf der Detailseite, dort mit dem Satz, wie
+  sie wieder verschwindet
+
+### Entscheidungen, die beim Bauen fielen
+
+| Entscheidung | Begründung |
+|---|---|
+| Die Kandidatenliste enthält **alle** Übungen, nicht nur die der Phase; „Phase" ist ein eigenes verfehltes Kriterium | Das Tech Design ließ offen, was „die Kandidaten eines Segments" umfasst. Nur mit allen stimmt der Leerzustand „du hast noch keine Übungen", kann der Übungsleiter eine Aufwärmübung bewusst in den Hauptteil setzen, und findet „Variante umschalten" die Geschwister einer selbst gewählten Übung. Preis: bei 100 Übungen wandern 100 schlanke Einträge in den Browser statt einer Teilmenge |
+| Nur **umgebaute** Segmente werden ersetzt | Ein Segment, dessen Folge aus Übung, Variante und Plandauer gleich geblieben ist, bleibt unangetastet und behält seine Lückenbegründung. Eine reine Notizänderung verwirft sie nicht — die Begründung stimmt dann ja noch |
+| Eine nicht sichtbare Übung wird zum **Platzhalter**, das Speichern scheitert nicht | Edge Case 3 verlangt das für eine anderswo gelöschte Übung. Siehe die Abweichung unten |
+| Verwendungsnachweise: unveränderte Übungen **behalten** ihren Zeitpunkt | Vollständiges Neuaufbauen bei jedem Speichern würde den Zeitpunkt aller Übungen auf den letzten Handgriff ziehen. Entfernte fallen weg, neue kommen dazu |
+| Wird ein Entwurf gespeichert, entstehen alle Nachweise **neu** | Damit steht der Zeitpunkt auf „gespeichert" und nicht auf „generiert" — **BUG-6**. Gilt für beide Wege: `save_unit_plan` und das bestehende `saveUnit` |
+| Die Meldung beim erschöpften Vorrat rechnet der Browser aus der geladenen Liste | Vorher stand dort die Begründung, die der Generator beim Erzeugen hinterlegt hatte — sie beschreibt den Stand von damals, nicht den nach drei Würfen. Jetzt: jede Ursache einzeln mit Anzahl, dazu „steht schon in dieser Einheit" und „hier schon weggewürfelt" (`describeExhaustion`) |
+| Kein Rate Limiting | Alle drei Stellen verlangen eine Anmeldung und schreiben nur ins eigene Konto. Laut Checkliste für das MVP optional |
+
+### Abweichungen von der Spec
+
+- **„Fremde Übung wird abgewiesen" ist nur halb erfüllt.** Unter den Leserichtlinien kann die
+  Datenbank-Funktion eine fremde Übung nicht von einer gelöschten unterscheiden — beide sind für
+  den Aufrufer unsichtbar. Beide werden als Platzhalter abgelegt. Ein fremder Verweis wird also
+  **in keinem Fall geschrieben**, das Speichern als Ganzes meldet aber Erfolg statt einer Abweisung.
+  Unterscheiden ließe sich das nur mit einer Funktion, die die Richtlinien umgeht; das wäre die
+  schlechtere Wahl. Über die Oberfläche ist der Fall nicht erreichbar, nur über einen von Hand
+  gebauten Aufruf
+- **Edge Case 10 (gelöschte Variante)** — der Eintrag fällt auf die **Hauptübung** zurück, statt
+  zum Platzhalter zu werden. So verhält sich die Stundenansicht seit PROJ-6, und die Datenbank
+  setzt beim Löschen einer Variante nur den Variantenverweis zurück. Der Editor folgt dem
+- **Schnell-Anlegen verlangt eine Beschreibung.** Die Übungstabelle lässt keine leere zu. Das
+  Formular prüft im Browser nur den Namen; fehlt die Beschreibung, kommt die Meldung vom Server und
+  die Eingaben bleiben stehen
+
+### Nebenbei behoben
+
+- **BUG-16** — `saveUnit` und `renameUnit` melden jetzt einen Fehler, wenn das Update keine Zeile
+  trifft. **Nicht** angefasst: `generateUnit` löscht Entwürfe weiter kontoweit. Das einzuschränken
+  hieße, die Regel „höchstens ein Entwurf je Nutzer" zu ändern — eine Produktentscheidung
+- **Ein Entwurf verlor beim Speichern aus dem Bearbeiten-Modus seine Änderungen.** Der
+  Namensdialog rief das alte `saveUnit` und sicherte den Entwurf ohne die Arbeitsfassung. Jetzt
+  gehen Name und Änderungen in einem Zug durch `savePlan`
+- **„Neu laden" im Dialog „Anderswo geändert"** ließ den Dialog offen stehen
+- **Leerzustand der Übungsübersicht** — die Prüfung „ist ein Filter aktiv?" hätte den
+  ausgeschalteten neuen Schalter als aktiven Filter gezählt
+
+### Nachweis am lebenden System (2026-10-08)
+
+Vorab: Spalte, Teilindex und Funktion vorhanden; die Funktion läuft mit den Rechten des Aufrufers,
+mit festem `search_path`, ausführbar für `authenticated`, nicht für `anon`.
+
+| Fall | Ergebnis |
+|---|---|
+| Veralteter Änderungsstempel | `stale`, nichts geschrieben, Stempel unverändert |
+| Speichern ohne inhaltliche Änderung | `ok`, Einträge behalten ihre Kennungen, „manuell bearbeitet" bleibt aus, Stempel wird nachgezogen, Nachweise behalten ihren Zeitpunkt |
+| Segment leeren, Übung tauschen, Plandauer ändern, Notiz setzen | `ok`, alles geschrieben, Lückenbegründung der umgebauten Segmente verworfen, „manuell bearbeitet" gesetzt |
+| Verwendungsnachweise danach | entfernte Übung weg, neue da, behaltene mit altem Zeitpunkt, Anzahl gleich Anzahl der Übungen im Plan |
+| Unbekannte Übung | als Platzhalter abgelegt, Speichern gelingt (Edge Case 3) |
+| Variante einer anderen Übung | Variantenverweis verworfen, Hauptübung bleibt |
+| Segment fehlt / fremde Segmentkennung / doppelte Segmentkennung | jeweils `segments_changed`, nichts geschrieben |
+| Gültige Änderung im einen Segment, Plandauer 0 im anderen | abgewiesen (`23514`), **nichts halb geschrieben** |
+| `force` bei veraltetem Stempel | `ok` |
+| Leerer Name | `invalid_name` |
+| Entwurf wird gespeichert | `saved` gesetzt, Name getrimmt übernommen, **alle** Nachweise tragen den Zeitpunkt des Speicherns (BUG-6) |
+| Übung eines anderen Nutzers | `ok`, fremder Verweis **nicht** geschrieben, Platzhalter an seiner Stelle, kein fremder Nachweis — die oben beschriebene Abweichung, so bestätigt |
+| Einheit eines anderen Nutzers | `unit_not_found` |
+| Aufruf ohne Nutzer | `not_authenticated` |
+
+`get_advisors` (Sicherheit) meldet danach weiterhin nur den erwarteten Hinweis zum Schutz gegen
+geleakte Passwörter — die neue Funktion erzeugt keinen.
+
+**Was dieser Nachweis nicht abdeckt:** die Server Actions und die Oberfläche selbst. Das
+Zusammenspiel Browser → Server Action → Funktion ist noch nicht durchgespielt.
+
+### Was noch aussteht
+
+1. **Im Browser durchspielen** — Auswürfeln, Auswahldialog, Variante umschalten, Schnell-Anlegen,
+   Speichern einer gespeicherten Einheit und eines Entwurfs, zwei Tabs
+2. E2E-Tests für den Editor — gehören zu `/qa`
 
 ## QA Test Results
 _To be added by /qa_
