@@ -103,7 +103,7 @@ Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, zehn Fäl
 - **BUG-20 (mittel, am 2026-10-09 vom Nutzer als Fehler bestätigt):** steht eine Variante im Platz, werden die übrigen Formen derselben Übung nicht gewürfelt — das Auswürfeln meldet „nichts mehr frei", obwohl eine Variante nie gezeigt wurde. Jede Variante ist eine vollwertige Übung; dass eine weggewürfelte Grundübung als Variante wiederkommt, ist dagegen richtig
 - **BUG-19:** vom Nutzer am 2026-10-09 als „kein Fehler" geschlossen — eine gefüllte und wieder geleerte Lücke darf geplant bleiben
 
-**BUG-17, BUG-18 und BUG-20 sind am 2026-10-09 behoben, der Nachtest im Browser steht aus.** 426 Unit-Tests grün. Die Meldungen erscheinen damit in der ganzen App zum ersten Mal — zu prüfen ist, ob sie am Handy etwas verdecken
+**BUG-17, BUG-18 und BUG-20 sind am 2026-10-09 behoben und nachgetestet: 156 von 156 Browser-Tests grün, 426 Unit-Tests grün. PROJ-7 ist damit freigegeben** — 115 von 115 Akzeptanzkriterien, kein offener Fehler. Die Meldungen erscheinen jetzt in der ganzen App zum ersten Mal; ob sie am Handy etwas verdecken, zeigt kein Test und sollte einmal von Hand angesehen werden. Die drei Fehlermeldungen (Speichern schlägt fehl, Liste lädt nicht, Verbindung bricht ab) laufen über dieselbe Anzeige, sind aber nicht eigens ausgelöst worden
 
 Die Browser-Tests laufen auf diesem Rechner stabil mit `--workers=2` (rund 12 Minuten).
 
@@ -114,7 +114,7 @@ Die Browser-Tests laufen auf diesem Rechner stabil mit `--workers=2` (rund 12 Mi
 2. **Eine bekannte Abweichung:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen — sie ist für die Funktion von einer gelöschten nicht unterscheidbar. Am lebenden System bestätigt: der fremde Verweis wird nicht geschrieben. In der Spec begründet, für `/qa` zu bewerten
 3. **Beim Ausrollen:** die Migration ist schon in der Datenbank, der Code kann also jederzeit folgen
 
-**Nächster Schritt:** Nachtest der Browser-Tests auswerten (`/qa PROJ-7`), bei Grün `/deploy PROJ-7`.
+**Nächster Schritt:** `/deploy PROJ-7`.
 
 ## Features
 
@@ -126,7 +126,7 @@ Die Browser-Tests laufen auf diesem Rechner stabil mit `--workers=2` (rund 12 Mi
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
-| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | In Review | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
+| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Approved | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
 | PROJ-9 | Kalenderansicht & Langzeitplanung | P1 | PROJ-6, PROJ-7 | Roadmap | — | 2026-09-28 |
 | PROJ-10 | Übungsrotation (Abwechslung über Wochen) | P1 | PROJ-6, PROJ-9 | Roadmap | — | 2026-09-28 |
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |

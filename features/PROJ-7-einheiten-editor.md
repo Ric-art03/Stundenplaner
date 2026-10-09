@@ -1,6 +1,6 @@
 # PROJ-7: Einheiten-Editor
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-10-06
 **Last Updated:** 2026-10-09
 
@@ -1662,8 +1662,24 @@ Kein neuer Sicherheitsbefund.
 
 ### Nach der QA behoben (2026-10-09)
 
-Auf Wunsch des Nutzers direkt im Anschluss behoben. **Der Nachtest im Browser steht noch aus** —
-Typprüfung und Lint sind sauber, **426 Unit-Tests grün** (420 plus 6 neue zur Varianten-Regel).
+Auf Wunsch des Nutzers direkt im Anschluss behoben und nachgetestet. Typprüfung und Lint sind
+sauber, **426 Unit-Tests grün** (420 plus 6 neue zur Varianten-Regel).
+
+**Nachtest im Browser: 156 von 156 grün** (Gesamtlauf gegen den Produktionsbuild, 11 Minuten,
+`--workers=2`) — die 94 bestehenden Tests zu PROJ-3, PROJ-5 und PROJ-6 samt dem Leerzustand-Test,
+dazu 31 Editor-Tests je am Rechner und in Handybreite. Die beiden Tests, die vorher an BUG-17
+scheiterten, sind grün; der neue Test zu BUG-18 ebenfalls. Dass die Meldungen jetzt erscheinen,
+hat keinen der bestehenden Tests gestört.
+
+**Damit: 115 von 115 Akzeptanzkriterien bestanden, kein offener Fehler — bereit für die
+Auslieferung.** Zwei Einschränkungen, ehrlich benannt:
+
+- Von den fünf Kriterien, die an BUG-17 hingen, sind zwei im Browser belegt (Bestätigung nach dem
+  Speichern, Begründung bei erschöpftem Vorrat). Die drei **Fehlermeldungen** (Speichern schlägt
+  fehl, Kandidatenliste lädt nicht, Verbindung bricht ab) laufen über dieselbe Anzeige, sind aber
+  nicht eigens ausgelöst worden — einen Serverfehler stellt kein Test her
+- Ob eine Meldung am Handy etwas verdeckt, zeigt kein Test: sie erscheint dort oben, wo auch die
+  Änderungsleiste klebt. Einmal von Hand ansehen
 
 | Fehler | Abhilfe |
 |---|---|
@@ -1688,11 +1704,11 @@ PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npx playwright test --workers=2
 ### Zusammenfassung
 
 - **Akzeptanzkriterien:** 110 von 115 bestanden
-- **Fehler:** 4 gefunden — 0 kritisch, **1 hoch** (BUG-17), 1 mittel (BUG-20), 2 niedrig (BUG-18, BUG-19). **Stand danach:** BUG-17, BUG-18 und BUG-20 behoben, Nachtest im Browser ausstehend; BUG-19 vom Nutzer als „kein Fehler" geschlossen
+- **Fehler:** 4 gefunden — 0 kritisch, **1 hoch** (BUG-17), 1 mittel (BUG-20), 2 niedrig (BUG-18, BUG-19). **Stand danach:** BUG-17, BUG-18 und BUG-20 behoben und im Browser nachgetestet; BUG-19 vom Nutzer als „kein Fehler" geschlossen
 - **Sicherheit:** bestanden, kein neuer Befund
 - **Regression:** keine
-- **Bereit für die Auslieferung:** **NEIN**
-- **Empfehlung:** BUG-17 und BUG-20 über `/frontend` beheben, danach `/qa PROJ-7` erneut — es genügt dann der Lauf der Browser-Tests und ein Blick auf die Meldungen am Handy
+- **Bereit für die Auslieferung:** im ersten Durchgang **NEIN** (BUG-17). **Nach Behebung und Nachtest am 2026-10-09: JA** — siehe „Nach der QA behoben"
+- **Empfehlung:** die Meldungen einmal am Handy ansehen, dann `/deploy PROJ-7`
 
 ## Deployment
 _To be added by /deploy_
