@@ -107,12 +107,20 @@ Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, zehn Fäl
 
 Die Browser-Tests laufen auf diesem Rechner stabil mit `--workers=2` (rund 12 Minuten).
 
-### Was PROJ-7 noch fehlt
+### Was vor und bei der Auslieferung von PROJ-7 zu tun ist
 
-0. **Die neuen Wege im Browser durchspielen** — Lücke erklären, speichern, neu laden; Phase mit Organisationsform generieren und über „Zurück zum Generator" wiederfinden; „Lockern" an einer solchen Phase
-1. **Im Browser durchspielen.** Nachgewiesen ist die Datenbank-Funktion, nicht das Zusammenspiel Browser → Server Action → Funktion: Auswürfeln, Auswahldialog, Variante umschalten, Schnell-Anlegen, Speichern von gespeicherter Einheit und Entwurf, zwei Tabs
-2. **Eine bekannte Abweichung:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen — sie ist für die Funktion von einer gelöschten nicht unterscheidbar. Am lebenden System bestätigt: der fremde Verweis wird nicht geschrieben. In der Spec begründet, für `/qa` zu bewerten
-3. **Beim Ausrollen:** die Migration ist schon in der Datenbank, der Code kann also jederzeit folgen
+Geprüft am 2026-10-09: Build, Lint, 426 Unit-Tests und 156 Browser-Tests grün; Register 15 zu 15
+und in der Datenbank angewendet; keine Tabelle ohne Zugriffsschutz; keine Geheimnisse im
+Repository; Testkonto aufgeräumt; keine neue Umgebungsvariable.
+
+1. ~~**Von Hand ansehen:** eine Meldung am Handy~~ — am 2026-10-10 vom Nutzer angesehen und für gut befunden. Dabei gefunden und behoben: die **doppelte Nachfrage beim Verlassen** (BUG-21 — erst die App, dann noch einmal der Browser), das Signalrot der Meldung „Keine weitere passende Übung" (jetzt im Ton des Lückenhinweises) und das am Handy versteckte Kreuz zum Schließen
+2. **Hochladen:** die Commits seit der Auslieferung von PROJ-6 liegen nur lokal. Vercel liefert beim Hochladen von `main` aus — das Hochladen **ist** die Auslieferung und gehört zu `/deploy`
+3. **Die Migration ist schon in der Datenbank**, der Code kann jederzeit folgen. Die ausgelieferte Fassung (PROJ-6) benutzt weder die neuen Felder noch die Speicher-Funktion und läuft damit unverändert weiter
+4. **Nicht prüfbar auf diesem Rechner:** Firefox und echtes Safari
+6. **„Lockern" an einer Phase mit Organisationsform** hat der Nutzer am 2026-10-09 von Hand im Browser durchgespielt — läuft. Einen Browser-Test dazu gibt es nicht, nur die Logik-Tests
+5. **Bekannte Abweichung, bewertet und hingenommen:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen; der fremde Verweis wird nie geschrieben
+
+**Für später, kein Hindernis:** Supabase meldet zur Leistung 52 Richtlinien, die den angemeldeten Nutzer je Zeile neu auswerten, zwei Fremdschlüssel ohne Index und neun ungenutzte Indizes. Alles aus der Zeit vor PROJ-7, bei der heutigen Datenmenge ohne Wirkung — vor der Marktreife in einem Zug aufzuräumen.
 
 **Nächster Schritt:** `/deploy PROJ-7`.
 

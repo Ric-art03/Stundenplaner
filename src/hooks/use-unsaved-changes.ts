@@ -68,6 +68,10 @@ export function useUnsavedChanges(
       event.preventDefault()
       event.stopPropagation()
       handler.current(() => {
+        // Der Nutzer hat in der Nachfrage der App schon entschieden. Ohne das
+        // fragte der Browser gleich noch einmal („Website verlassen?"): der
+        // Seitenwechsel beginnt, bevor React die Warnung abgemeldet hat.
+        window.removeEventListener('beforeunload', warnBeforeUnload)
         window.location.href = anchor.href
       })
     }

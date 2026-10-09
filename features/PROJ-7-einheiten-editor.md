@@ -1691,6 +1691,22 @@ Auslieferung.** Zwei Einschränkungen, ehrlich benannt:
 Die Browser-Tests sind an die neue Varianten-Regel angepasst: aus einem Platz mit vier ziehbaren
 Formen sind es jetzt immer genau vier Würfe.
 
+### Nach der Durchsicht der Meldungen durch den Nutzer (2026-10-10)
+
+Der Nutzer hat die Meldungen in Handybreite angesehen: sie verdecken oben kurz einen Bereich,
+verschwinden nach einigen Sekunden und lassen sich wegwischen — **für ihn in Ordnung**. Dabei drei
+Dinge gefunden und behoben; vom Nutzer im Browser gegengeprüft:
+
+| Befund | Abhilfe |
+|---|---|
+| **BUG-21 (mittel): doppelte Nachfrage beim Verlassen.** Nach „Verwerfen" in der Nachfrage der App fragte der Browser noch einmal („Website verlassen?"). Der Seitenwechsel begann, bevor die Warnung des Browsers abgemeldet war. Betraf seit der Behebung von BUG-18 auch „Speichern" | `use-unsaved-changes.ts` meldet die Warnung ab, bevor es zur angeklickten Seite geht. Für Tab schließen, Neuladen und die Zurück-Taste bleibt sie |
+| „Keine weitere passende Übung" erschien in Signalrot | Ein Hinweis, kein Fehler — jetzt im Ton des Lückenhinweises. Echte Fehlermeldungen bleiben rot |
+| Das Kreuz zum Schließen einer Meldung war am Handy erst nach dem Festhalten zu sehen | Am Handy immer sichtbar; am Rechner wie bisher beim Überfahren |
+
+**Warum die Browser-Tests BUG-21 nicht gefunden haben:** Playwright beantwortet die
+Verlassen-Warnung des Browsers von selbst. Solche Nachfragen des Browsers sieht nur, wer von Hand
+klickt.
+
 ### Hinweis zur Testumgebung
 
 Mit vier gleichzeitigen Arbeitern scheitern auf diesem Rechner einzelne Tests an Zeitfenstern und

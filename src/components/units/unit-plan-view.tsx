@@ -272,10 +272,13 @@ export function UnitPlanView({
       if (!drawn) {
         // Jede Ursache einzeln und mit Anzahl — aus dem Stand **jetzt**, nicht
         // aus der Begründung, die der Generator beim Erzeugen hinterlegt hat.
+        // Ein Hinweis, kein Fehler: es ist nichts schiefgegangen, der Vorrat
+        // ist nur aufgebraucht. Deshalb im Ton des Lückenhinweises und nicht
+        // im Signalrot der Fehlermeldungen.
         toast({
-          variant: 'destructive',
           title: 'Keine weitere passende Übung',
           description: describeExhaustion(pool, exclusions, segment.name),
+          className: 'border-amber-500/40 bg-amber-50 text-foreground dark:bg-amber-950',
         })
         return
       }

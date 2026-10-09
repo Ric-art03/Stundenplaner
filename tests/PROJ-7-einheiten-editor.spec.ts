@@ -862,6 +862,26 @@ test.describe('PROJ-7 — Übungsordner und Generator', () => {
     await expect(page.getByText('Arbeitsnotizen', { exact: true })).toHaveCount(0)
   })
 
+  test('AC: über „Zurück zum Generator" bleibt die Organisationsform der Phase erhalten', async ({
+    page,
+  }) => {
+    await open(page, [
+      {
+        minutes: 15,
+        organizationForms: ['Stationsbetrieb'],
+        items: [{ exerciseId: fx.exercises.alpha, minutes: 5 }],
+        plannedGapMinutes: 10,
+      },
+    ])
+    await page.getByRole('link', { name: /Zurück zum Generator/ }).click()
+    await expect(page.getByRole('heading', { name: 'Einheit generieren' })).toBeVisible()
+
+    // Die Einstellungen der Phase aufklappen — dort steht die Auswahl.
+    await page.getByRole('button', { name: new RegExp(fx.phase) }).first().click()
+    await expect(page.getByText('Organisationsform(en)').first()).toBeVisible()
+    await expect(page.getByText('Stationsbetrieb').first()).toBeVisible()
+  })
+
   test('AC: im Generator lässt sich je Phase eine Organisationsform wählen, und die Arbeitsnotiz trägt ihren Erklärtext', async ({
     page,
   }) => {
