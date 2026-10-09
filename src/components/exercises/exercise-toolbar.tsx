@@ -20,6 +20,8 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { MultiSelect } from './multi-select'
 import {
@@ -75,6 +77,7 @@ export function ExerciseToolbar({
     for (const m of filters.materials) chips.push({ label: m, key: 'materials', value: m })
     if (filters.participantsMin != null) chips.push({ label: `Min. ${filters.participantsMin} TN`, key: 'participantsMin' })
     if (filters.participantsMax != null) chips.push({ label: `Max. ${filters.participantsMax} TN`, key: 'participantsMax' })
+    if (filters.needsCompletion) chips.push({ label: 'Noch zu ergänzen', key: 'needsCompletion' })
     return chips
   }, [filters])
 
@@ -93,6 +96,8 @@ export function ExerciseToolbar({
       onFiltersChange({ ...filters, participantsMin: null })
     } else if (key === 'participantsMax') {
       onFiltersChange({ ...filters, participantsMax: null })
+    } else if (key === 'needsCompletion') {
+      onFiltersChange({ ...filters, needsCompletion: false })
     }
   }
 
@@ -138,6 +143,24 @@ export function ExerciseToolbar({
                 </SheetTitle>
               </SheetHeader>
               <div className="space-y-6 mt-6">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="filter-noch-zu-ergaenzen" className="text-sm font-medium">
+                      Nur noch zu ergänzende
+                    </Label>
+                    <Switch
+                      id="filter-noch-zu-ergaenzen"
+                      checked={filters.needsCompletion}
+                      onCheckedChange={(checked) => updateFilter('needsCompletion', checked)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Übungen, die du beim Bearbeiten einer Einheit schnell angelegt hast.
+                    Die Markierung verschwindet, sobald du die Übung bearbeitest und
+                    speicherst.
+                  </p>
+                </div>
+                <Separator />
                 <FilterSection label="Sportart">
                   <MultiSelect
                     options={sportsOptions}

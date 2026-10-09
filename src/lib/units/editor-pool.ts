@@ -1,6 +1,16 @@
-import { candidateKey, type Candidate } from './candidates'
-import type { GapCriterion } from './generator'
+import {
+  buildCandidates,
+  candidateKey,
+  type Candidate,
+  type CandidateSource,
+} from './candidates'
+import {
+  failedCriteriaOf,
+  type CandidateCriterion,
+  type GeneratorGroup,
+} from './generator'
 import type { DrawExclusions, DraftPlacement } from './draft'
+import type { SegmentConfig } from '@/lib/types/unit'
 
 /**
  * Die Kandidatenliste eines Segments, wie der Editor sie braucht — die
@@ -24,7 +34,7 @@ export interface EditorCandidate extends Candidate {
    * Kriterienliste, die der Generator benutzt — der Browser bekommt das
    * Ergebnis, nicht die Regeln.
    */
-  failedCriteria: GapCriterion[]
+  failedCriteria: CandidateCriterion[]
   /** Markierung „noch zu ergänzen" aus dem Schnell-Anlegen. */
   needsCompletion: boolean
 }
@@ -34,7 +44,8 @@ export interface EditorCandidate extends Candidate {
  * Bewusst andere Texte als im Lückenhinweis: dort stehen sie in einem Satz
  * („erfüllt nicht das Material in deiner Halle"), hier als Merkmal an einer
  * Zeile. Dieselben Wörter würden an einer der beiden Stellen falsch klingen. */
-export const CRITERION_LABELS: Record<GapCriterion, string> = {
+export const CRITERION_LABELS: Record<CandidateCriterion, string> = {
+  phase: 'Phase',
   age: 'Altersgruppe',
   material: 'Material',
   participants: 'Teilnehmerzahl',
@@ -156,4 +167,109 @@ export function splitForPicker(
     fitting: found.filter(passes),
     others: found.filter((candidate) => !passes(candidate)),
   }
+}
+
+// ---- Aufbau auf dem Server ----
+
+/** Was der Editor über den Generator-Zuschnitt hinaus von einer Übung braucht. */
+export interface EditorSource extends CandidateSource {
+  musicRequired: boolean
+  musicLink: string | null
+  needsCompletion: boolean
+}
+
+/**
+ * Die Kandidatenliste eines Segments: **alle** Übungen des Nutzers samt
+ * Varianten, jede mit der Auskunft, woran sie in diesem Segment scheitert.
+ *
+ * Alle und nicht nur die passenden, weil der Übungsleiter im Auswahldialog das
+ * letzte Wort hat — und weil „Variante umschalten" die Geschwister auch einer
+ * Übung finden muss, die selbst gewählt wurde und nicht zum Segment passt.
+ *
+ * Läuft auf dem Server. Die Regeln stehen im Generator; hier werden sie nur
+ * befragt.
+ */
+export function buildEditorPool(
+  sources: EditorSource[],
+  segment: SegmentConfig,
+  group: GeneratorGroup
+): EditorCandidate[] {
+  const bySource = new Map(sources.map((source) => [source.id, source]))
+
+  return buildCandidates(sources).flatMap((candidate) => {
+    const source = bySource.get(candidate.exerciseId)
+    if (!source) return []
+
+    return [
+      {
+        ...candidate,
+        musicRequired: source.musicRequired,
+        musicLink: source.musicLink,
+        variantCount: source.variants.length,
+        failedCriteria: failedCriteriaOf(candidate, segment, group),
+        needsCompletion: source.needsCompletion,
+      },
+    ]
+  })
+}
+
+// ---- Wenn der Vorrat erschöpft ist ----
+
+function countOf(count: number, one: string, many: string): string {
+  return count === 1 ? one : many.replace('{n}', String(count))
+}
+
+/**
+ * Warum an diesem Platz nichts mehr zu würfeln ist — **jede** Ursache einzeln
+ * und mit Anzahl, nicht nur die erste. Der Nutzer soll sehen, wo es überall
+ * hängt, damit er gezielt nachbessern kann.
+ *
+ * Gezählt wird wie im Lückenhinweis des Generators: die Übungen mit passender
+ * Phase sind die Grundmenge, jedes Kriterium zählt unabhängig. Eine Übung, die
+ * an zwei Kriterien scheitert, taucht deshalb zweimal auf.
+ */
+export function describeExhaustion(
+  pool: EditorCandidate[],
+  exclusions: DrawExclusions,
+  segmentName: string
+): string {
+  const phase = `„${segmentName}"`
+
+  if (pool.length === 0) {
+    return 'Du hast noch keine Übungen angelegt, aus denen gewürfelt werden könnte.'
+  }
+
+  const inPhase = pool.filter((candidate) => !candidate.failedCriteria.includes('phase'))
+  if (inPhase.length === 0) {
+    return countOf(
+      pool.length,
+      `Deine einzige Übung ist der Phase ${phase} nicht zugeordnet.`,
+      `Keine deiner {n} Übungen ist der Phase ${phase} zugeordnet.`
+    )
+  }
+
+  const causes: string[] = []
+
+  for (const criterion of ['sport', 'difficulty', 'material', 'age', 'participants'] as const) {
+    const count = inPhase.filter((candidate) => candidate.failedCriteria.includes(criterion)).length
+    if (count > 0) causes.push(`${count} × ${CRITERION_LABELS[criterion]}`)
+  }
+
+  const fitting = inPhase.filter(passes)
+  const inUnit = fitting.filter((candidate) => exclusions.exerciseIds.has(candidate.exerciseId))
+  const rolledAway = fitting.filter(
+    (candidate) =>
+      !exclusions.exerciseIds.has(candidate.exerciseId) && exclusions.keys.has(keyOf(candidate))
+  )
+
+  if (inUnit.length > 0) causes.push(`${inUnit.length} × steht schon in dieser Einheit`)
+  if (rolledAway.length > 0) causes.push(`${rolledAway.length} × hier schon weggewürfelt`)
+
+  const head = countOf(
+    inPhase.length,
+    `Eine Übung trägt die Phase ${phase}, ist aber nicht mehr frei.`,
+    `{n} Übungen tragen die Phase ${phase}, aber keine ist mehr frei.`
+  )
+
+  return causes.length > 0 ? `${head} Woran es hängt: ${causes.join(', ')}.` : head
 }

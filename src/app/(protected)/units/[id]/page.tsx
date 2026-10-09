@@ -1,5 +1,10 @@
 import { notFound } from 'next/navigation'
-import { getUnit } from '@/lib/actions/units'
+import {
+  getEditorPool,
+  getUnit,
+  quickCreateExercise,
+  saveUnitPlan,
+} from '@/lib/actions/units'
 import { getGroup } from '@/lib/actions/groups'
 import { UnitPlanView } from '@/components/units/unit-plan-view'
 
@@ -19,7 +24,18 @@ export default async function UnitPage({ params }: UnitPageProps) {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <UnitPlanView unit={unit} singleSportGroup={group?.sports.length === 1} />
+      <UnitPlanView
+        unit={unit}
+        singleSportGroup={group?.sports.length === 1}
+        groupAgeGroups={group?.ageGroups ?? []}
+        editorActions={{
+          loadPool: getEditorPool,
+          // Die Einheit steht fest, sobald die Seite geladen ist — der Editor
+          // schickt nur noch die Arbeitsfassung.
+          savePlan: saveUnitPlan.bind(null, unit.id),
+          quickCreate: quickCreateExercise,
+        }}
+      />
     </div>
   )
 }

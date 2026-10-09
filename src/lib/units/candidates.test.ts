@@ -17,6 +17,7 @@ function exercise(overrides: Partial<Exercise> = {}): Exercise {
     participantsMin: 6,
     participantsMax: 20,
     musicRequired: false,
+    needsCompletion: false,
     images: [],
     materials: [{ name: 'Reifen', quantity: 6, mode: 'insgesamt' }],
     variants: [],

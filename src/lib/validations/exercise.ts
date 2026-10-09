@@ -104,7 +104,24 @@ export const exerciseSchema = z.object({
   { message: 'Minimum muss kleiner oder gleich Maximum sein', path: ['participantsMax'] }
 )
 
-export type StepBasisData = z.infer<typeof stepBasisSchema>
+/**
+ * „Schnell anlegen" aus dem Einheiten-Editor (PROJ-7): nur was der Nutzer
+ * tippt. Sportart, Phase, Schwierigkeit und Altersgruppen setzt der Server aus
+ * Segment und Gruppe — sie kommen nicht aus dem Formular und werden deshalb
+ * hier auch nicht angenommen.
+ */
+export const quickCreateSchema = z.object({
+  name: z.string().trim().min(1, 'Bitte gib der Übung einen Namen.').max(100, 'Maximal 100 Zeichen'),
+  duration: z.number().int().min(1, 'Mindestens 1 Minute').max(300, 'Maximal 300 Minuten'),
+  description: z
+    .string()
+    .trim()
+    .min(1, 'Bitte beschreibe die Übung kurz — ein Satz genügt.')
+    .max(5000, 'Maximal 5.000 Zeichen'),
+  workNotes: z.string().trim().max(2000, 'Maximal 2.000 Zeichen'),
+})
+
+export type StepBasisData =z.infer<typeof stepBasisSchema>
 export type StepEinordnungData = z.infer<typeof stepEinordnungSchema>
 export type StepLogistikData = z.infer<typeof stepLogistikSchema>
 export type StepExtrasData = z.infer<typeof stepExtrasSchema>

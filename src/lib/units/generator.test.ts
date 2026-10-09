@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   createRandom,
+  failedCriteriaOf,
   generateUnitPlan,
   planDurations,
   planSegment,
@@ -959,5 +960,70 @@ describe('planSegment', () => {
     expect(plan.items).toEqual([])
     expect(plan.gapReason).toBeNull()
     expect(plan.relaxNote).toBeNull()
+  })
+})
+
+describe('failedCriteriaOf — Auskunft je Kandidat (PROJ-7)', () => {
+  it('ist leer, wenn der Kandidat alle Kriterien erfüllt', () => {
+    expect(failedCriteriaOf(candidate({ exerciseId: 'a' }), segment(), group())).toEqual([])
+  })
+
+  it('nennt die Phase, wenn die Übung dem Segment nicht zugeordnet ist', () => {
+    expect(
+      failedCriteriaOf(candidate({ exerciseId: 'a', phases: ['Aufwärmen'] }), segment(), group())
+    ).toEqual(['phase'])
+  })
+
+  it('nennt jedes verfehlte Kriterium, nicht nur das erste', () => {
+    const failed = failedCriteriaOf(
+      candidate({
+        exerciseId: 'a',
+        sports: ['Volleyball'],
+        difficulty: 'Schwer',
+        ageGroups: ['Senioren (60+)'],
+        participantsMax: 10,
+        materials: [{ name: 'Reifen', quantity: 6, mode: 'insgesamt' }],
+      }),
+      segment({ difficulties: ['Leicht'] }),
+      group({ venueMaterials: [] })
+    )
+
+    expect([...failed].sort()).toEqual(['age', 'difficulty', 'material', 'participants', 'sport'])
+  })
+
+  it('urteilt wie der Generator: was er einplant, hat kein verfehltes Kriterium', () => {
+    const candidates = [
+      candidate({ exerciseId: 'passt' }),
+      candidate({ exerciseId: 'falsche-sportart', sports: ['Volleyball'] }),
+      candidate({ exerciseId: 'falsche-phase', phases: ['Cool-Down'] }),
+      candidate({ exerciseId: 'zu-klein', participantsMax: 5 }),
+    ]
+    const plan = planSegment({
+      segment: segment(),
+      segmentIndex: 0,
+      group: group(),
+      candidates,
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 1,
+      relax: false,
+    })
+
+    const fitting = candidates
+      .filter((entry) => failedCriteriaOf(entry, segment(), group()).length === 0)
+      .map((entry) => entry.exerciseId)
+
+    expect(fitting).toEqual(['passt'])
+    expect(plan.usedExerciseIds).toEqual(['passt'])
+  })
+
+  it('prüft immer streng — ein gelockert entstandenes Segment ändert daran nichts', () => {
+    expect(
+      failedCriteriaOf(
+        candidate({ exerciseId: 'a', difficulty: 'Schwer' }),
+        segment({ difficulties: ['Leicht'] }),
+        group()
+      )
+    ).toEqual(['difficulty'])
   })
 })

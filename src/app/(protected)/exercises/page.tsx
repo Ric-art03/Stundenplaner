@@ -137,7 +137,7 @@ export default function ExercisesPage() {
           ))}
         </div>
       ) : exercises.length === 0 ? (
-        filters.search || Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : v !== null && v !== '') ? (
+        filters.search || Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : v !== null && v !== '' && v !== false) ? (
           <div className="text-center py-12 text-muted-foreground">
             <p>Keine Übungen gefunden, die zu deinen Filtern passen.</p>
           </div>

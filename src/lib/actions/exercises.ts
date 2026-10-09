@@ -54,6 +54,7 @@ function mapRowToExercise(
     participantsMax: row.participants_max,
     musicRequired: row.music_required,
     musicLink: row.music_link,
+    needsCompletion: row.needs_completion,
     images: ((row.images as unknown as ExerciseImage[]) ?? []).filter((img) => img?.path),
     materials,
     variants,
@@ -106,6 +107,9 @@ export async function getExercises(
     for (const form of filters.organizationForms) {
       query = query.contains('organization_forms', JSON.stringify([form]))
     }
+  }
+  if (filters.needsCompletion) {
+    query = query.eq('needs_completion', true)
   }
   if (filters.participantsMin != null) {
     query = query.or(`participants_max.gte.${filters.participantsMin},participants_max.is.null`)
@@ -287,6 +291,9 @@ export async function updateExercise(
       music_required: data.musicRequired,
       music_link: data.musicLink || null,
       images: (data.images.length > 0 ? data.images : null) as unknown as Json,
+      // Die eine Stelle, an der „noch zu ergänzen" wieder verschwindet: wer die
+      // Übung im regulären Formular speichert, hat sie durchgesehen.
+      needs_completion: false,
     })
     .eq('id', id)
     .eq('user_id', user.id)

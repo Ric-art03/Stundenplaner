@@ -249,6 +249,31 @@ function criteriaFor(
   return checks
 }
 
+/** Für die Auskunft je Kandidat kommt die Phase dazu — sie ist beim Zählen der
+ *  Lückengründe die Grundmenge und deshalb dort kein eigenes Kriterium. */
+export type CandidateCriterion = GapCriterion | 'phase'
+
+/**
+ * Woran **dieser eine** Kandidat in diesem Segment scheitert; leer, wenn er
+ * passt. Dieselbe Kriterienliste wie beim Generieren, nur je Kandidat befragt
+ * statt je Kriterium gezählt — der Auswahldialog aus PROJ-7 braucht die
+ * Begründung an der einzelnen Übung. Immer streng geprüft: Lockern ist eine
+ * Entscheidung des Generators, kein Zustand des Segments.
+ */
+export function failedCriteriaOf(
+  candidate: Candidate,
+  segment: SegmentConfig,
+  group: GeneratorGroup
+): CandidateCriterion[] {
+  const failed: CandidateCriterion[] = matchesPhase(candidate, segment.name) ? [] : ['phase']
+
+  for (const check of criteriaFor(segment, group, 0)) {
+    if (!check.passes(candidate)) failed.push(check.criterion)
+  }
+
+  return failed
+}
+
 /**
  * Baut den Pool und — falls er leer bleibt — die vollständige Begründung.
  * Anders als eine Filterkette, die beim ersten leeren Zwischenstand abbricht,

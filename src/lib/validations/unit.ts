@@ -49,5 +49,51 @@ export const unitConfigSchema = z
 // Laut Spec darf der Nutzer alle Segmente frei lassen und so ein leeres
 // Gerüst erzeugen, das er später selbst füllt.
 
-export type SegmentConfigSchema = z.infer<typeof segmentConfigSchema>
+// ---- PROJ-7: die Arbeitsfassung, wie der Editor sie zum Speichern schickt ----
+
+/** Nach oben nur ein Schutz vor Unsinn: laut Spec darf eine Plandauer die
+ *  Einheit überfüllen, der Übungsleiter entscheidet. */
+const MAX_PLANNED_MINUTES = 1440
+const MAX_ITEMS_PER_SEGMENT = 200
+
+const draftItemSchema = z.object({
+  /** null = Platzhalter einer gelöschten Übung, der stehen bleibt. */
+  exerciseId: z.string().uuid().nullable(),
+  variantId: z.string().uuid().nullable(),
+  plannedDuration: z
+    .number()
+    .int()
+    .min(1, 'Mindestens 1 Minute')
+    .max(MAX_PLANNED_MINUTES, 'Maximal 1.440 Minuten'),
+})
+
+/**
+ * Bewusst nur das, was gespeichert wird. Die Anzeigedaten der Übung und die
+ * weggewürfelten Kandidaten schickt der Browser mit; hier fallen sie weg, statt
+ * ungeprüft durchgereicht zu werden.
+ */
+export const unitDraftSchema = z.object({
+  segments: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        notes: z.string().max(2000, 'Eine Notiz darf höchstens 2.000 Zeichen haben'),
+        items: z
+          .array(draftItemSchema)
+          .max(MAX_ITEMS_PER_SEGMENT, 'Zu viele Übungen in einem Abschnitt'),
+      })
+    )
+    .min(1)
+    .max(50),
+})
+
+export const savePlanOptionsSchema = z.object({
+  /** Der Änderungsstempel, den der Bearbeiten-Modus beim Öffnen gesehen hat. */
+  expectedUpdatedAt: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
+  force: z.boolean(),
+  name: z.string().optional(),
+})
+
+export type UnitDraftSchema = z.infer<typeof unitDraftSchema>
+export type SegmentConfigSchema =z.infer<typeof segmentConfigSchema>
 export type UnitConfigSchema = z.infer<typeof unitConfigSchema>

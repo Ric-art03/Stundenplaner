@@ -4,7 +4,12 @@ import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/server'
 import type { Database, Json } from '@/lib/database.types'
-import { unitConfigSchema } from '@/lib/validations/unit'
+import {
+  savePlanOptionsSchema,
+  unitConfigSchema,
+  unitDraftSchema,
+} from '@/lib/validations/unit'
+import { quickCreateSchema } from '@/lib/validations/exercise'
 import { PHASES } from '@/lib/types/exercise'
 import type {
   DifficultyLevel,
@@ -26,7 +31,6 @@ import {
   buildCandidates,
   candidateKey,
   type Candidate,
-  type CandidateSource,
 } from '@/lib/units/candidates'
 import {
   generateUnitPlan,
@@ -35,6 +39,16 @@ import {
   type GapDetail,
   type GeneratorGroup,
 } from '@/lib/units/generator'
+import {
+  buildEditorPool,
+  type EditorCandidate,
+  type EditorSource,
+} from '@/lib/units/editor-pool'
+import type { UnitDraft } from '@/lib/units/draft'
+import type {
+  QuickCreateInput,
+  QuickCreateResult,
+} from '@/components/units/quick-create-exercise-form'
 import { getGroup } from './groups'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
@@ -46,6 +60,8 @@ type SegmentRow = Database['public']['Tables']['unit_segments']['Row']
 type ItemRow = Database['public']['Tables']['unit_items']['Row']
 
 const GENERIC_ERROR = 'Generieren fehlgeschlagen, bitte erneut versuchen.'
+const UNIT_GONE =
+  'Diese Einheit existiert nicht mehr. Sie wurde inzwischen gelöscht oder durch einen neuen Vorschlag ersetzt.'
 
 async function getAuthUser() {
   const supabase = await createClient()
@@ -92,16 +108,21 @@ function mapVariant(row: VariantRow): ExerciseVariant {
  * Lädt alle Übungen des Nutzers mit Material und Varianten. Bewusst
  * serverseitig: der gesamte Pool darf nicht in den Browser wandern — das wäre
  * langsam und gäbe Daten unnötig heraus.
+ *
+ * Ohne `strict` wird ein Lesefehler zu einer leeren Liste — der Generator
+ * meldet dann eine Lücke. Der Editor braucht den Unterschied: ein Lesefehler
+ * darf im Auswahldialog nicht wie „du hast noch keine Übungen" aussehen.
  */
 async function loadCandidateSources(
   supabase: SupabaseClient,
   userId: string,
-  exerciseIds?: string[]
-): Promise<CandidateSource[]> {
+  exerciseIds?: string[],
+  options: { strict?: boolean } = {}
+): Promise<EditorSource[]> {
   let query = supabase
     .from('exercises')
     .select(
-      'id, name, phases, sports, difficulty, age_groups, organization_forms, duration, participants_min, participants_max'
+      'id, name, phases, sports, difficulty, age_groups, organization_forms, duration, participants_min, participants_max, music_required, music_link, needs_completion'
     )
     .eq('user_id', userId)
 
@@ -111,7 +132,10 @@ async function loadCandidateSources(
   }
 
   const { data, error } = await query
-  if (error || !data) return []
+  if (error || !data) {
+    if (options.strict) throw new Error('exercises')
+    return []
+  }
 
   const rows = data as unknown as ExerciseRow[]
   if (rows.length === 0) return []
@@ -121,6 +145,8 @@ async function loadCandidateSources(
     supabase.from('exercise_materials').select('*').in('exercise_id', ids).order('sort_order'),
     supabase.from('exercise_variants').select('*').in('exercise_id', ids).order('sort_order'),
   ])
+
+  if (options.strict && (materialsRes.error || variantsRes.error)) throw new Error('exercises')
 
   const materialsByExercise = groupBy((materialsRes.data ?? []) as MaterialRow[], 'exercise_id')
   const variantsByExercise = groupBy((variantsRes.data ?? []) as VariantRow[], 'exercise_id')
@@ -138,6 +164,9 @@ async function loadCandidateSources(
     participantsMax: row.participants_max,
     materials: (materialsByExercise[row.id] ?? []).map(mapMaterial),
     variants: (variantsByExercise[row.id] ?? []).map(mapVariant),
+    musicRequired: row.music_required,
+    musicLink: row.music_link,
+    needsCompletion: row.needs_completion,
   }))
 }
 
@@ -532,13 +561,16 @@ export async function renameUnit(
   const checked = checkUnitName(name)
   if ('error' in checked) return { error: checked.error }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('units')
     .update({ name: checked.name })
     .eq('id', unitId)
     .eq('user_id', user.id)
+    .select('id')
 
   if (error) return { error: 'Einheit konnte nicht umbenannt werden.' }
+  // Ein Update, das keine Zeile trifft, ist in Supabase kein Fehler (BUG-16).
+  if (!data || data.length === 0) return { error: UNIT_GONE }
   return { success: true }
 }
 
@@ -580,13 +612,26 @@ export async function saveUnit(
   const checked = checkUnitName(name)
   if ('error' in checked) return { error: checked.error }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('units')
     .update({ name: checked.name, saved: true })
     .eq('id', unitId)
     .eq('user_id', user.id)
+    .select('id, group_id')
 
   if (error) return { error: 'Einheit konnte nicht gespeichert werden.' }
+
+  // Ein Update, das keine Zeile trifft, ist in Supabase kein Fehler — der
+  // Entwurf kann inzwischen von einem zweiten Generieren ersetzt worden sein.
+  // Ohne diese Prüfung stünde „Einheit gespeichert" da, und geschrieben wäre
+  // nichts (BUG-16).
+  const saved = (data ?? [])[0]
+  if (!saved) return { error: UNIT_GONE }
+
+  // Die Verwendungsnachweise entstehen beim Speichern neu: ihr Zeitpunkt ist
+  // dann der des Speicherns, nicht der des Generierens (BUG-6).
+  await rewriteUsages(supabase, user.id, saved.id, saved.group_id)
+
   return { success: true }
 }
 
@@ -746,6 +791,219 @@ async function rewriteUsages(
       }))
     )
   }
+}
+
+// ---- Editor (PROJ-7) ----
+
+/**
+ * Segment, Einheit und Gruppe zu einer Segment-Kennung — mit Eigentumsprüfung
+ * über die Einheit. Die Segment-Kennung allein ist kein Eigentumsnachweis.
+ */
+async function loadSegmentContext(
+  supabase: SupabaseClient,
+  userId: string,
+  segmentId: string
+): Promise<
+  | { segment: SegmentRow; unit: UnitRow; group: NonNullable<Awaited<ReturnType<typeof getGroup>>> }
+  | { error: string }
+> {
+  const { data: segmentData, error: segmentError } = await supabase
+    .from('unit_segments')
+    .select('*')
+    .eq('id', segmentId)
+    .maybeSingle()
+
+  if (segmentError || !segmentData) return { error: 'Segment nicht gefunden.' }
+  const segment = segmentData as SegmentRow
+
+  const { data: unitData, error: unitError } = await supabase
+    .from('units')
+    .select('*')
+    .eq('id', segment.unit_id)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (unitError || !unitData) return { error: 'Diese Einheit gehört nicht zu deinem Konto.' }
+  const unit = unitData as UnitRow
+
+  const group = await getGroup(unit.group_id)
+  if (!group) return { error: 'Die Gruppe dieser Einheit existiert nicht mehr.' }
+
+  return { segment, unit, group }
+}
+
+/**
+ * Die Kandidatenliste eines Segments für den Bearbeiten-Modus. Wird einmal je
+ * Segment geholt; danach laufen Würfeln, Auswahl und Variantenwechsel im
+ * Browser.
+ *
+ * Wirft bei jedem Fehlschlag, statt eine leere Liste zu liefern: der
+ * Auswahldialog zeigt dann „erneut versuchen" und nicht den Leerzustand „du
+ * hast noch keine Übungen".
+ */
+export async function getEditorPool(segmentId: string): Promise<EditorCandidate[]> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) throw new Error('Nicht angemeldet.')
+
+  const context = await loadSegmentContext(supabase, user.id, segmentId)
+  if ('error' in context) throw new Error(context.error)
+
+  const sources = await loadCandidateSources(supabase, user.id, undefined, { strict: true })
+
+  return buildEditorPool(
+    sources,
+    segmentRowToConfig(context.segment),
+    toGeneratorGroup(context.group)
+  )
+}
+
+/** Was die Datenbank-Funktion an Ausnahmen kennt, in Worten für den Nutzer. */
+function savePlanError(message: string): string {
+  if (message.includes('unit_not_found')) return UNIT_GONE
+  if (message.includes('segments_changed')) {
+    return 'Der Zeitverlauf dieser Einheit wurde inzwischen neu erzeugt. Lade die Seite neu — deine Änderungen hier passen nicht mehr dazu.'
+  }
+  if (message.includes('not_authenticated')) return 'Nicht angemeldet.'
+  return 'Speichern fehlgeschlagen, bitte erneut versuchen. Deine Änderungen sind noch da.'
+}
+
+/**
+ * Legt die Arbeitsfassung des Editors ab — als **eine** Datenbank-Operation.
+ * Eigentumsprüfung, Abgleich des Änderungsstempels, Einträge, Notizen,
+ * Verwendungsnachweise und die Markierung „manuell bearbeitet" passieren in
+ * der Funktion `save_unit_plan` gemeinsam oder gar nicht.
+ *
+ * `stale: true` heißt: die Einheit wurde seit dem Öffnen anderswo geändert und
+ * nichts wurde geschrieben. Mit `force` wird trotzdem überschrieben.
+ *
+ * Ein Entwurf bringt seinen Namen mit und wird im selben Zug in die
+ * Übersichten aufgenommen.
+ */
+export async function saveUnitPlan(
+  unitId: string,
+  draft: UnitDraft,
+  options: { expectedUpdatedAt: string; force: boolean; name?: string }
+): Promise<{ error?: string; stale?: boolean }> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) return { error: 'Nicht angemeldet.' }
+
+  const parsedDraft = unitDraftSchema.safeParse(draft)
+  if (!parsedDraft.success) {
+    return { error: parsedDraft.error.issues[0]?.message ?? 'Der Plan ist unvollständig.' }
+  }
+
+  const parsedOptions = savePlanOptionsSchema.safeParse(options)
+  if (!parsedOptions.success) return { error: 'Ungültige Anfrage.' }
+
+  let name: string | undefined
+  if (parsedOptions.data.name !== undefined) {
+    const checked = checkUnitName(parsedOptions.data.name)
+    if ('error' in checked) return { error: checked.error }
+    name = checked.name
+  }
+
+  const { data, error } = await supabase.rpc('save_unit_plan', {
+    p_unit_id: unitId,
+    p_segments: parsedDraft.data.segments as unknown as Json,
+    p_expected_updated_at: parsedOptions.data.expectedUpdatedAt,
+    p_force: parsedOptions.data.force,
+    ...(name !== undefined ? { p_name: name } : {}),
+  })
+
+  if (error) return { error: savePlanError(error.message) }
+  if (data === 'stale') return { stale: true }
+  if (data !== 'ok') return { error: savePlanError('') }
+
+  return {}
+}
+
+/** `%` und `_` sind in ILIKE Platzhalter — im Namen einer Übung sind sie Zeichen. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`)
+}
+
+/**
+ * „Übung fehlt? Schnell anlegen" — legt die Übung **sofort** an, unabhängig vom
+ * Speichern des Plans. Darum bleibt sie erhalten, wenn der Nutzer seine
+ * Planänderungen verwirft.
+ *
+ * Sportart, Phase, Schwierigkeit und Altersgruppen kommen aus Segment und
+ * Gruppe und nicht aus dem Formular: nur so ist die Übung beim nächsten
+ * Generieren ein gültiger Kandidat. Sie trägt die Markierung „noch zu
+ * ergänzen", bis sie über das reguläre Formular gespeichert wird.
+ *
+ * Den Namensabgleich macht der Server über **alle** Übungen des Nutzers.
+ */
+export async function quickCreateExercise(
+  segmentId: string,
+  input: QuickCreateInput
+): Promise<QuickCreateResult> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) return { error: 'Nicht angemeldet.' }
+
+  const parsed = quickCreateSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Ungültige Eingabe.' }
+  }
+  const data = parsed.data
+
+  const context = await loadSegmentContext(supabase, user.id, segmentId)
+  if ('error' in context) return { error: context.error }
+
+  const segment = segmentRowToConfig(context.segment)
+  const group = toGeneratorGroup(context.group)
+
+  /** Die Übung als Kandidat dieses Segments — derselbe Weg wie die Liste. */
+  const asCandidate = async (exerciseId: string): Promise<EditorCandidate | null> => {
+    const sources = await loadCandidateSources(supabase, user.id, [exerciseId])
+    return (
+      buildEditorPool(sources, segment, group).find((candidate) => candidate.variantId === null) ??
+      null
+    )
+  }
+
+  const { data: sameName, error: lookupError } = await supabase
+    .from('exercises')
+    .select('id')
+    .eq('user_id', user.id)
+    .ilike('name', escapeLike(data.name))
+    .limit(1)
+
+  if (lookupError) return { error: 'Übung konnte nicht angelegt werden.' }
+
+  if (sameName && sameName.length > 0) {
+    const duplicate = await asCandidate(sameName[0].id)
+    if (duplicate) return { duplicate }
+  }
+
+  const { data: created, error } = await supabase
+    .from('exercises')
+    .insert({
+      user_id: user.id,
+      name: data.name,
+      description: data.description,
+      work_notes: data.workNotes || null,
+      sports: segment.sports as unknown as Json,
+      age_groups: group.ageGroups as unknown as Json,
+      phases: [segment.name] as unknown as Json,
+      difficulty: segment.difficulties[0] ?? 'Mittel',
+      duration: data.duration,
+      needs_completion: true,
+    })
+    .select('id')
+    .single()
+
+  if (error || !created) return { error: 'Übung konnte nicht angelegt werden.' }
+
+  const candidate = await asCandidate(created.id)
+  if (!candidate) {
+    return {
+      error:
+        'Die Übung wurde angelegt, konnte aber nicht eingesetzt werden. Schließe den Dialog und öffne ihn erneut — sie steht dann in der Liste.',
+    }
+  }
+
+  return { created: candidate }
 }
 
 // ---- Lesen ----

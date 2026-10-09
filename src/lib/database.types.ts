@@ -50,6 +50,7 @@ export type Database = {
           music_link: string | null
           image_url: string | null
           images: Json | null
+          needs_completion: boolean
           created_at: string
           updated_at: string
         }
@@ -72,6 +73,7 @@ export type Database = {
           music_link?: string | null
           image_url?: string | null
           images?: Json | null
+          needs_completion?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -94,6 +96,7 @@ export type Database = {
           music_link?: string | null
           image_url?: string | null
           images?: Json | null
+          needs_completion?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -488,7 +491,18 @@ export type Database = {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      save_unit_plan: {
+        Args: {
+          p_unit_id: string
+          p_segments: Json
+          p_expected_updated_at: string
+          p_force?: boolean
+          p_name?: string
+        }
+        Returns: string
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

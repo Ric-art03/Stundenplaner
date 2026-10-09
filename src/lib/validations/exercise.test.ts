@@ -5,6 +5,7 @@ import {
   stepLogistikSchema,
   stepExtrasSchema,
   exerciseSchema,
+  quickCreateSchema,
 } from './exercise'
 
 describe('stepBasisSchema', () => {
@@ -352,5 +353,47 @@ describe('exerciseSchema (full validation)', () => {
   it('fails when required fields are missing', () => {
     const result = exerciseSchema.safeParse({})
     expect(result.success).toBe(false)
+  })
+})
+
+describe('quickCreateSchema — „Schnell anlegen" aus dem Editor (PROJ-7)', () => {
+  const valid = { name: 'Kettenfangen', duration: 10, description: 'Fänger bilden eine Kette.', workNotes: '' }
+
+  it('nimmt Name, Dauer und Beschreibung an — Arbeitsnotizen dürfen leer sein', () => {
+    expect(quickCreateSchema.safeParse(valid).success).toBe(true)
+  })
+
+  it('übernimmt Arbeitsnotizen, wenn sie ausgefüllt sind', () => {
+    const result = quickCreateSchema.safeParse({ ...valid, workNotes: ' Hütchen vorher stellen ' })
+    expect(result.success && result.data.workNotes).toBe('Hütchen vorher stellen')
+  })
+
+  it('weist einen leeren oder nur aus Leerzeichen bestehenden Namen ab', () => {
+    expect(quickCreateSchema.safeParse({ ...valid, name: '' }).success).toBe(false)
+    expect(quickCreateSchema.safeParse({ ...valid, name: '   ' }).success).toBe(false)
+  })
+
+  it('verlangt eine Beschreibung und sagt das verständlich', () => {
+    const result = quickCreateSchema.safeParse({ ...valid, description: '  ' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toContain('beschreibe')
+    }
+  })
+
+  it('hält die Grenzen der Übungstabelle ein', () => {
+    expect(quickCreateSchema.safeParse({ ...valid, name: 'a'.repeat(101) }).success).toBe(false)
+    expect(quickCreateSchema.safeParse({ ...valid, duration: 0 }).success).toBe(false)
+    expect(quickCreateSchema.safeParse({ ...valid, duration: 301 }).success).toBe(false)
+    expect(quickCreateSchema.safeParse({ ...valid, workNotes: 'a'.repeat(2001) }).success).toBe(false)
+  })
+
+  it('nimmt keine Einordnung aus dem Formular an — die setzt der Server', () => {
+    const result = quickCreateSchema.safeParse({ ...valid, sports: ['Fußball'], phases: ['Hauptteil'] })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).not.toHaveProperty('sports')
+      expect(result.data).not.toHaveProperty('phases')
+    }
   })
 })

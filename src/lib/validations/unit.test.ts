@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { editorStateSchema, segmentConfigSchema, unitConfigSchema } from './unit'
+import {
+  editorStateSchema,
+  savePlanOptionsSchema,
+  segmentConfigSchema,
+  unitConfigSchema,
+  unitDraftSchema,
+} from './unit'
 import type { SegmentConfig, UnitConfig } from '@/lib/types/unit'
 
 function segment(overrides: Partial<SegmentConfig> = {}): SegmentConfig {
@@ -143,5 +149,91 @@ describe('unitConfigSchema', () => {
   it('begrenzt die Einheitsdauer nach unten und oben', () => {
     expect(unitConfigSchema.safeParse(config({ totalMinutes: 4, segments: [segment({ minutes: 4 })] })).success).toBe(false)
     expect(unitConfigSchema.safeParse(config({ totalMinutes: 301, segments: [segment({ minutes: 301 })] })).success).toBe(false)
+  })
+})
+
+describe('unitDraftSchema — die Arbeitsfassung des Editors (PROJ-7)', () => {
+  const SEGMENT = '11111111-1111-4111-8111-111111111111'
+  const EXERCISE = '22222222-2222-4222-8222-222222222222'
+  const VARIANT = '33333333-3333-4333-8333-333333333333'
+
+  function item(overrides: Record<string, unknown> = {}) {
+    return { exerciseId: EXERCISE, variantId: null, plannedDuration: 10, ...overrides }
+  }
+
+  function draft(items: unknown[] = [item()], notes = '') {
+    return { segments: [{ id: SEGMENT, notes, items }] }
+  }
+
+  it('nimmt eine gültige Arbeitsfassung an', () => {
+    expect(unitDraftSchema.safeParse(draft([item(), item({ variantId: VARIANT })])).success).toBe(true)
+  })
+
+  it('lässt ein leeres Segment zu — eine leere Einheit ist ein zulässiges Gerüst', () => {
+    expect(unitDraftSchema.safeParse(draft([])).success).toBe(true)
+  })
+
+  it('lässt den Platzhalter einer gelöschten Übung stehen', () => {
+    expect(unitDraftSchema.safeParse(draft([item({ exerciseId: null })])).success).toBe(true)
+  })
+
+  it('wirft Anzeigedaten und weggewürfelte Kandidaten weg, statt sie durchzureichen', () => {
+    const result = unitDraftSchema.safeParse(
+      draft([item({ key: 'neu-1', rejected: ['x:'], exercise: { name: 'Fangen' } })])
+    )
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.segments[0].items[0]).toEqual(item())
+    }
+  })
+
+  it('weist eine Plandauer unter einer Minute ab', () => {
+    expect(unitDraftSchema.safeParse(draft([item({ plannedDuration: 0 })])).success).toBe(false)
+    expect(unitDraftSchema.safeParse(draft([item({ plannedDuration: -5 })])).success).toBe(false)
+    expect(unitDraftSchema.safeParse(draft([item({ plannedDuration: 2.5 })])).success).toBe(false)
+  })
+
+  it('lässt eine Plandauer über der Segmentlänge zu — der Übungsleiter entscheidet', () => {
+    expect(unitDraftSchema.safeParse(draft([item({ plannedDuration: 400 })])).success).toBe(true)
+  })
+
+  it('weist Kennungen ab, die keine sind', () => {
+    expect(unitDraftSchema.safeParse(draft([item({ exerciseId: 'neu-1' })])).success).toBe(false)
+    expect(
+      unitDraftSchema.safeParse({ segments: [{ id: 'seg-1', notes: '', items: [] }] }).success
+    ).toBe(false)
+  })
+
+  it('begrenzt die Notiz auf 2.000 Zeichen', () => {
+    expect(unitDraftSchema.safeParse(draft([], 'a'.repeat(2000))).success).toBe(true)
+    expect(unitDraftSchema.safeParse(draft([], 'a'.repeat(2001))).success).toBe(false)
+  })
+
+  it('verlangt mindestens ein Segment', () => {
+    expect(unitDraftSchema.safeParse({ segments: [] }).success).toBe(false)
+  })
+})
+
+describe('savePlanOptionsSchema', () => {
+  it('nimmt den Änderungsstempel so an, wie die Datenbank ihn liefert', () => {
+    expect(
+      savePlanOptionsSchema.safeParse({
+        expectedUpdatedAt: '2026-10-07T12:34:56.123456+00:00',
+        force: false,
+      }).success
+    ).toBe(true)
+  })
+
+  it('weist einen Stempel ab, der kein Zeitpunkt ist', () => {
+    expect(
+      savePlanOptionsSchema.safeParse({ expectedUpdatedAt: 'gestern', force: false }).success
+    ).toBe(false)
+  })
+
+  it('lässt den Namen weg oder nimmt ihn mit', () => {
+    const base = { expectedUpdatedAt: '2026-10-07T12:34:56Z', force: true }
+    expect(savePlanOptionsSchema.safeParse(base).success).toBe(true)
+    expect(savePlanOptionsSchema.safeParse({ ...base, name: 'Mittwoch' }).success).toBe(true)
   })
 })

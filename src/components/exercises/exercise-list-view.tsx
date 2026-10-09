@@ -29,6 +29,11 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
             <div className="flex items-center gap-2">
               <h3 className="font-medium truncate">{exercise.name}</h3>
               <DifficultyDot difficulty={exercise.difficulty} />
+              {exercise.needsCompletion && (
+                <Badge variant="outline" className="shrink-0 text-[10px]">
+                  noch zu ergänzen
+                </Badge>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
               {exercise.phases.map((phase) => (

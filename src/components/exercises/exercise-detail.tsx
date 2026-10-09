@@ -65,6 +65,14 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
               <Badge key={sport} variant="outline">{sport}</Badge>
             ))}
           </div>
+          {exercise.needsCompletion && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              <Badge variant="outline" className="mr-1.5 text-[10px]">noch zu ergänzen</Badge>
+              Beim Bearbeiten einer Einheit schnell angelegt. Trage über
+              &bdquo;Bearbeiten&ldquo; Material und Details nach — beim Speichern
+              verschwindet die Markierung.
+            </p>
+          )}
         </div>
         <div className="flex flex-col sm:flex-row gap-2 shrink-0">
           <Button variant="outline" size="sm" asChild>

@@ -74,6 +74,7 @@ import {
   type UnitDraft,
 } from '@/lib/units/draft'
 import {
+  describeExhaustion,
   drawCandidate,
   keyOf,
   placementFrom,
@@ -84,9 +85,10 @@ import { candidateKey } from '@/lib/units/candidates'
 import type { Unit, UnitSegment } from '@/lib/types/unit'
 
 /**
- * Was der Editor vom Server braucht. Kommt im Backend-Schritt dazu; bis dahin
- * arbeiten alle Operationen, die ohne Server auskommen — Entfernen,
- * Umsortieren, Plandauer, Notiz, Rückgängig, Verwerfen.
+ * Was der Editor vom Server braucht — die Seite gibt die drei Server Actions
+ * mit. Fehlt der Vertrag (etwa in einem Test der reinen Oberfläche), arbeiten
+ * weiter alle Operationen, die ohne Server auskommen: Entfernen, Umsortieren,
+ * Plandauer, Notiz, Rückgängig, Verwerfen.
  */
 export interface UnitEditorActions {
   /** Die Kandidatenliste eines Segments. Wird einmal je Segment geladen. */
@@ -104,6 +106,8 @@ export interface UnitEditorActions {
 interface UnitPlanViewProps {
   unit: Unit
   singleSportGroup: boolean
+  /** Altersgruppen der Gruppe — die Vorbelegung, die „Schnell anlegen" anzeigt. */
+  groupAgeGroups?: string[]
   editorActions?: UnitEditorActions
 }
 
@@ -116,7 +120,12 @@ interface PickerTarget {
   atIndex?: number
 }
 
-export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlanViewProps) {
+export function UnitPlanView({
+  unit,
+  singleSportGroup,
+  groupAgeGroups = [],
+  editorActions,
+}: UnitPlanViewProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [busy, setBusy] = React.useState<string | null>(null)
@@ -159,9 +168,9 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
 
   function missingBackend() {
     toast({
-      title: 'Noch nicht angeschlossen',
+      title: 'Nicht verfügbar',
       description:
-        'Übungsauswahl, Auswürfeln und Speichern kommen mit dem Backend-Schritt. Entfernen, Umsortieren, Plandauer und Notizen funktionieren schon.',
+        'Übungsauswahl, Auswürfeln und Speichern sind an dieser Stelle nicht angeschlossen.',
     })
   }
 
@@ -198,14 +207,15 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
       const pool = await ensurePool(segment.id)
       if (!pool) return
 
-      const drawn = drawCandidate(pool, exclusionsFor(draft, segment.id, itemKey))
+      const exclusions = exclusionsFor(draft, segment.id, itemKey)
+      const drawn = drawCandidate(pool, exclusions)
       if (!drawn) {
+        // Jede Ursache einzeln und mit Anzahl — aus dem Stand **jetzt**, nicht
+        // aus der Begründung, die der Generator beim Erzeugen hinterlegt hat.
         toast({
           variant: 'destructive',
           title: 'Keine weitere passende Übung',
-          description:
-            segment.gapReason ??
-            `Alle passenden Übungen der Phase „${segment.name}" stehen in dieser Einheit schon.`,
+          description: describeExhaustion(pool, exclusions, segment.name),
         })
         return
       }
@@ -293,14 +303,15 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
     void savePlan()
   }
 
-  async function savePlan(force = false) {
+  async function savePlan(force = false, name?: string) {
     if (!editorActions) {
       missingBackend()
       return
     }
 
-    // Ein Entwurf bekommt beim Speichern erst seinen Namen.
-    if (!unit.saved) {
+    // Ein Entwurf bekommt beim Speichern erst seinen Namen. Der Namensdialog
+    // ruft danach wieder hierher — Name und Änderungen gehen in einem Zug.
+    if (!unit.saved && name === undefined) {
       setPrompt(null)
       setNaming(true)
       return
@@ -311,10 +322,15 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
       const result = await editorActions.savePlan(draft, {
         expectedUpdatedAt: unit.updatedAt,
         force,
+        name,
       })
 
       if (result.stale) {
         setPrompt(null)
+        setNaming(false)
+        // Für „Trotzdem überschreiben": der Name soll nicht ein zweites Mal
+        // abgefragt werden.
+        pendingName.current = name
         setStaleOpen(true)
         return
       }
@@ -325,6 +341,7 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
       }
 
       setPrompt(null)
+      setNaming(false)
       setQuickCreated([])
       // Speichern beendet das Bearbeiten — es gibt keinen zweiten Knopf dafür.
       setEditing(false)
@@ -342,6 +359,7 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
   }
 
   const [staleOpen, setStaleOpen] = React.useState(false)
+  const pendingName = React.useRef<string | undefined>(undefined)
 
   function discard() {
     setHistory((current) => discardChanges(current))
@@ -410,6 +428,13 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
   }
 
   async function save(name: string) {
+    // Im Bearbeiten-Modus gehören die offenen Änderungen dazu: `saveUnit` allein
+    // würde den Entwurf ohne sie sichern.
+    if (editing) {
+      await savePlan(false, name)
+      return
+    }
+
     setBusy('save')
     try {
       const result = await saveUnit(unit.id, name)
@@ -466,7 +491,7 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
     sports: pickerSegment?.sports ?? [],
     phase: pickerSegment?.name ?? '',
     difficulty: pickerSegment?.difficulties[0] ?? 'Mittel',
-    ageGroups: [],
+    ageGroups: groupAgeGroups,
   }
 
   return (
@@ -620,7 +645,7 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
         description="Unter diesem Namen findest du die Einheit später wieder. Der Vorschlag aus Gruppe und Datum lässt sich überschreiben."
         confirmLabel="Speichern"
         initialName={unit.name}
-        busy={busy === 'save'}
+        busy={busy === 'save' || saving}
         onConfirm={save}
       />
 
@@ -755,14 +780,20 @@ export function UnitPlanView({ unit, singleSportGroup, editorActions }: UnitPlan
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <Button variant="outline" onClick={() => router.refresh()}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStaleOpen(false)
+                router.refresh()
+              }}
+            >
               Neu laden
             </Button>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault()
                 setStaleOpen(false)
-                void savePlan(true)
+                void savePlan(true, pendingName.current)
               }}
             >
               Trotzdem überschreiben

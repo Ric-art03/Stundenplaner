@@ -66,6 +66,11 @@ export function ExerciseCardView({ exercises, onRequestDelete }: ExerciseCardVie
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="font-medium truncate">{exercise.name}</h3>
                 <DifficultyDot difficulty={exercise.difficulty} />
+                {exercise.needsCompletion && (
+                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                    noch zu ergänzen
+                  </Badge>
+                )}
               </div>
               <div className="flex flex-wrap gap-1 mb-1.5">
                 {exercise.phases.map((phase) => (

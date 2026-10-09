@@ -92,6 +92,12 @@ export interface Exercise {
   participantsMax?: number | null
   musicRequired: boolean
   musicLink?: string | null
+  /**
+   * „Noch zu ergänzen": im Einheiten-Editor schnell angelegt und noch nicht
+   * über das reguläre Formular gespeichert. Ein Hinweis, keine Einschränkung —
+   * Generator und Editor behandeln die Übung wie jede andere.
+   */
+  needsCompletion: boolean
   images: ExerciseImage[]
   materials: ExerciseMaterial[]
   variants: ExerciseVariant[]
@@ -135,6 +141,8 @@ export interface ExerciseFilters {
   materials: string[]
   participantsMin: number | null
   participantsMax: number | null
+  /** Nur Übungen mit der Markierung „noch zu ergänzen". */
+  needsCompletion: boolean
 }
 
 export const EMPTY_FILTERS: ExerciseFilters = {
@@ -147,6 +155,7 @@ export const EMPTY_FILTERS: ExerciseFilters = {
   materials: [],
   participantsMin: null,
   participantsMax: null,
+  needsCompletion: false,
 }
 
 export const EMPTY_FORM_DATA: ExerciseFormData = {
