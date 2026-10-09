@@ -36,8 +36,9 @@ function placement(id: string, duration = 10): DraftPlacement {
       materials: [],
       musicRequired: false,
       musicLink: null,
-      variantCount: 0,
+      variants: [],
       variantTitle: null,
+      workNotes: null,
     },
   }
 }
@@ -62,7 +63,9 @@ function segment(id: string, minutes: number, items: UnitItem[]): UnitSegment {
     sports: ['Turnen'],
     primarySport: 'Turnen',
     difficulties: ['Mittel'],
+    organizationForms: [],
     notes: '',
+    plannedGapMinutes: 0,
     gapReason: null,
     gapDetail: null,
     position: 0,

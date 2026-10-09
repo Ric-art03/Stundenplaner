@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { createClient } from '@/lib/supabase/client'
+import { ExerciseFactsRow } from './exercise-facts-row'
+import { variantFacts } from './variant-facts'
 import type { Exercise } from '@/lib/types/exercise'
 
 interface ExerciseCardViewProps {
@@ -62,7 +64,7 @@ export function ExerciseCardView({ exercises, onRequestDelete }: ExerciseCardVie
                 </span>
               </div>
             )}
-            <CardContent className="p-4">
+            <CardContent className="p-4 pb-2">
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="font-medium truncate">{exercise.name}</h3>
                 <DifficultyDot difficulty={exercise.difficulty} />
@@ -106,6 +108,14 @@ export function ExerciseCardView({ exercises, onRequestDelete }: ExerciseCardVie
               </div>
             </CardContent>
           </Link>
+          {/* Neben dem Verweis, nicht in ihm: „Varianten (n)" klappt auf, ohne
+              die Detailseite zu öffnen. */}
+          <ExerciseFactsRow
+            className="px-4 pb-4"
+            materials={exercise.materials}
+            organizationForms={exercise.organizationForms}
+            variants={variantFacts(exercise.variants)}
+          />
         </Card>
       ))}
     </div>

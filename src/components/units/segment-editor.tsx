@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import {
   Select,
@@ -16,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { MultiSelect } from '@/components/exercises/multi-select'
+import { WorkNoteField } from '@/components/exercises/work-note'
 import { resolvePrimarySport } from '@/lib/units/timeline'
 import { PhaseSelect } from './phase-select'
 import { DIFFICULTY_LEVELS } from '@/lib/types/exercise'
@@ -28,6 +28,7 @@ interface SegmentEditorProps {
   totalMinutes: number
   phaseOptions: string[]
   sportOptions: string[]
+  organizationFormOptions: string[]
   onChange: (segment: SegmentConfig) => void
   onMinutesChange: (minutes: number) => void
   onRemove: () => void
@@ -39,6 +40,7 @@ export function SegmentEditor({
   totalMinutes,
   phaseOptions,
   sportOptions,
+  organizationFormOptions,
   onChange,
   onMinutesChange,
   onRemove,
@@ -93,7 +95,7 @@ export function SegmentEditor({
             }}
           />
           <p className="text-xs text-muted-foreground">
-            Die übrigen Segmente werden angepasst, damit die Einheit {totalMinutes} Minuten bleibt.
+            Die übrigen Phasen werden angepasst, damit die Einheit {totalMinutes} Minuten bleibt.
           </p>
         </div>
       </div>
@@ -105,8 +107,8 @@ export function SegmentEditor({
           </Label>
           <p className="text-xs text-muted-foreground">
             {filling
-              ? 'Der Generator sucht Übungen für dieses Segment.'
-              : 'Dieses Segment bleibt als Lücke leer — du füllst es selbst.'}
+              ? 'Der Generator sucht Übungen für diese Phase.'
+              : 'Diese Phase bleibt als Lücke leer — du füllst sie selbst.'}
           </p>
         </div>
         <Switch
@@ -187,29 +189,35 @@ export function SegmentEditor({
               }
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Organisationsform(en)</Label>
+            <MultiSelect
+              options={organizationFormOptions}
+              selected={segment.organizationForms}
+              onChange={(organizationForms) => onChange({ ...segment, organizationForms })}
+              placeholder="Egal — keine Einschränkung"
+            />
+            <p className="text-xs text-muted-foreground">
+              Leer heißt: jede Organisationsform ist recht. Wählst du etwas aus, kommen nur
+              Übungen in Frage, die so laufen — Übungen ohne Angabe fallen dann heraus. Beim
+              Lockern wird diese Vorgabe als Erstes freigegeben.
+            </p>
+          </div>
         </>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor={`notes-${segment.id}`}>Arbeitsnotiz</Label>
-        <Textarea
-          id={`notes-${segment.id}`}
-          value={segment.notes}
-          onChange={(e) => onChange({ ...segment, notes: e.target.value })}
-          placeholder={
-            filling
-              ? 'Hinweise für dich zu diesem Abschnitt'
-              : 'Was hast du hier vor? z.B. „Wettkampfspiel", „Besprechung", „Material umbauen"'
-          }
-          rows={2}
-          maxLength={2000}
-        />
-        {!filling && (
-          <p className="text-xs text-muted-foreground">
-            Die Arbeitsnotiz erscheint im fertigen Stundenverlauf an dieser Stelle.
-          </p>
-        )}
-      </div>
+      <WorkNoteField
+        id={`notes-${segment.id}`}
+        scope="segment"
+        value={segment.notes}
+        onChange={(notes) => onChange({ ...segment, notes })}
+        placeholder={
+          filling
+            ? 'Hinweise für dich zu diesem Abschnitt'
+            : 'Was hast du hier vor? z.B. „Wettkampfspiel", „Besprechung", „Material umbauen"'
+        }
+      />
 
       <Separator />
 
@@ -223,7 +231,7 @@ export function SegmentEditor({
           disabled={count <= 1}
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Segment entfernen
+          Phase entfernen
         </Button>
       </div>
     </div>

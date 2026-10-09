@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Check, ChevronDown, Loader2, Package, Plus, RotateCw, TriangleAlert } from 'lucide-react'
+import { Check, ChevronDown, Loader2, Plus, RotateCw, TriangleAlert } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ExerciseFactsRow } from '@/components/exercises/exercise-facts-row'
 import {
   QuickCreateExerciseForm,
   type QuickCreateDefaults,
@@ -29,9 +30,11 @@ import {
 } from './quick-create-exercise-form'
 import {
   failureLabel,
+  groupForPicker,
   keyOf,
-  splitForPicker,
+  passes,
   type EditorCandidate,
+  type PickerEntry,
 } from '@/lib/units/editor-pool'
 
 interface ExercisePickerDialogProps {
@@ -56,6 +59,10 @@ interface ExercisePickerDialogProps {
  * Der Auswahldialog: oben die passenden Übungen mit ihrer Anzahl im Titel,
  * darunter aufklappbar die übrigen — jede mit der Begründung, woran sie
  * scheitert.
+ *
+ * **Eine Zeile je Übung.** Grundübung und Varianten stehen zusammen; die Zeile
+ * gilt als passend, sobald eine ihrer Formen passt. Über „Varianten (n)" lässt
+ * sich jede Form einzeln einsetzen.
  *
  * Eine unpassende Übung wird ohne zweite Bestätigung eingesetzt: der
  * Übungsleiter behält das letzte Wort über seine eigene Erfahrung. Die
@@ -90,7 +97,7 @@ export function ExercisePickerDialog({
   }, [open])
 
   const { fitting, others } = React.useMemo(
-    () => splitForPicker(pool ?? [], search),
+    () => groupForPicker(pool ?? [], search),
     [pool, search]
   )
 
@@ -101,6 +108,16 @@ export function ExercisePickerDialog({
     onPick(candidate)
     onOpenChange(false)
   }
+
+  const renderEntry = (entry: PickerEntry) => (
+    <PickerRow
+      key={entry.exerciseId}
+      entry={entry}
+      currentKey={currentKey}
+      alreadyUsed={usedExerciseIds.has(entry.exerciseId)}
+      onPick={pick}
+    />
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -158,7 +175,7 @@ export function ExercisePickerDialog({
         ) : (
           <Command shouldFilter={false} className="flex-1 overflow-hidden">
             <CommandInput
-              placeholder="Übung suchen …"
+              placeholder="Übung oder Variante suchen …"
               value={search}
               onValueChange={setSearch}
             />
@@ -175,15 +192,7 @@ export function ExercisePickerDialog({
 
               {fitting.length > 0 && (
                 <CommandGroup heading={`Passend (${fitting.length})`}>
-                  {fitting.map((candidate) => (
-                    <CandidateRow
-                      key={keyOf(candidate)}
-                      candidate={candidate}
-                      selected={keyOf(candidate) === currentKey}
-                      alreadyUsed={usedExerciseIds.has(candidate.exerciseId)}
-                      onSelect={() => pick(candidate)}
-                    />
-                  ))}
+                  {fitting.map(renderEntry)}
                 </CommandGroup>
               )}
 
@@ -205,17 +214,7 @@ export function ExercisePickerDialog({
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <CommandGroup>
-                        {others.map((candidate) => (
-                          <CandidateRow
-                            key={keyOf(candidate)}
-                            candidate={candidate}
-                            selected={keyOf(candidate) === currentKey}
-                            alreadyUsed={usedExerciseIds.has(candidate.exerciseId)}
-                            onSelect={() => pick(candidate)}
-                          />
-                        ))}
-                      </CommandGroup>
+                      <CommandGroup>{others.map(renderEntry)}</CommandGroup>
                     </CollapsibleContent>
                   </Collapsible>
                 </div>
@@ -242,55 +241,86 @@ export function ExercisePickerDialog({
   )
 }
 
-function CandidateRow({
-  candidate,
-  selected,
+function PickerRow({
+  entry,
+  currentKey,
   alreadyUsed,
-  onSelect,
+  onPick,
 }: {
-  candidate: EditorCandidate
-  selected: boolean
+  entry: PickerEntry
+  currentKey: string | null
   alreadyUsed: boolean
-  onSelect: () => void
+  onPick: (candidate: EditorCandidate) => void
 }) {
-  const reason = failureLabel(candidate)
+  const { preferred, forms } = entry
+  const base = forms[0]
+  const current = forms.find((form) => keyOf(form) === currentKey)
+  const note = (form: EditorCandidate) =>
+    passes(form) ? undefined : `passt nicht: ${failureLabel(form)}`
 
   return (
-    <CommandItem value={keyOf(candidate)} onSelect={onSelect} className="items-start gap-2">
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex items-center gap-1.5">
-          {selected && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
-          <span className="truncate text-sm font-medium">{candidate.name}</span>
-          {candidate.needsCompletion && (
-            <Badge variant="outline" className="shrink-0 text-[10px]">
-              noch zu ergänzen
-            </Badge>
+    <div className="border-b last:border-b-0">
+      {/* Ein Klick auf die Zeile setzt die Form ein, die sie nennt: die
+          Grundübung, wenn sie passt, sonst die erste passende Variante. */}
+      <CommandItem
+        value={entry.exerciseId}
+        onSelect={() => onPick(preferred)}
+        className="items-start gap-2"
+      >
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center gap-1.5">
+            {current && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+            <span className="truncate text-sm font-medium">{entry.name}</span>
+            {base.needsCompletion && (
+              <Badge variant="outline" className="shrink-0 text-[10px]">
+                noch zu ergänzen
+              </Badge>
+            )}
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
+              {preferred.duration} Min
+            </span>
+          </div>
+
+          {preferred.variantTitle && (
+            <p className="text-xs text-muted-foreground">
+              Eingesetzt wird die Variante: {preferred.variantTitle}
+              {entry.fits && ' — die Grundübung passt hier nicht'}
+            </p>
+          )}
+
+          {!entry.fits && (
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              passt nicht: {failureLabel(base)}
+            </p>
+          )}
+          {alreadyUsed && !current && (
+            <p className="text-xs text-muted-foreground">
+              Steht in dieser Einheit schon — einsetzen ist trotzdem möglich.
+            </p>
           )}
         </div>
+      </CommandItem>
 
-        {candidate.variantTitle && (
-          <p className="text-xs text-muted-foreground">Variante: {candidate.variantTitle}</p>
-        )}
-
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-          <span className="tabular-nums">{candidate.duration} Min</span>
-          <span className="flex items-center gap-1">
-            <Package className="h-3 w-3" />
-            {candidate.materials.length > 0
-              ? candidate.materials.map((material) => material.name).join(', ')
-              : 'kein Material'}
-          </span>
-        </div>
-
-        {reason && (
-          <p className="text-xs text-amber-600 dark:text-amber-500">passt nicht: {reason}</p>
-        )}
-        {alreadyUsed && !selected && (
-          <p className="text-xs text-muted-foreground">
-            Steht in dieser Einheit schon — einsetzen ist trotzdem möglich.
-          </p>
-        )}
-      </div>
-    </CommandItem>
+      {/* Außerhalb der klickbaren Zeile: „Varianten (n)" klappt auf, ohne die
+          Übung einzusetzen. */}
+      <ExerciseFactsRow
+        className="px-2 pb-2"
+        materials={preferred.materials.map((material) => ({ name: material.name }))}
+        organizationForms={preferred.organizationForms}
+        variants={forms
+          .filter((form) => form.variantId !== null)
+          .map((form) => ({
+            id: form.variantId as string,
+            title: form.variantTitle ?? 'Variante',
+            note: note(form),
+          }))}
+        currentVariantId={current ? current.variantId : undefined}
+        baseNote={note(base)}
+        onSelect={(variantId) => {
+          const form = forms.find((candidate) => candidate.variantId === variantId)
+          if (form) onPick(form)
+        }}
+      />
+    </div>
   )
 }

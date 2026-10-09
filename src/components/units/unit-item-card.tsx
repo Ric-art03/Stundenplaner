@@ -1,9 +1,13 @@
 'use client'
 
+import * as React from 'react'
 import Link from 'next/link'
-import { Dices, ExternalLink, Layers, Loader2, Music, Package, Search, TriangleAlert } from 'lucide-react'
+import { Dices, ExternalLink, Loader2, Music, Search, TriangleAlert } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ExerciseFactsRow } from '@/components/exercises/exercise-facts-row'
+import { WorkNote } from '@/components/exercises/work-note'
+import { cn } from '@/lib/utils'
 import type { DraftItemExercise } from '@/lib/units/draft'
 
 interface UnitItemCardProps {
@@ -14,6 +18,7 @@ interface UnitItemCardProps {
    */
   item: {
     plannedDuration: number
+    variantId: string | null
     exercise: DraftItemExercise | null
   }
   /**
@@ -25,9 +30,28 @@ interface UnitItemCardProps {
     onReroll: () => void
     onChoose: () => void
   }
+  /** Wird an diesem Platz gerade gewürfelt? Dann zeigt es die Karte selbst. */
+  rolling?: boolean
+  /**
+   * Nur im Bearbeiten-Modus gesetzt: eine Form aus „Varianten (n)" wählen.
+   * `null` = zurück zur Grundübung. In der Leseansicht ist die Liste nur zum
+   * Ansehen.
+   */
+  onSelectVariant?: (variantId: string | null) => void
+  /** Die Arbeitsnotiz der Übung unter der Karte — nur in der Leseansicht. */
+  showWorkNotes?: boolean
+  /** Die Bedienzeile. Sitzt **im** Rahmen der Karte: beide bilden einen Block. */
+  children?: React.ReactNode
 }
 
-export function UnitItemCard({ item, refill }: UnitItemCardProps) {
+export function UnitItemCard({
+  item,
+  refill,
+  rolling = false,
+  onSelectVariant,
+  showWorkNotes = false,
+  children,
+}: UnitItemCardProps) {
   if (!item.exercise) {
     return (
       <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 p-3">
@@ -55,7 +79,7 @@ export function UnitItemCard({ item, refill }: UnitItemCardProps) {
                   ) : (
                     <Dices className="mr-2 h-3.5 w-3.5" />
                   )}
-                  Auswürfeln
+                  {refill.rolling ? 'Wird gewürfelt …' : 'Auswürfeln'}
                 </Button>
                 <Button variant="outline" size="sm" className="h-8" onClick={refill.onChoose}>
                   <Search className="mr-2 h-3.5 w-3.5" />
@@ -73,61 +97,67 @@ export function UnitItemCard({ item, refill }: UnitItemCardProps) {
   const durationDiffers = item.plannedDuration !== exercise.estimatedDuration
 
   return (
-    <div className="rounded-lg border p-3 transition-colors hover:bg-muted/40">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <Link
-            href={`/exercises/${exercise.id}`}
-            className="text-sm font-medium hover:underline"
-          >
-            {exercise.name}
-          </Link>
-          {exercise.variantTitle && (
-            <p className="text-xs text-muted-foreground">
-              Variante: {exercise.variantTitle}
-            </p>
-          )}
+    <div
+      className={cn(
+        'rounded-lg border p-3 transition-colors',
+        !children && 'hover:bg-muted/40',
+        rolling && 'border-primary/40'
+      )}
+      aria-busy={rolling}
+    >
+      {/* Dass gewürfelt wird, steht an der Karte selbst — nicht nur als kleiner
+          Kreisel am Menüknopf. Sonst wirkt ein laufender Vorgang wie ein
+          Knopf, der nichts tut. */}
+      {rolling && (
+        <p role="status" className="mb-2 flex items-center gap-2 text-xs font-medium text-primary">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Wird gewürfelt …
+        </p>
+      )}
+
+      <div className={cn(rolling && 'opacity-50')}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <Link
+              href={`/exercises/${exercise.id}`}
+              className="text-sm font-medium hover:underline"
+            >
+              {exercise.name}
+            </Link>
+            {exercise.variantTitle && (
+              <p className="text-sm font-medium">
+                Variante: {exercise.variantTitle}
+              </p>
+            )}
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-sm font-medium tabular-nums">{item.plannedDuration} Min</p>
+            {durationDiffers && (
+              <p className="text-xs text-muted-foreground tabular-nums">
+                geschätzt: {exercise.estimatedDuration}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-sm font-medium tabular-nums">{item.plannedDuration} Min</p>
-          {durationDiffers && (
-            <p className="text-xs text-muted-foreground tabular-nums">
-              geschätzt: {exercise.estimatedDuration}
-            </p>
-          )}
+
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          {exercise.sports.map((sport) => (
+            <Badge key={sport} variant="outline" className="text-xs">{sport}</Badge>
+          ))}
+          <Badge variant="secondary" className="text-xs">{exercise.difficulty}</Badge>
         </div>
-      </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1">
-        {exercise.sports.map((sport) => (
-          <Badge key={sport} variant="outline" className="text-xs">{sport}</Badge>
-        ))}
-        <Badge variant="secondary" className="text-xs">{exercise.difficulty}</Badge>
-        {exercise.organizationForms.map((form) => (
-          <Badge key={form} variant="secondary" className="text-xs">{form}</Badge>
-        ))}
-      </div>
-
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <Package className="h-3 w-3" />
-          {exercise.materials.length > 0
-            ? exercise.materials
-                .map((m) => `${m.quantity}× ${m.name}${m.mode === 'pro Teilnehmer' ? ' p. TN' : ''}`)
-                .join(', ')
-            : 'kein Material'}
-        </span>
-
-        {exercise.variantCount > 0 && (
-          <span className="flex items-center gap-1">
-            <Layers className="h-3 w-3" />
-            {exercise.variantCount}{' '}
-            {exercise.variantCount === 1 ? 'Variante verfügbar' : 'Varianten verfügbar'}
-          </span>
-        )}
+        <ExerciseFactsRow
+          className="mt-2"
+          materials={exercise.materials}
+          organizationForms={exercise.organizationForms}
+          variants={exercise.variants}
+          currentVariantId={item.variantId}
+          onSelect={onSelectVariant}
+        />
 
         {exercise.musicRequired && (
-          <span className="flex items-center gap-1">
+          <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
             <Music className="h-3 w-3" />
             {exercise.musicLink ? (
               <a
@@ -142,9 +172,15 @@ export function UnitItemCard({ item, refill }: UnitItemCardProps) {
             ) : (
               'Musik benötigt'
             )}
-          </span>
+          </p>
+        )}
+
+        {showWorkNotes && exercise.workNotes && (
+          <WorkNote className="mt-3" text={exercise.workNotes} />
         )}
       </div>
+
+      {children}
     </div>
   )
 }

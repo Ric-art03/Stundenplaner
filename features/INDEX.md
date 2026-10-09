@@ -88,14 +88,18 @@ Dabei mit abgeräumt: **BUG-16** (`saveUnit` und `renameUnit` melden jetzt, wenn
 - **Die Arbeitsfassung wird nicht mehr bei jedem Nachladen der Seite verworfen** — die Absicherung gegen das folgenlose Auswürfeln, auch für Ursachen, die noch nicht gefunden sind
 - **Eine Migration**, rein hinzufügend: zwei Felder am Segment, neue Fassung der Speicher-Funktion. **Keine neuen Pakete**
 
+**Die Oberfläche der Überarbeitung steht seit dem 2026-10-09** — Abschnitt „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-09" in der Spec. **420 Unit-Tests grün** (375 plus 45 neue), Typprüfung, Lint und Produktionsbuild sauber; **im Browser noch nicht durchgespielt**. Zwei gemeinsame Bausteine tragen die Einheitlichkeit: die Übungszeile (`exercise-facts-row.tsx`) und die Arbeitsnotiz (`work-note.tsx`). Der Variantendialog ist entfernt.
+
+Drei Dinge tragen erst mit der Migration aus `/backend`: die **geplante Lücke wird noch nicht gespeichert** (nach dem Neuladen wieder gelb), die **Organisationsform der Phase wirkt nur beim ersten Generieren**, und „Schnell anlegen" belegt sie noch nicht vor.
+
 ### Was PROJ-7 noch fehlt
 
-0. **Die Überarbeitung vom 2026-10-09 bauen** — `/frontend`, dann `/backend` (mit der Migration über den SQL-Editor). Erst dann lohnt `/qa`
+0. **`/backend` für die Überarbeitung vom 2026-10-09** — die Migration (zwei Felder am Segment, neue Fassung der Speicher-Funktion mit Lückenprüfung) über den SQL-Editor, Organisationsform lesen und schreiben, alten Speicherweg entfernen. Erst dann lohnt `/qa`
 1. **Im Browser durchspielen.** Nachgewiesen ist die Datenbank-Funktion, nicht das Zusammenspiel Browser → Server Action → Funktion: Auswürfeln, Auswahldialog, Variante umschalten, Schnell-Anlegen, Speichern von gespeicherter Einheit und Entwurf, zwei Tabs
 2. **Eine bekannte Abweichung:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen — sie ist für die Funktion von einer gelöschten nicht unterscheidbar. Am lebenden System bestätigt: der fremde Verweis wird nicht geschrieben. In der Spec begründet, für `/qa` zu bewerten
 3. **Beim Ausrollen:** die Migration ist schon in der Datenbank, der Code kann also jederzeit folgen
 
-**Nächster Schritt:** `/frontend PROJ-7` (Überarbeitung vom 2026-10-09 nach dem Nachtrag zum Tech Design).
+**Nächster Schritt:** Oberfläche im Browser ansehen, dann `/backend PROJ-7` (Überarbeitung vom 2026-10-09).
 
 ## Features
 
@@ -117,10 +121,11 @@ Dabei mit abgeräumt: **BUG-16** (`saveUnit` und `renameUnit` melden jetzt, wenn
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Eigene Kategorien verwalten | P0 | PROJ-3 | Roadmap | — | 2026-10-04 |
 | PROJ-17 | Stundenmuster (wiederverwendbare Einheiten-Konfigurationen) | P1 | PROJ-6 | Roadmap | — | 2026-10-04 |
+| PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-18
+## Next Available ID: PROJ-19
 
 ## Empfohlene Build-Reihenfolge (MVP)
 

@@ -1338,6 +1338,90 @@ Zusammenspiel Browser → Server Action → Funktion ist noch nicht durchgespiel
    Speichern einer gespeicherten Einheit und eines Entwurfs, zwei Tabs
 2. E2E-Tests für den Editor — gehören zu `/qa`
 
+## Implementation Notes (Frontend) — Überarbeitung vom 2026-10-09
+
+**Stand:** 2026-10-09 · Typprüfung, Lint und Produktionsbuild sauber · **420 Unit-Tests grün**
+(375 vorher plus 45 neue) · **im Browser noch nicht durchgespielt**
+
+Gebaut nach der Reihenfolge aus dem Nachtrag (N10): erst die Logik mit Tests, dann die zwei
+gemeinsamen Bausteine, dann der Einbau.
+
+### Neu
+
+| Datei | Was es ist |
+|---|---|
+| `src/components/exercises/exercise-facts-row.tsx` | **Die Übungszeile** — Material · Organisationsform · „Varianten (n)" in fester Reihenfolge. Zwei Betriebsarten: nur ansehen, oder eine Form auswählen |
+| `src/components/exercises/work-note.tsx` | **Die Arbeitsnotiz** — als Eingabefeld (Name, Erklärtext, hellgrünes Feld) und als Anzeige. Name und Erklärtexte stehen dort an einer Stelle |
+| `src/components/units/planned-gap.tsx` | Die geplante Lücke: ruhig, mit Minuten, im Bearbeiten-Modus mit „Übung einfügen" und „Wieder öffnen" |
+| `src/hooks/use-stored-flag.ts` | Merkt „Arbeitsnotizen anzeigen" im Browser |
+
+### Geändert
+
+| Ort | Änderung |
+|---|---|
+| `draft.ts` | Geplante Minuten am Segment, zwei neue Operationen (`declarePlannedGap`, `reopenGap`), die eine Regel `gapState`, dazu `openGaps` und `declareAllOpenGaps`. Geplante Minuten zählen beim Vergleich zweier Stände mit |
+| `generator.ts` | Organisationsform in der Kriterienliste, eine Lockerungsstufe mehr (übersprungen ohne Auswahl), der Lockerungs-Hinweis nennt nur, was freigegeben wurde |
+| `editor-pool.ts` | Gewichtete Ziehung (frisch zuerst, dann Sportart, dann Übung), `groupForPicker` statt `splitForPicker`, Variantennamen und „kürzlich verwendet" je Kandidat |
+| `unit-plan-view.tsx` | Ein Speicherweg, Lückenregel, Schalter für Arbeitsnotizen, Variantenwahl auf der Karte, die Arbeitsfassung folgt der Einheit nur noch außerhalb des Bearbeiten-Modus |
+| `unit-item-card.tsx` / `unit-item-controls.tsx` | Karte und Bedienzeile in **einem** Rahmen; die Würfel-Anzeige liegt auf der Karte; „Variante umschalten" ist aus dem Menü heraus |
+| `gap-notice.tsx` | „Als geplante Lücke stehen lassen"; „Lockern" nur noch in der Leseansicht; Organisationsform als Ursache |
+| `save-changes-prompt.tsx` | Nennt offene Lücken und Überfüllung getrennt; „Alle als geplant übernehmen und speichern" |
+| `exercise-picker-dialog.tsx` | Eine Zeile je Übung mit Übungszeile |
+| `segment-editor.tsx` (Generator) | Mehrfachauswahl „Organisationsform(en)", Arbeitsnotiz über den gemeinsamen Baustein |
+| Übungsordner, Wizard, Detailseite, Schnell-Anlegen | Übungszeile bzw. Arbeitsnotiz über die gemeinsamen Bausteine |
+| `variant-switch-dialog.tsx` | **entfernt** |
+
+### Entscheidungen, die beim Bauen fielen
+
+| Entscheidung | Begründung |
+|---|---|
+| Fehlt die Organisationsform, steht an ihrem Platz ein Strich | „Der Platz bleibt leer" wörtlich genommen ließe die Varianten nachrücken. Der Strich hält den Platz und sagt zugleich, dass nichts angegeben ist |
+| Die Organisationsform steht nur noch in der Übungszeile, nicht mehr zusätzlich als Marke neben Sportart und Schwierigkeit | Dieselbe Angabe zweimal auf einer Karte |
+| „Alle als geplant übernehmen" landet in der **Leseansicht** nicht in der Arbeitsfassung | Dort gibt es keine sichtbare Arbeitsfassung. Bräche der Nutzer im Namensdialog ab, stünde sonst eine Erklärung im Raum, die er nicht sieht — und das nächste Speichern fragte nicht mehr nach |
+| „Neu laden" im Dialog „Anderswo geändert" verlässt den Bearbeiten-Modus | Die Arbeitsfassung folgt der Einheit nur außerhalb des Modus (N8). Die Änderungen sind an dieser Stelle laut Dialog ohnehin verloren |
+| Im Übungsordner steht die Übungszeile **neben** dem Verweis auf die Detailseite, nicht in ihm | Ein Bedienelement in einem Verweis ist ungültig und würde beim Aufklappen die Seite wechseln |
+| Die Stufen des Lockerns sind neu nummeriert, die Startwerte je Stufe nicht | Eine Phase ohne Organisationsform würfelt beim Lockern genau wie vorher; nur zwei Tests mussten die neue Nummer lernen |
+| Im Auswahldialog steht die Dauer rechts in der Zeile, das Material in der Übungszeile | Sonst stünde das Material zweimal da |
+
+### Was ohne `/backend` noch nicht trägt
+
+Die Oberfläche ist fertig, drei Dinge hängen an der Migration aus dem Nachtrag (N2):
+
+1. **Die geplante Lücke wird nicht gespeichert.** Im Bearbeiten-Modus funktioniert sie vollständig
+   (erklären, öffnen, rückgängig, Sperre, Dialog). Die Speicher-Funktion der Datenbank kennt das
+   Feld aber noch nicht — nach dem Speichern und Neuladen ist die Lücke wieder gelb. Auch die
+   Prüfung am Server fehlt noch
+2. **Die Organisationsform der Phase wirkt nur beim ersten Generieren.** Sie wird am Segment noch
+   nicht abgelegt: „Neu generieren", „Lockern", „Zurück zum Generator" und die Kandidatenliste des
+   Editors kennen sie danach nicht mehr
+3. **„Schnell anlegen" belegt die Organisationsform noch nicht vor**
+
+Schon angeschlossen, weil es ohne Datenbankänderung ging: Variantennamen und Arbeitsnotiz in der
+Stundenansicht, „kürzlich verwendet" in der Kandidatenliste.
+
+Für `/backend` außerdem: der alte Speicherweg `saveUnit` wird von der Oberfläche nicht mehr
+benutzt und kann entfallen; die Typen der Datenbank sind nach der Migration neu zu erzeugen.
+
+### Nach der Durchsicht im Browser nachgeschärft (2026-10-09)
+
+Der Nutzer hat die Oberfläche im Browser angesehen und abgenommen. Dabei geändert:
+
+- **Dialog „Eine Lücke ist noch offen"** — Text und Knöpfe ragten über den Rand. Die Knöpfe stehen
+  jetzt untereinander in voller Breite, lange Beschriftungen brechen um. „ruhig und" ist aus dem
+  Text gestrichen
+- **Lückenhinweis in der Leseansicht** — unter dem Lockern steht der Verweis auf „Bearbeiten" für
+  die zwei weiteren Handhaben (Übungen einfügen oder Lücke stehen lassen)
+- **Reihenfolge unter „Was hilft"** — zuerst, was sich im Generator für die Phase ändern lässt
+  („Hake im Generator für diese Phase …"), danach das Übrige
+- **„Segment" heißt in der ganzen Oberfläche „Phase"** — Generator, Stundenansicht, Lückenhinweis,
+  Fehlermeldungen. Im Code und in dieser Spec bleibt „Segment" der technische Begriff. Das Wort
+  „Abschnitt", das der Editor an einigen Stellen für dasselbe benutzt, ist nicht angefasst
+- **„Variante: …" auf der Karte** steht in Größe, Dicke und Farbe wie der Name der Grundübung
+
+**Dunkelmodus:** die dunklen Farben sind im Stylesheet angelegt, aber nichts schaltet sie ein — es
+gibt weder einen Schalter noch folgt die App der Systemeinstellung. Als eigenes Feature auf der
+Roadmap: PROJ-18.
+
 ## QA Test Results
 _To be added by /qa_
 

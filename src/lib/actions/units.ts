@@ -41,6 +41,7 @@ import {
 } from '@/lib/units/generator'
 import {
   buildEditorPool,
+  variantNamesOf,
   type EditorCandidate,
   type EditorSource,
 } from '@/lib/units/editor-pool'
@@ -652,7 +653,7 @@ export async function relaxSegment(
     .eq('id', segmentId)
     .single()
 
-  if (segmentError || !segmentData) return { error: 'Segment nicht gefunden.' }
+  if (segmentError || !segmentData) return { error: 'Phase nicht gefunden.' }
   const segmentRow = segmentData as SegmentRow
 
   // Zugehörigkeit über die Einheit prüfen — die Segment-Kennung allein ist
@@ -813,7 +814,7 @@ async function loadSegmentContext(
     .eq('id', segmentId)
     .maybeSingle()
 
-  if (segmentError || !segmentData) return { error: 'Segment nicht gefunden.' }
+  if (segmentError || !segmentData) return { error: 'Phase nicht gefunden.' }
   const segment = segmentData as SegmentRow
 
   const { data: unitData, error: unitError } = await supabase
@@ -848,12 +849,17 @@ export async function getEditorPool(segmentId: string): Promise<EditorCandidate[
   const context = await loadSegmentContext(supabase, user.id, segmentId)
   if ('error' in context) throw new Error(context.error)
 
-  const sources = await loadCandidateSources(supabase, user.id, undefined, { strict: true })
+  const [sources, recentExerciseIds] = await Promise.all([
+    loadCandidateSources(supabase, user.id, undefined, { strict: true }),
+    // Dieselbe Frische-Regel wie beim Generieren; die Einheit selbst zählt nicht mit.
+    loadRecentExerciseIds(supabase, context.group.id, context.unit.id),
+  ])
 
   return buildEditorPool(
     sources,
     segmentRowToConfig(context.segment),
-    toGeneratorGroup(context.group)
+    toGeneratorGroup(context.group),
+    recentExerciseIds
   )
 }
 
@@ -1017,6 +1023,9 @@ function segmentRowToConfig(row: SegmentRow): SegmentConfig {
     sports: (row.sports as string[]) ?? [],
     primarySport: row.primary_sport,
     difficulties: ((row.difficulties as string[]) ?? []) as DifficultyLevel[],
+    // Das Feld am Segment kommt mit der Migration aus /backend. Bis dahin gilt
+    // „keine Einschränkung".
+    organizationForms: [],
     notes: row.notes ?? '',
   }
 }
@@ -1062,22 +1071,26 @@ export async function getUnit(id: string): Promise<Unit | null> {
   )
   const sources = await loadCandidateSources(supabase, user.id, exerciseIds)
 
-  const descriptions = new Map<string, { description: string; musicRequired: boolean; musicLink: string | null }>()
+  const descriptions = new Map<string, ExerciseExtra>()
   if (exerciseIds.length > 0) {
     const { data } = await supabase
       .from('exercises')
-      .select('id, description, music_required, music_link')
+      .select('id, description, work_notes, music_required, music_link')
       .in('id', exerciseIds)
-    for (const row of (data ?? []) as Pick<ExerciseRow, 'id' | 'description' | 'music_required' | 'music_link'>[]) {
+    for (const row of (data ?? []) as Pick<
+      ExerciseRow,
+      'id' | 'description' | 'work_notes' | 'music_required' | 'music_link'
+    >[]) {
       descriptions.set(row.id, {
         description: row.description,
+        workNotes: row.work_notes,
         musicRequired: row.music_required,
         musicLink: row.music_link,
       })
     }
   }
 
-  const variantCounts = new Map(sources.map((source) => [source.id, source.variants.length]))
+  const variantNames = new Map(sources.map((source) => [source.id, variantNamesOf(source)]))
   const candidates = new Map<string, Candidate>(
     buildCandidates(sources).map((candidate) => [
       candidateKey(candidate.exerciseId, candidate.variantId),
@@ -1089,10 +1102,12 @@ export async function getUnit(id: string): Promise<Unit | null> {
 
   const segments: UnitSegment[] = segmentRows.map((row) => ({
     ...segmentRowToConfig(row),
+    // Kommt mit der Migration aus /backend; bis dahin ist keine Lücke geplant.
+    plannedGapMinutes: 0,
     gapReason: row.gap_reason,
     gapDetail: (row.gap_detail as unknown as GapDetail | null) ?? null,
     position: row.position,
-    items: (itemsBySegment[row.id] ?? []).map((item) => mapItem(item, candidates, descriptions, variantCounts)),
+    items: (itemsBySegment[row.id] ?? []).map((item) => mapItem(item, candidates, descriptions, variantNames)),
   }))
 
   return {
@@ -1113,11 +1128,19 @@ export async function getUnit(id: string): Promise<Unit | null> {
   }
 }
 
+/** Was die Stundenansicht über den Kandidaten-Zuschnitt hinaus von einer Übung zeigt. */
+interface ExerciseExtra {
+  description: string
+  workNotes: string | null
+  musicRequired: boolean
+  musicLink: string | null
+}
+
 function mapItem(
   row: ItemRow,
   candidates: Map<string, Candidate>,
-  descriptions: Map<string, { description: string; musicRequired: boolean; musicLink: string | null }>,
-  variantCounts: Map<string, number>
+  descriptions: Map<string, ExerciseExtra>,
+  variantNames: Map<string, { id: string; title: string }[]>
 ): UnitItem {
   const base: UnitItem = {
     id: row.id,
@@ -1153,8 +1176,10 @@ function mapItem(
       materials: candidate.materials,
       musicRequired: extra?.musicRequired ?? false,
       musicLink: extra?.musicLink ?? null,
-      variantCount: variantCounts.get(candidate.exerciseId) ?? 0,
+      variants: variantNames.get(candidate.exerciseId) ?? [],
       variantTitle: candidate.variantTitle,
+      // Varianten haben keine eigene Arbeitsnotiz — es gilt die der Grundübung.
+      workNotes: extra?.workNotes ?? null,
     },
   }
 }

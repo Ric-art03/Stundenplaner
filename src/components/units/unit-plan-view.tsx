@@ -16,7 +16,9 @@ import {
   Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -30,25 +32,27 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useStoredFlag } from '@/hooks/use-stored-flag'
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
+import { WorkNote } from '@/components/exercises/work-note'
 import { UnitItemCard } from './unit-item-card'
 import { GapNotice } from './gap-notice'
+import { PlannedGap } from './planned-gap'
 import { UnitActionsMenu } from './unit-actions-menu'
 import { UnitNameDialog } from './unit-name-dialog'
 import { UnitItemControls } from './unit-item-controls'
 import { SegmentFillStatus } from './segment-fill-status'
 import { SegmentNoteField } from './segment-note-field'
 import { EditChangeBar } from './edit-change-bar'
-import { SaveChangesPrompt, type SegmentMismatch } from './save-changes-prompt'
+import { SaveChangesPrompt, type OverfillNotice } from './save-changes-prompt'
 import { DiscardChangesDialog } from './discard-changes-dialog'
 import { ExercisePickerDialog } from './exercise-picker-dialog'
-import { VariantSwitchDialog } from './variant-switch-dialog'
 import type {
   QuickCreateDefaults,
   QuickCreateInput,
   QuickCreateResult,
 } from './quick-create-exercise-form'
-import { regenerateUnit, relaxSegment, saveUnit } from '@/lib/actions/units'
+import { regenerateUnit, relaxSegment } from '@/lib/actions/units'
 import {
   applyChange,
   canUndo as historyCanUndo,
@@ -60,10 +64,15 @@ import {
   type DraftHistory,
 } from '@/lib/units/draft-history'
 import {
+  declareAllOpenGaps,
+  declarePlannedGap,
   exclusionsFor,
+  gapState,
   insertItem,
   moveItem,
+  openGaps,
   removeItem,
+  reopenGap,
   rerollItem,
   segmentBalance,
   setItemDuration,
@@ -71,14 +80,13 @@ import {
   setSegmentNotes,
   usedExerciseIds,
   type DraftSegment,
+  type SegmentFrame,
   type UnitDraft,
 } from '@/lib/units/draft'
 import {
   describeExhaustion,
   drawCandidate,
-  keyOf,
   placementFrom,
-  variantsOf,
   type EditorCandidate,
 } from '@/lib/units/editor-pool'
 import { candidateKey } from '@/lib/units/candidates'
@@ -88,7 +96,7 @@ import type { Unit, UnitSegment } from '@/lib/types/unit'
  * Was der Editor vom Server braucht — die Seite gibt die drei Server Actions
  * mit. Fehlt der Vertrag (etwa in einem Test der reinen Oberfläche), arbeiten
  * weiter alle Operationen, die ohne Server auskommen: Entfernen, Umsortieren,
- * Plandauer, Notiz, Rückgängig, Verwerfen.
+ * Plandauer, Arbeitsnotiz, geplante Lücke, Rückgängig, Verwerfen.
  */
 export interface UnitEditorActions {
   /** Die Kandidatenliste eines Segments. Wird einmal je Segment geladen. */
@@ -120,6 +128,8 @@ interface PickerTarget {
   atIndex?: number
 }
 
+const POOL_ERROR = 'Die Übungen konnten nicht geladen werden.'
+
 export function UnitPlanView({
   unit,
   singleSportGroup,
@@ -137,14 +147,26 @@ export function UnitPlanView({
   const [saving, setSaving] = React.useState(false)
   const [quickCreated, setQuickCreated] = React.useState<string[]>([])
 
-  // Nach dem Speichern lädt die Seite die Einheit neu: der gespeicherte Stand
-  // ist dann der neue Ausgangszustand, und „Rückgängig" beginnt leer.
+  // Die Arbeitsfassung folgt der geladenen Einheit **nur außerhalb** des
+  // Bearbeiten-Modus. Früher wurde sie bei jedem Nachladen der Seitendaten neu
+  // aufgesetzt — egal aus welchem Anlass, und damit gingen offene Änderungen
+  // ohne Nachfrage verloren. Jetzt entsteht sie beim Betreten des Modus aus dem
+  // gespeicherten Stand und wird erst nach dem Verlassen wieder nachgezogen.
   React.useEffect(() => {
-    setHistory(startHistory(unit))
-  }, [unit])
+    if (!editing) setHistory(startHistory(unit))
+  }, [unit, editing])
 
   const draft = history.present
   const dirty = isDirty(history)
+
+  // ---- Leseansicht: Arbeitsnotizen der Übungen ----
+  const [showWorkNotes, setShowWorkNotes] = useStoredFlag(
+    'stundenplaner:arbeitsnotizen-anzeigen',
+    true
+  )
+  const hasWorkNotes = unit.segments.some((segment) =>
+    segment.items.some((item) => Boolean(item.exercise?.workNotes))
+  )
 
   // ---- Kandidatenlisten, einmal je Segment ----
   const [pools, setPools] = React.useState<Record<string, EditorCandidate[]>>({})
@@ -154,13 +176,18 @@ export function UnitPlanView({
 
   // ---- Dialoge ----
   const [picker, setPicker] = React.useState<PickerTarget | null>(null)
-  const [variantTarget, setVariantTarget] = React.useState<
-    { segmentId: string; itemKey: string } | null
-  >(null)
   const [prompt, setPrompt] = React.useState<
     { mode: 'leave' | 'confirm'; proceed?: () => void } | null
   >(null)
   const [discardOpen, setDiscardOpen] = React.useState(false)
+  const [staleOpen, setStaleOpen] = React.useState(false)
+  const pendingName = React.useRef<string | undefined>(undefined)
+  /**
+   * Die Fassung, die gerade gespeichert werden soll, wenn sie von der
+   * Arbeitsfassung abweicht — nach „Alle als geplant übernehmen" in der
+   * Leseansicht. Sie überdauert den Umweg über den Namensdialog.
+   */
+  const pendingDraft = React.useRef<UnitDraft | null>(null)
 
   function change(apply: (current: UnitDraft) => UnitDraft) {
     setHistory((current) => applyChange(current, apply))
@@ -174,8 +201,18 @@ export function UnitPlanView({
     })
   }
 
-  /** Lädt die Liste eines Segments, falls sie noch nicht da ist. */
-  async function ensurePool(segmentId: string): Promise<EditorCandidate[] | null> {
+  /**
+   * Lädt die Liste eines Segments, falls sie noch nicht da ist.
+   *
+   * `announce` meldet einen Ladefehler an Ort und Stelle. Der Auswahldialog
+   * zeigt ihn selbst; beim Auswürfeln und beim Wählen einer Variante ist kein
+   * Dialog offen, und ohne Meldung sähe der Fehler aus wie ein Knopf, der
+   * nichts tut.
+   */
+  async function ensurePool(
+    segmentId: string,
+    { announce = false }: { announce?: boolean } = {}
+  ): Promise<EditorCandidate[] | null> {
     if (pools[segmentId]) return pools[segmentId]
     if (!editorActions) {
       missingBackend()
@@ -189,7 +226,14 @@ export function UnitPlanView({
       setPools((current) => ({ ...current, [segmentId]: loaded }))
       return loaded
     } catch {
-      setPoolError('Die Übungen konnten nicht geladen werden.')
+      setPoolError(POOL_ERROR)
+      if (announce) {
+        toast({
+          variant: 'destructive',
+          title: 'Fehler',
+          description: `${POOL_ERROR} Bitte versuche es erneut.`,
+        })
+      }
       return null
     } finally {
       setPoolLoading(null)
@@ -198,17 +242,27 @@ export function UnitPlanView({
 
   // ---- Die Operationen ----
 
+  /**
+   * Auswürfeln endet in genau einem von drei Ausgängen, und jeder ist zu sehen:
+   * eine andere Übung im Platz, die Begründung des erschöpften Vorrats oder
+   * eine Fehlermeldung. Solange es läuft, zeigt es die Karte selbst, und an den
+   * übrigen Karten ist „Neu auswürfeln" ausgegraut.
+   */
   async function reroll(segment: UnitSegment, itemKey: string) {
-    // Edge Case 13: der zweite Klick wird ignoriert, solange der erste läuft.
     if (rolling !== null) return
 
     setRolling(itemKey)
     try {
-      const pool = await ensurePool(segment.id)
+      const pool = await ensurePool(segment.id, { announce: true })
       if (!pool) return
 
       const exclusions = exclusionsFor(draft, segment.id, itemKey)
-      const drawn = drawCandidate(pool, exclusions)
+      // Dieselbe Gewichtung wie im Generator: die Hauptsportart der Phase
+      // zählt doppelt, kürzlich Verwendetes kommt zuletzt.
+      const drawn = drawCandidate(pool, exclusions, Math.random, {
+        sports: segment.sports,
+        primarySport: segment.primarySport,
+      })
       if (!drawn) {
         // Jede Ursache einzeln und mit Anzahl — aus dem Stand **jetzt**, nicht
         // aus der Begründung, die der Generator beim Erzeugen hinterlegt hat.
@@ -221,6 +275,12 @@ export function UnitPlanView({
       }
 
       change((current) => rerollItem(current, segment.id, itemKey, placementFrom(drawn)))
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Fehler',
+        description: 'Auswürfeln fehlgeschlagen, bitte erneut versuchen.',
+      })
     } finally {
       setRolling(null)
     }
@@ -231,10 +291,35 @@ export function UnitPlanView({
     await ensurePool(target.segmentId)
   }
 
-  async function openVariants(segmentId: string, itemKey: string) {
-    const pool = await ensurePool(segmentId)
+  /**
+   * Eine Form aus „Varianten (n)" auf der Karte wählen; `null` stellt die
+   * Grundübung wieder her. Material, Dauer und Organisationsform der Form
+   * kommen aus der Kandidatenliste des Segments — dort sind Varianten eigene
+   * Kandidaten, es gibt also keinen zweiten Ladeweg.
+   */
+  async function selectVariant(
+    segmentId: string,
+    itemKey: string,
+    exerciseId: string,
+    variantId: string | null
+  ) {
+    const pool = await ensurePool(segmentId, { announce: true })
     if (!pool) return
-    setVariantTarget({ segmentId, itemKey })
+
+    const form = pool.find(
+      (candidate) => candidate.exerciseId === exerciseId && candidate.variantId === variantId
+    )
+    if (!form) {
+      toast({
+        variant: 'destructive',
+        title: 'Nicht mehr vorhanden',
+        description:
+          'Diese Form der Übung gibt es nicht mehr. Lade die Seite neu, um den aktuellen Stand zu sehen.',
+      })
+      return
+    }
+
+    change((current) => setItemExercise(current, segmentId, itemKey, placementFrom(form)))
   }
 
   function placeFromPicker(candidate: EditorCandidate) {
@@ -274,36 +359,63 @@ export function UnitPlanView({
 
   // ---- Verlassen, Speichern, Verwerfen ----
 
-  /** Segmente, die nicht aufgehen — namentlich, für den Speichern-Dialog. */
-  const mismatches: SegmentMismatch[] = React.useMemo(() => {
-    return unit.segments
-      .map((segment) => {
-        const draftSegment = draft.segments.find((entry) => entry.id === segment.id)
-        if (!draftSegment) return null
-        // Ein bewusst frei gelassener und leerer Abschnitt ist Absicht, keine
-        // Abweichung. Sobald er Übungen trägt, wird sein Stand ausgewiesen.
-        if (segment.fillMode === 'empty' && draftSegment.items.length === 0) return null
+  /** Der Rahmen, den die Arbeitsfassung bewusst nicht trägt. */
+  const frames: SegmentFrame[] = React.useMemo(
+    () =>
+      unit.segments.map((segment) => ({
+        id: segment.id,
+        name: segment.name,
+        minutes: segment.minutes,
+        fillMode: segment.fillMode,
+      })),
+    [unit.segments]
+  )
 
-        const balance = segmentBalance(draftSegment, segment.minutes)
-        if (balance.free === 0 && balance.over === 0) return null
-        return { name: segment.name, free: balance.free, over: balance.over }
-      })
-      .filter((entry): entry is SegmentMismatch => entry !== null)
-  }, [unit.segments, draft])
+  /**
+   * Offene Lücken sperren das Speichern: in einer gespeicherten Einheit steht
+   * kein gelbes Warnfeld. Jede freie Minute ist gefüllt oder als geplant
+   * erklärt.
+   */
+  const gaps = React.useMemo(() => openGaps(draft, frames), [draft, frames])
+
+  /** Überfüllte Segmente werden genannt, sperren aber nicht. */
+  const overfills: OverfillNotice[] = React.useMemo(
+    () =>
+      frames.flatMap((frame) => {
+        const segment = draft.segments.find((entry) => entry.id === frame.id)
+        if (!segment) return []
+        const { over } = segmentBalance(segment, frame.minutes)
+        return over > 0 ? [{ name: frame.name, over }] : []
+      }),
+    [draft, frames]
+  )
 
   useUnsavedChanges(editing && dirty, (proceed) => {
     setPrompt({ mode: 'leave', proceed })
   })
 
+  /** Der eine Einstieg ins Speichern — aus dem Bearbeiten-Modus und aus der Leseansicht. */
   function requestSave() {
-    if (mismatches.length > 0) {
+    pendingDraft.current = null
+    if (gaps.length > 0 || overfills.length > 0) {
       setPrompt({ mode: 'confirm' })
       return
     }
     void savePlan()
   }
 
-  async function savePlan(force = false, name?: string) {
+  /** „Alle als geplant übernehmen und speichern". */
+  function acceptGapsAndSave() {
+    const next = declareAllOpenGaps(draft, frames)
+    // Im Bearbeiten-Modus ist das eine Änderung wie jede andere. In der
+    // Leseansicht gibt es keine Arbeitsfassung, die sie tragen könnte — bräche
+    // der Nutzer danach ab, stünde eine Erklärung im Raum, die er nicht sieht.
+    if (editing) setHistory((current) => applyChange(current, () => next))
+    pendingDraft.current = next
+    void savePlan(false, undefined, next)
+  }
+
+  async function savePlan(force = false, name?: string, toSave: UnitDraft = draft) {
     if (!editorActions) {
       missingBackend()
       return
@@ -319,7 +431,7 @@ export function UnitPlanView({
 
     setSaving(true)
     try {
-      const result = await editorActions.savePlan(draft, {
+      const result = await editorActions.savePlan(toSave, {
         expectedUpdatedAt: unit.updatedAt,
         force,
         name,
@@ -328,24 +440,27 @@ export function UnitPlanView({
       if (result.stale) {
         setPrompt(null)
         setNaming(false)
-        // Für „Trotzdem überschreiben": der Name soll nicht ein zweites Mal
-        // abgefragt werden.
+        // Für „Trotzdem überschreiben": Name und Fassung sollen nicht ein
+        // zweites Mal abgefragt werden.
         pendingName.current = name
+        pendingDraft.current = toSave
         setStaleOpen(true)
         return
       }
       if (result.error) {
-        // Die Einheit bleibt im Bearbeiten-Modus, die Änderungen bleiben stehen.
+        // Die Einheit bleibt, wie sie ist, die Änderungen bleiben stehen.
         toast({ variant: 'destructive', title: 'Fehler', description: result.error })
         return
       }
 
+      const wasDraft = !unit.saved
+      pendingDraft.current = null
       setPrompt(null)
       setNaming(false)
       setQuickCreated([])
       // Speichern beendet das Bearbeiten — es gibt keinen zweiten Knopf dafür.
       setEditing(false)
-      toast({ title: 'Änderungen gespeichert' })
+      toast({ title: wasDraft ? 'Einheit gespeichert' : 'Änderungen gespeichert' })
       router.refresh()
     } catch {
       toast({
@@ -357,9 +472,6 @@ export function UnitPlanView({
       setSaving(false)
     }
   }
-
-  const [staleOpen, setStaleOpen] = React.useState(false)
-  const pendingName = React.useRef<string | undefined>(undefined)
 
   function discard() {
     setHistory((current) => discardChanges(current))
@@ -406,7 +518,8 @@ export function UnitPlanView({
     }
   }
 
-  /** Lockern wirkt nur in dem Segment, in dem der Nutzer geklickt hat. */
+  /** Lockern wirkt nur in dem Segment, in dem der Nutzer geklickt hat. Nur in
+   *  der Leseansicht — es lädt die Einheit neu. */
   async function relax(segmentId: string) {
     setBusy(segmentId)
     try {
@@ -427,49 +540,6 @@ export function UnitPlanView({
     }
   }
 
-  async function save(name: string) {
-    // Im Bearbeiten-Modus gehören die offenen Änderungen dazu: `saveUnit` allein
-    // würde den Entwurf ohne sie sichern.
-    if (editing) {
-      await savePlan(false, name)
-      return
-    }
-
-    setBusy('save')
-    try {
-      const result = await saveUnit(unit.id, name)
-      if (result.error) {
-        toast({ variant: 'destructive', title: 'Fehler', description: result.error })
-        return
-      }
-      setNaming(false)
-      toast({ title: 'Einheit gespeichert' })
-      router.refresh()
-    } catch {
-      toast({
-        variant: 'destructive',
-        title: 'Fehler',
-        description: 'Speichern fehlgeschlagen, bitte erneut versuchen.',
-      })
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  /**
-   * Lücken sperren das Speichern **nicht mehr**. Die Sperre existierte, weil der
-   * Nutzer keine Handhabe hatte — mit dem Bearbeiten-Modus hat er eine, und der
-   * Hinweis verweist dorthin statt in den Generator zurück.
-   */
-  const gapSegmentNames = unit.segments
-    .filter(
-      (segment) =>
-        segment.fillMode === 'generate' &&
-        segment.items.reduce((sum, item) => sum + item.plannedDuration, 0) < segment.minutes
-    )
-    .map((segment) => segment.name)
-  const hasGaps = gapSegmentNames.length > 0
-
   const pickerSegment = picker
     ? unit.segments.find((segment) => segment.id === picker.segmentId)
     : null
@@ -480,12 +550,6 @@ export function UnitPlanView({
     picker?.itemKey && pickerDraftSegment
       ? pickerDraftSegment.items.find((item) => item.key === picker.itemKey)
       : null
-
-  const variantDraftItem = variantTarget
-    ? draft.segments
-        .find((segment) => segment.id === variantTarget.segmentId)
-        ?.items.find((item) => item.key === variantTarget.itemKey)
-    : null
 
   const quickCreateDefaults: QuickCreateDefaults = {
     sports: pickerSegment?.sports ?? [],
@@ -535,7 +599,7 @@ export function UnitPlanView({
               variant="outline"
               size="sm"
               onClick={() => setEditing(true)}
-              disabled={busy !== null}
+              disabled={busy !== null || saving}
             >
               <Pencil className="mr-2 h-4 w-4" />
               Bearbeiten
@@ -543,8 +607,7 @@ export function UnitPlanView({
           )}
 
           {/* Im Bearbeiten-Modus sagt die Leiste, was offen ist, und ihr Hauptknopf
-              speichert. „Gespeichert" stünde dort neben ungespeicherten Änderungen,
-              und „Einheit speichern" würde den Entwurf ohne sie sichern. */}
+              speichert. „Gespeichert" stünde dort neben ungespeicherten Änderungen. */}
           {editing ? null : unit.saved ? (
             <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
               <Check className="h-4 w-4 text-primary" />
@@ -554,10 +617,10 @@ export function UnitPlanView({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setNaming(true)}
-              disabled={busy !== null}
+              onClick={requestSave}
+              disabled={busy !== null || saving}
             >
-              {busy === 'save' ? (
+              {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Save className="mr-2 h-4 w-4" />
@@ -570,7 +633,7 @@ export function UnitPlanView({
           {editing ? null : unit.manuallyEdited && !unit.saved ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={busy !== null}>
+                <Button variant="outline" size="sm" disabled={busy !== null || saving}>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Neu generieren
                 </Button>
@@ -591,7 +654,12 @@ export function UnitPlanView({
               </AlertDialogContent>
             </AlertDialog>
           ) : (
-            <Button variant="outline" size="sm" onClick={regenerate} disabled={busy !== null}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={regenerate}
+              disabled={busy !== null || saving}
+            >
               {busy === 'regenerate' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -602,18 +670,18 @@ export function UnitPlanView({
           )}
         </div>
 
-        {!unit.saved && (
+        {!unit.saved && !editing && (
           <p className="text-xs text-muted-foreground">
-            {hasGaps ? (
+            {gaps.length > 0 ? (
               <>
-                <span className="font-medium text-foreground">Mit Lücken:</span>{' '}
-                {gapSegmentNames.length === 1
-                  ? `Das Segment „${gapSegmentNames[0]}" ist nicht voll.`
-                  : `Diese Segmente sind nicht voll: ${gapSegmentNames
-                      .map((name) => `„${name}"`)
+                <span className="font-medium text-foreground">Mit offenen Lücken:</span>{' '}
+                {gaps.length === 1
+                  ? `Die Phase „${gaps[0].name}" ist nicht voll.`
+                  : `Diese Phasen sind nicht voll: ${gaps
+                      .map((gap) => `„${gap.name}"`)
                       .join(', ')}.`}{' '}
-                Du kannst trotzdem speichern — oder die Lücken über
-                &bdquo;Bearbeiten&ldquo; selbst füllen.
+                Vor dem Speichern füllst du sie über &bdquo;Bearbeiten&ldquo; — oder lässt
+                sie bewusst als geplante Lücke stehen.
               </>
             ) : (
               <>
@@ -622,6 +690,21 @@ export function UnitPlanView({
               </>
             )}
           </p>
+        )}
+
+        {/* Ein Schalter für alle Einträge zugleich. Nur in der Leseansicht: im
+            Bearbeiten-Modus geht es um den Aufbau des Plans. */}
+        {!editing && hasWorkNotes && (
+          <div className="flex items-center gap-2">
+            <Switch
+              id="arbeitsnotizen-anzeigen"
+              checked={showWorkNotes}
+              onCheckedChange={setShowWorkNotes}
+            />
+            <Label htmlFor="arbeitsnotizen-anzeigen" className="cursor-pointer text-sm font-normal">
+              Arbeitsnotizen anzeigen
+            </Label>
+          </div>
         )}
       </div>
 
@@ -640,13 +723,16 @@ export function UnitPlanView({
 
       <UnitNameDialog
         open={naming}
-        onOpenChange={setNaming}
+        onOpenChange={(open) => {
+          setNaming(open)
+          if (!open) pendingDraft.current = null
+        }}
         title="Einheit speichern"
         description="Unter diesem Namen findest du die Einheit später wieder. Der Vorschlag aus Gruppe und Datum lässt sich überschreiben."
         confirmLabel="Speichern"
         initialName={unit.name}
-        busy={busy === 'save' || saving}
-        onConfirm={save}
+        busy={saving}
+        onConfirm={(name) => savePlan(false, name, pendingDraft.current ?? draft)}
       />
 
       {!unit.saved && unit.relaxedNote && (
@@ -669,6 +755,7 @@ export function UnitPlanView({
               segment={segment}
               draftSegment={draftSegment}
               editing={editing}
+              showWorkNotes={showWorkNotes}
               singleSportGroup={singleSportGroup}
               relaxing={busy === segment.id}
               rollingKey={rolling}
@@ -687,8 +774,14 @@ export function UnitPlanView({
               }
               onReroll={(itemKey) => void reroll(segment, itemKey)}
               onChoose={(itemKey) => void openPicker({ segmentId: segment.id, itemKey })}
-              onSwitchVariant={(itemKey) => void openVariants(segment.id, itemKey)}
+              onSelectVariant={(itemKey, exerciseId, variantId) =>
+                void selectVariant(segment.id, itemKey, exerciseId, variantId)
+              }
               onInsert={() => void openPicker({ segmentId: segment.id })}
+              onDeclarePlanned={() =>
+                change((current) => declarePlannedGap(current, segment.id, segment.minutes))
+              }
+              onReopenGap={() => change((current) => reopenGap(current, segment.id))}
             />
           )
         })}
@@ -718,45 +811,27 @@ export function UnitPlanView({
         onQuickCreate={quickCreate}
       />
 
-      <VariantSwitchDialog
-        open={variantTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setVariantTarget(null)
-        }}
-        variants={
-          variantTarget && variantDraftItem?.exerciseId
-            ? variantsOf(pools[variantTarget.segmentId] ?? [], variantDraftItem.exerciseId)
-            : []
-        }
-        currentKey={
-          variantDraftItem?.exerciseId
-            ? candidateKey(variantDraftItem.exerciseId, variantDraftItem.variantId)
-            : null
-        }
-        onPick={(candidate) => {
-          if (!variantTarget) return
-          change((current) =>
-            setItemExercise(
-              current,
-              variantTarget.segmentId,
-              variantTarget.itemKey,
-              placementFrom(candidate)
-            )
-          )
-        }}
-      />
-
       <SaveChangesPrompt
         open={prompt !== null}
         onOpenChange={(open) => {
           if (!open) setPrompt(null)
         }}
         mode={prompt?.mode ?? 'leave'}
-        mismatches={mismatches}
+        openGaps={gaps}
+        overfills={overfills}
         quickCreated={quickCreated}
         saving={saving}
         onSave={() => void savePlan()}
+        onAcceptGapsAndSave={acceptGapsAndSave}
         onDiscard={discardAndLeave}
+        onEdit={
+          editing
+            ? undefined
+            : () => {
+                setPrompt(null)
+                setEditing(true)
+              }
+        }
       />
 
       <DiscardChangesDialog
@@ -784,6 +859,12 @@ export function UnitPlanView({
               variant="outline"
               onClick={() => {
                 setStaleOpen(false)
+                pendingDraft.current = null
+                // Die Arbeitsfassung folgt der Einheit nur außerhalb des
+                // Bearbeiten-Modus — „Neu laden" verlässt ihn deshalb, die
+                // Änderungen sind laut Dialog ohnehin verloren.
+                setQuickCreated([])
+                setEditing(false)
                 router.refresh()
               }}
             >
@@ -793,7 +874,7 @@ export function UnitPlanView({
               onClick={(event) => {
                 event.preventDefault()
                 setStaleOpen(false)
-                void savePlan(true, pendingName.current)
+                void savePlan(true, pendingName.current, pendingDraft.current ?? draft)
               }}
             >
               Trotzdem überschreiben
@@ -809,6 +890,7 @@ interface SegmentBlockProps {
   segment: UnitSegment
   draftSegment: DraftSegment | undefined
   editing: boolean
+  showWorkNotes: boolean
   singleSportGroup: boolean
   relaxing: boolean
   rollingKey: string | null
@@ -819,14 +901,17 @@ interface SegmentBlockProps {
   onRemove: (itemKey: string) => void
   onReroll: (itemKey: string) => void
   onChoose: (itemKey: string) => void
-  onSwitchVariant: (itemKey: string) => void
+  onSelectVariant: (itemKey: string, exerciseId: string, variantId: string | null) => void
   onInsert: () => void
+  onDeclarePlanned: () => void
+  onReopenGap: () => void
 }
 
 function SegmentBlock({
   segment,
   draftSegment,
   editing,
+  showWorkNotes,
   singleSportGroup,
   relaxing,
   rollingKey,
@@ -837,15 +922,22 @@ function SegmentBlock({
   onRemove,
   onReroll,
   onChoose,
-  onSwitchVariant,
+  onSelectVariant,
   onInsert,
+  onDeclarePlanned,
+  onReopenGap,
 }: SegmentBlockProps) {
   // Im Bearbeiten-Modus zeigt die Arbeitsfassung den Stand, in der Leseansicht
   // die geladene Einheit.
-  const items = editing && draftSegment ? draftSegment.items : segment.items
-  const notes = editing && draftSegment ? draftSegment.notes : segment.notes
+  const inDraft = editing && draftSegment !== undefined
+  const items = inDraft ? draftSegment.items : segment.items
+  const notes = inDraft ? draftSegment.notes : segment.notes
+  const plannedGapMinutes = inDraft ? draftSegment.plannedGapMinutes : segment.plannedGapMinutes
   const filledMinutes = items.reduce((sum, item) => sum + item.plannedDuration, 0)
-  const hasGap = segment.fillMode === 'generate' && filledMinutes < segment.minutes
+  const freeMinutes = Math.max(0, segment.minutes - filledMinutes)
+
+  /** Die eine Regel: keine Lücke, offen (gelb, sperrt) oder geplant (ruhig). */
+  const gap = gapState(freeMinutes, plannedGapMinutes, segment.fillMode)
 
   /**
    * Ein bewusst frei gelassener Abschnitt zeigt seinen Inhalt, sobald er einen
@@ -860,7 +952,7 @@ function SegmentBlock({
         <h2 className="text-sm font-semibold">
           {segment.fillMode === 'empty' ? `${segment.name} · frei` : segment.name}
         </h2>
-        {editing && draftSegment ? (
+        {inDraft ? (
           <SegmentFillStatus balance={segmentBalance(draftSegment, segment.minutes)} />
         ) : (
           <span className="text-xs text-muted-foreground tabular-nums">
@@ -869,17 +961,10 @@ function SegmentBlock({
         )}
       </div>
 
-      {editing && draftSegment ? (
-        <SegmentNoteField
-          segmentId={segment.id}
-          segmentName={segment.name}
-          notes={notes}
-          onChange={onNotesChange}
-        />
+      {inDraft ? (
+        <SegmentNoteField segmentId={segment.id} notes={notes} onChange={onNotesChange} />
       ) : (
-        notes && (
-          <p className="rounded-md bg-muted/50 px-3 py-2 text-sm whitespace-pre-wrap">{notes}</p>
-        )
+        notes && <WorkNote text={notes} />
       )}
 
       {showAsEmpty && !editing ? (
@@ -890,53 +975,56 @@ function SegmentBlock({
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        // Der Abstand zwischen den Einträgen ist die Trennung: Karte und
+        // Bedienzeile stehen in einem Rahmen, der nächste Eintrag beginnt danach.
+        <div className={editing ? 'space-y-3' : 'space-y-2'}>
           {items.map((item, index) => {
             const itemKey = 'key' in item ? item.key : item.id
+            const exercise = item.exercise
 
             return (
-              <div key={itemKey}>
-                <UnitItemCard
-                  item={item}
-                  refill={
-                    editing && item.exercise === null
-                      ? {
-                          rolling: rollingKey === itemKey,
-                          onReroll: () => onReroll(itemKey),
-                          onChoose: () => onChoose(itemKey),
-                        }
-                      : undefined
-                  }
-                />
-                {editing && item.exercise !== null && (
+              <UnitItemCard
+                key={itemKey}
+                item={item}
+                rolling={rollingKey === itemKey}
+                showWorkNotes={!editing && showWorkNotes}
+                onSelectVariant={
+                  editing && exercise
+                    ? (variantId) => onSelectVariant(itemKey, exercise.id, variantId)
+                    : undefined
+                }
+                refill={
+                  editing && exercise === null
+                    ? {
+                        rolling: rollingKey === itemKey,
+                        onReroll: () => onReroll(itemKey),
+                        onChoose: () => onChoose(itemKey),
+                      }
+                    : undefined
+                }
+              >
+                {editing && exercise !== null && (
                   <UnitItemControls
                     itemKey={itemKey}
                     plannedDuration={item.plannedDuration}
-                    estimatedDuration={item.exercise.estimatedDuration}
+                    estimatedDuration={exercise.estimatedDuration}
                     position={index + 1}
                     total={items.length}
-                    hasVariants={item.exercise.variantCount > 0}
                     rolling={rollingKey === itemKey}
+                    rollBlocked={rollingKey !== null && rollingKey !== itemKey}
                     onDurationChange={(minutes) => onDurationChange(itemKey, minutes)}
                     onMoveUp={() => onMove(itemKey, 'up')}
                     onMoveDown={() => onMove(itemKey, 'down')}
                     onReroll={() => onReroll(itemKey)}
                     onChoose={() => onChoose(itemKey)}
-                    onSwitchVariant={() => onSwitchVariant(itemKey)}
                     onRemove={() => onRemove(itemKey)}
                   />
                 )}
-              </div>
+              </UnitItemCard>
             )
           })}
 
-          {showAsEmpty && editing && (
-            <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-              Dieser Abschnitt ist zum Selberfüllen vorgesehen.
-            </p>
-          )}
-
-          {hasGap && (
+          {gap === 'open' && (
             <GapNotice
               segmentMinutes={segment.minutes}
               filledMinutes={filledMinutes}
@@ -944,12 +1032,27 @@ function SegmentBlock({
               detail={segment.gapDetail}
               singleSportGroup={singleSportGroup}
               relaxing={relaxing}
-              onRelax={onRelax}
+              // Lockern lädt die Einheit neu — im Bearbeiten-Modus füllt oder
+              // erklärt der Nutzer die Lücke selbst.
+              onRelax={editing ? undefined : onRelax}
               onInsert={editing ? onInsert : undefined}
+              onDeclarePlanned={editing ? onDeclarePlanned : undefined}
             />
           )}
 
-          {editing && (
+          {gap === 'planned' && (
+            <PlannedGap
+              minutes={freeMinutes}
+              onInsert={editing ? onInsert : undefined}
+              // Ein im Generator frei gelassenes Segment ist dort geplant
+              // worden; hier gibt es nichts wieder zu öffnen.
+              onReopen={editing && segment.fillMode === 'generate' ? onReopenGap : undefined}
+            />
+          )}
+
+          {/* Je Segment nur ein Knopf „Übung einfügen": steht eine Lücke da,
+              trägt sie ihn. */}
+          {editing && gap === 'none' && (
             <Button
               variant="outline"
               size="sm"

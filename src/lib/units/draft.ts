@@ -1,5 +1,5 @@
 import { candidateKey } from './candidates'
-import type { Unit, UnitItemExercise } from '@/lib/types/unit'
+import type { SegmentFillMode, Unit, UnitItemExercise } from '@/lib/types/unit'
 
 /**
  * Die Arbeitsfassung des Plans — der Stand, an dem der Bearbeiten-Modus aus
@@ -60,6 +60,12 @@ export interface DraftItem {
 export interface DraftSegment {
   id: string
   notes: string
+  /**
+   * Bis zu so viele freie Minuten sind hier **geplant**. Eine Zahl und kein
+   * Ja/Nein: so gilt die Erklärung für den Stand, an dem sie gegeben wurde —
+   * werden danach mehr Minuten frei, ist die Lücke von selbst wieder offen.
+   */
+  plannedGapMinutes: number
   items: DraftItem[]
 }
 
@@ -88,6 +94,7 @@ export function createDraft(unit: Unit): UnitDraft {
     segments: unit.segments.map((segment) => ({
       id: segment.id,
       notes: segment.notes,
+      plannedGapMinutes: segment.plannedGapMinutes,
       items: segment.items.map((item) => ({
         key: item.id,
         exerciseId: item.exerciseId,
@@ -279,6 +286,46 @@ export function insertItem(
   })
 }
 
+/**
+ * „Als geplante Lücke stehen lassen": was in diesem Segment gerade frei ist,
+ * gilt ab jetzt als geplant. Ohne freie Minuten ein Nichts.
+ */
+export function declarePlannedGap(
+  draft: UnitDraft,
+  segmentId: string,
+  segmentMinutes: number
+): UnitDraft {
+  return mapSegment(draft, segmentId, (segment) => {
+    const free = Math.max(0, segmentMinutes - plannedMinutes(segment))
+    return free === 0 ? segment : { ...segment, plannedGapMinutes: free }
+  })
+}
+
+/** „Wieder öffnen": die Lücke ist wieder eine offene. */
+export function reopenGap(draft: UnitDraft, segmentId: string): UnitDraft {
+  return mapSegment(draft, segmentId, (segment) => ({ ...segment, plannedGapMinutes: 0 }))
+}
+
+/** Der Rahmen eines Segments, den die Arbeitsfassung bewusst nicht trägt. */
+export interface SegmentFrame {
+  id: string
+  name: string
+  minutes: number
+  fillMode: SegmentFillMode
+}
+
+/**
+ * „Alle als geplant übernehmen": erklärt jede **offene** Lücke zur geplanten.
+ * Segmente ohne offene Lücke bleiben unberührt — eine schon geplante Lücke
+ * wird nicht nebenbei vergrößert.
+ */
+export function declareAllOpenGaps(draft: UnitDraft, frames: SegmentFrame[]): UnitDraft {
+  return openGaps(draft, frames).reduce(
+    (current, gap) => declarePlannedGap(current, gap.id, gap.minutes),
+    draft
+  )
+}
+
 // ---- Abgeleitetes ----
 
 /** Verplante Minuten eines Segments. */
@@ -309,6 +356,43 @@ export function segmentBalance(segment: DraftSegment, minutes: number): SegmentB
     free: Math.max(0, minutes - planned),
     over: Math.max(0, planned - minutes),
   }
+}
+
+export type GapState = 'none' | 'open' | 'planned'
+
+/**
+ * Die eine Regel für freie Minuten:
+ *
+ * - nichts frei → keine Lücke
+ * - das Segment stand im Generator auf „frei lassen" → immer geplant
+ * - frei ≤ geplant → geplant
+ * - frei > geplant → offen, und eine offene Lücke sperrt das Speichern
+ */
+export function gapState(
+  free: number,
+  plannedGapMinutes: number,
+  fillMode: SegmentFillMode
+): GapState {
+  if (free <= 0) return 'none'
+  if (fillMode === 'empty') return 'planned'
+  return free <= plannedGapMinutes ? 'planned' : 'open'
+}
+
+export interface OpenGap extends SegmentFrame {
+  free: number
+}
+
+/** Alle Segmente mit offener Lücke, in der Reihenfolge des Zeitverlaufs. */
+export function openGaps(draft: UnitDraft, frames: SegmentFrame[]): OpenGap[] {
+  return frames.flatMap((frame) => {
+    const segment = draft.segments.find((entry) => entry.id === frame.id)
+    if (!segment) return []
+
+    const { free } = segmentBalance(segment, frame.minutes)
+    return gapState(free, segment.plannedGapMinutes, frame.fillMode) === 'open'
+      ? [{ ...frame, free }]
+      : []
+  })
 }
 
 /** Geht dieses Segment auf? */
@@ -359,7 +443,7 @@ export function exclusionsFor(
 
 /**
  * Unterscheiden sich zwei Stände im **Plan**? Verglichen wird, was gespeichert
- * würde: Notizen, Reihenfolge, Übungen, Plandauern.
+ * würde: Notizen, geplante Lücken, Reihenfolge, Übungen, Plandauern.
  *
  * Bewusst nicht verglichen werden die weggewürfelten Übungen und die
  * Anzeigedaten. Wer A wegwürfelt, dann B, dann wieder bei A landet, hat am
@@ -372,6 +456,7 @@ export function draftsEqual(a: UnitDraft, b: UnitDraft): boolean {
     const other = b.segments[index]
     if (segment.id !== other.id) return false
     if (segment.notes !== other.notes) return false
+    if (segment.plannedGapMinutes !== other.plannedGapMinutes) return false
     if (segment.items.length !== other.items.length) return false
 
     return segment.items.every((item, position) => {

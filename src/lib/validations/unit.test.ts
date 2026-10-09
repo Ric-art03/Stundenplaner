@@ -17,6 +17,7 @@ function segment(overrides: Partial<SegmentConfig> = {}): SegmentConfig {
     sports: ['Turnen'],
     primarySport: null,
     difficulties: ['Leicht', 'Mittel', 'Schwer'],
+    organizationForms: [],
     notes: '',
     ...overrides,
   }
@@ -235,5 +236,39 @@ describe('savePlanOptionsSchema', () => {
     const base = { expectedUpdatedAt: '2026-10-07T12:34:56Z', force: true }
     expect(savePlanOptionsSchema.safeParse(base).success).toBe(true)
     expect(savePlanOptionsSchema.safeParse({ ...base, name: 'Mittwoch' }).success).toBe(true)
+  })
+})
+
+describe('Überarbeitung 2026-10-09 — geplante Lücke und Organisationsform', () => {
+  const SEGMENT = '11111111-1111-4111-8111-111111111111'
+
+  it('nimmt die geplanten Minuten eines Segments mit', () => {
+    const result = unitDraftSchema.safeParse({
+      segments: [{ id: SEGMENT, notes: '', plannedGapMinutes: 5, items: [] }],
+    })
+    expect(result.success && result.data.segments[0].plannedGapMinutes).toBe(5)
+  })
+
+  it('setzt fehlende geplante Minuten auf 0', () => {
+    const result = unitDraftSchema.safeParse({ segments: [{ id: SEGMENT, notes: '', items: [] }] })
+    expect(result.success && result.data.segments[0].plannedGapMinutes).toBe(0)
+  })
+
+  it('weist negative geplante Minuten ab', () => {
+    const result = unitDraftSchema.safeParse({
+      segments: [{ id: SEGMENT, notes: '', plannedGapMinutes: -1, items: [] }],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('lässt eine Phase ohne Organisationsform zu und setzt sie auf leer', () => {
+    const { organizationForms: _omitted, ...withoutForms } = segment()
+    const result = segmentConfigSchema.safeParse(withoutForms)
+    expect(result.success && result.data.organizationForms).toEqual([])
+  })
+
+  it('nimmt gewählte Organisationsformen an', () => {
+    const result = segmentConfigSchema.safeParse(segment({ organizationForms: ['Kleingruppen'] }))
+    expect(result.success && result.data.organizationForms).toEqual(['Kleingruppen'])
   })
 })

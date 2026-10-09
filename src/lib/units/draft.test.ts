@@ -2,8 +2,13 @@ import { describe, it, expect } from 'vitest'
 import {
   MIN_ITEM_MINUTES,
   createDraft,
+  declareAllOpenGaps,
+  declarePlannedGap,
   draftsEqual,
   exclusionsFor,
+  gapState,
+  openGaps,
+  reopenGap,
   insertItem,
   moveItem,
   plannedMinutes,
@@ -17,6 +22,7 @@ import {
   usedExerciseIds,
   type DraftItemExercise,
   type DraftPlacement,
+  type SegmentFrame,
   type UnitDraft,
 } from './draft'
 import type { Unit, UnitItem, UnitSegment } from '@/lib/types/unit'
@@ -34,8 +40,9 @@ function exercise(id: string, duration = 10): DraftItemExercise {
     materials: [],
     musicRequired: false,
     musicLink: null,
-    variantCount: 0,
+    variants: [],
     variantTitle: null,
+    workNotes: null,
   }
 }
 
@@ -63,7 +70,9 @@ function segment(id: string, minutes: number, items: UnitItem[], notes = ''): Un
     sports: ['Turnen'],
     primarySport: 'Turnen',
     difficulties: ['Mittel'],
+    organizationForms: [],
     notes,
+    plannedGapMinutes: 0,
     gapReason: null,
     gapDetail: null,
     position: 0,
@@ -519,5 +528,123 @@ describe('draftsEqual', () => {
   it('erkennt eine eingefügte Übung', () => {
     const changed = insertItem(threeItemDraft(), 's1', placement('d'))
     expect(draftsEqual(threeItemDraft(), changed)).toBe(false)
+  })
+})
+
+// ---- Geplante Lücke (Überarbeitung 2026-10-09) ----
+
+describe('gapState — die eine Regel für freie Minuten', () => {
+  it('kennt ohne freie Minuten keine Lücke', () => {
+    expect(gapState(0, 0, 'generate')).toBe('none')
+    expect(gapState(0, 5, 'generate')).toBe('none')
+  })
+
+  it('hält eine nicht erklärte Lücke für offen', () => {
+    expect(gapState(2, 0, 'generate')).toBe('open')
+  })
+
+  it('hält freie Minuten bis zur erklärten Zahl für geplant', () => {
+    expect(gapState(2, 2, 'generate')).toBe('planned')
+    expect(gapState(1, 2, 'generate')).toBe('planned')
+  })
+
+  it('öffnet die Lücke wieder, sobald mehr frei wird als erklärt', () => {
+    expect(gapState(7, 2, 'generate')).toBe('open')
+  })
+
+  it('hält ein im Generator frei gelassenes Segment immer für geplant', () => {
+    expect(gapState(10, 0, 'empty')).toBe('planned')
+  })
+})
+
+describe('declarePlannedGap und reopenGap', () => {
+  // Drei Übungen à 5 Minuten in einem Gerüst von 15.
+  const FRAME: SegmentFrame = { id: 's1', name: 'Aufwärmen', minutes: 15, fillMode: 'generate' }
+  const withGap = () => removeItem(threeItemDraft(), 's1', 'i3')
+
+  it('erklärt die gerade freien Minuten als geplant', () => {
+    const declared = declarePlannedGap(withGap(), 's1', 15)
+    expect(declared.segments[0].plannedGapMinutes).toBe(5)
+    expect(openGaps(declared, [FRAME])).toEqual([])
+  })
+
+  it('ändert nichts, wenn nichts frei ist', () => {
+    const draft = threeItemDraft()
+    expect(draftsEqual(declarePlannedGap(draft, 's1', 15), draft)).toBe(true)
+  })
+
+  it('gilt für den Stand, an dem erklärt wurde — eine größere Lücke ist wieder offen', () => {
+    const declared = declarePlannedGap(withGap(), 's1', 15)
+    const larger = removeItem(declared, 's1', 'i2')
+
+    expect(openGaps(larger, [FRAME])).toEqual([{ ...FRAME, free: 10 }])
+  })
+
+  it('bleibt geplant, wenn die Lücke kleiner wird', () => {
+    const declared = declarePlannedGap(withGap(), 's1', 15)
+    const smaller = setItemDuration(declared, 's1', 'i1', 8)
+
+    expect(openGaps(smaller, [FRAME])).toEqual([])
+  })
+
+  it('öffnet die Lücke wieder', () => {
+    const reopened = reopenGap(declarePlannedGap(withGap(), 's1', 15), 's1')
+    expect(reopened.segments[0].plannedGapMinutes).toBe(0)
+    expect(openGaps(reopened, [FRAME])).toHaveLength(1)
+  })
+
+  it('zählt als Änderung am Plan', () => {
+    const draft = withGap()
+    expect(draftsEqual(draft, declarePlannedGap(draft, 's1', 15))).toBe(false)
+  })
+
+  it('übernimmt die geplanten Minuten aus der geladenen Einheit', () => {
+    const loaded = createDraft(
+      unit([{ ...segment('s1', 15, [item('i1', 'a', 5, 0)]), plannedGapMinutes: 10 }])
+    )
+    expect(loaded.segments[0].plannedGapMinutes).toBe(10)
+    expect(openGaps(loaded, [FRAME])).toEqual([])
+  })
+})
+
+describe('declareAllOpenGaps', () => {
+  const frames: SegmentFrame[] = [
+    { id: 's1', name: 'Aufwärmen', minutes: 10, fillMode: 'generate' },
+    { id: 's2', name: 'Hauptteil', minutes: 20, fillMode: 'generate' },
+    { id: 's3', name: 'Spiel', minutes: 10, fillMode: 'empty' },
+    { id: 's4', name: 'Cool-Down', minutes: 5, fillMode: 'generate' },
+  ]
+  const draft = () =>
+    createDraft(
+      unit([
+        segment('s1', 10, [item('i1', 'a', 8, 0)]),
+        segment('s2', 20, []),
+        { ...segment('s3', 10, []), fillMode: 'empty' },
+        segment('s4', 5, [item('i4', 'd', 5, 0)]),
+      ])
+    )
+
+  it('nennt nur die offenen Lücken — Restlücke und leeres Segment, nicht das frei gelassene', () => {
+    expect(openGaps(draft(), frames).map((gap) => [gap.name, gap.free])).toEqual([
+      ['Aufwärmen', 2],
+      ['Hauptteil', 20],
+    ])
+  })
+
+  it('erklärt alle offenen Lücken in einem Zug', () => {
+    const declared = declareAllOpenGaps(draft(), frames)
+
+    expect(openGaps(declared, frames)).toEqual([])
+    expect(declared.segments.map((s) => s.plannedGapMinutes)).toEqual([2, 20, 0, 0])
+  })
+
+  it('lässt einen Plan ohne offene Lücke unverändert', () => {
+    const full = createDraft(unit([segment('s4', 5, [item('i4', 'd', 5, 0)])]))
+    expect(draftsEqual(declareAllOpenGaps(full, [frames[3]]), full)).toBe(true)
+  })
+
+  it('hält eine Überfüllung nicht für eine Lücke', () => {
+    const over = createDraft(unit([segment('s4', 5, [item('i4', 'd', 9, 0)])]))
+    expect(openGaps(over, [frames[3]])).toEqual([])
   })
 })

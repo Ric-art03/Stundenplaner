@@ -41,6 +41,7 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 | P1 | PWA (Homescreen-Installation) | Planned |
 | P2 | Community-Features (Übungen teilen) | Planned |
 | P2 | Mehrsprachigkeit (i18n) | Planned |
+| P2 | Dunkelmodus | Planned |
 
 ## Success Metrics
 - **Wiederkehrende Nutzung:** Nutzer erstellt mindestens 2 Einheiten pro Monat

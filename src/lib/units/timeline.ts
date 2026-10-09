@@ -99,6 +99,7 @@ export function createSegment(
     sports,
     primarySport: resolvePrimarySport(sports, primarySport),
     difficulties,
+    organizationForms: [],
     notes: '',
   }
 }

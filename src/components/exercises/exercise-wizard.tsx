@@ -17,6 +17,7 @@ import { MaterialInput } from './material-input'
 import { VariantInput } from './variant-input'
 import { LinkInput } from './link-input'
 import { ImageUpload } from './image-upload'
+import { WorkNoteField } from './work-note'
 import {
   SPORTS, AGE_GROUPS, PHASES, ORGANIZATION_FORMS, DIFFICULTY_LEVELS,
   EMPTY_FORM_DATA,
@@ -301,19 +302,15 @@ function StepBasis({ data, errors, update }: StepProps) {
           <p className="text-xs text-muted-foreground ml-auto">{data.description.length}/5.000</p>
         </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="workNotes">Arbeitsnotizen</Label>
-        <p className="text-xs text-muted-foreground">Werden angezeigt, wenn die Übung in der fertigen Stunde dran ist.</p>
-        <Textarea
-          id="workNotes"
-          placeholder="Hinweise zur Durchführung, Aufbau-Details..."
-          value={data.workNotes}
-          onChange={(e) => update('workNotes', e.target.value)}
-          maxLength={2000}
-          rows={3}
-        />
-        <p className="text-xs text-muted-foreground text-right">{data.workNotes.length}/2.000</p>
-      </div>
+      <WorkNoteField
+        id="workNotes"
+        scope="exercise"
+        value={data.workNotes}
+        onChange={(value) => update('workNotes', value)}
+        placeholder="Hinweise zur Durchführung, Aufbau-Details..."
+        rows={3}
+        showCount
+      />
       <div className="space-y-2">
         <Label htmlFor="notes">Anmerkungen</Label>
         <Textarea

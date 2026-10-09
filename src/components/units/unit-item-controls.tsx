@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronUp,
   Dices,
-  Layers,
   Loader2,
   MoreVertical,
   Search,
@@ -31,22 +30,33 @@ interface UnitItemControlsProps {
   /** 1-basiert, nur für die Beschriftung von Hoch/Runter. */
   position: number
   total: number
-  hasVariants: boolean
   /** Läuft gerade ein Auswürfeln an diesem Platz? */
   rolling?: boolean
+  /**
+   * Läuft ein Auswürfeln an einem **anderen** Platz? Dann ist „Neu auswürfeln"
+   * hier ausgegraut — ein Knopf, der sich klicken lässt und nichts tut, ist
+   * genau der Fehler, der vermieden werden soll.
+   */
+  rollBlocked?: boolean
   onDurationChange: (minutes: number) => void
   onMoveUp: () => void
   onMoveDown: () => void
   onReroll: () => void
   onChoose: () => void
-  onSwitchVariant: () => void
   onRemove: () => void
 }
 
 /**
- * Die Bedienzeile unter einem Eintrag. Bewusst **unter** der Karte und nicht in
- * einer schmalen Spalte daneben: auf dem Telefon ist das der Unterschied
- * zwischen treffbar und nicht treffbar.
+ * Die Bedienzeile eines Eintrags. Bewusst **unter** dem Inhalt der Karte und
+ * nicht in einer schmalen Spalte daneben: auf dem Telefon ist das der
+ * Unterschied zwischen treffbar und nicht treffbar.
+ *
+ * Sie sitzt **im Rahmen der Karte** und ist nur durch ihre Hinterlegung
+ * abgesetzt, nicht durch einen Strich: Karte und Bedienzeile gehören zusammen,
+ * die Trennung liegt danach — zwischen diesem Eintrag und dem nächsten.
+ *
+ * Die Variante wird nicht hier umgeschaltet, sondern auf der Karte über
+ * „Varianten (n)".
  *
  * Hoch und Runter liegen als eigene Knöpfe draußen, nicht im Menü — sie werden
  * in der Halle gebraucht und sollen einen Daumen weit weg sein. Alles Übrige
@@ -58,14 +68,13 @@ export function UnitItemControls({
   estimatedDuration,
   position,
   total,
-  hasVariants,
   rolling = false,
+  rollBlocked = false,
   onDurationChange,
   onMoveUp,
   onMoveDown,
   onReroll,
   onChoose,
-  onSwitchVariant,
   onRemove,
 }: UnitItemControlsProps) {
   const fieldId = `dauer-${itemKey}`
@@ -101,7 +110,7 @@ export function UnitItemControls({
   const durationDiffers = estimatedDuration !== null && estimatedDuration !== plannedDuration
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2 border-t pt-2">
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-muted/50 px-2 py-1.5">
       {/* Plandauer */}
       <div className="flex items-center gap-1.5">
         <Label htmlFor={fieldId} className="text-xs text-muted-foreground">
@@ -179,8 +188,9 @@ export function UnitItemControls({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {/* Ein zweiter Klick wird ignoriert, solange der erste läuft. */}
-            <DropdownMenuItem onClick={onReroll} disabled={rolling}>
+            {/* Solange irgendwo gewürfelt wird, ist der Punkt ausgegraut statt
+                folgenlos klickbar. */}
+            <DropdownMenuItem onClick={onReroll} disabled={rolling || rollBlocked}>
               <Dices className="mr-2 h-4 w-4" />
               Neu auswürfeln
             </DropdownMenuItem>
@@ -188,13 +198,6 @@ export function UnitItemControls({
               <Search className="mr-2 h-4 w-4" />
               Selbst wählen …
             </DropdownMenuItem>
-            {/* Ohne Varianten gar nicht angeboten, statt ausgegraut. */}
-            {hasVariants && (
-              <DropdownMenuItem onClick={onSwitchVariant}>
-                <Layers className="mr-2 h-4 w-4" />
-                Variante umschalten …
-              </DropdownMenuItem>
-            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onRemove} className="text-destructive">
               <Trash2 className="mr-2 h-4 w-4" />

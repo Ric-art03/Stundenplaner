@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, Plus, TriangleAlert, Unlock } from 'lucide-react'
+import { CalendarCheck, Loader2, Plus, TriangleAlert, Unlock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { GapCriterion, GapDetail } from '@/lib/units/generator'
 
@@ -13,7 +13,14 @@ interface GapNoticeProps {
   relaxing: boolean
   /** Nur im Bearbeiten-Modus gesetzt: die Lücke an dieser Stelle selbst füllen. */
   onInsert?: () => void
-  onRelax: () => void
+  /** Nur im Bearbeiten-Modus gesetzt: „Als geplante Lücke stehen lassen". */
+  onDeclarePlanned?: () => void
+  /**
+   * Nur in der Leseansicht gesetzt. Lockern füllt das Segment auf dem Server
+   * neu und lädt die Einheit — im Bearbeiten-Modus würde das die offenen
+   * Änderungen ohne Nachfrage verwerfen.
+   */
+  onRelax?: () => void
 }
 
 /** Wie das Kriterium heißt und was der Nutzer dagegen tun kann. */
@@ -35,34 +42,44 @@ const CRITERIA: Record<GapCriterion, { label: string; remedy: string }> = {
   },
   sport: {
     label: 'gewählte Sportarten',
-    remedy: 'Hake in diesem Segment weitere Sportarten an.',
+    remedy: 'Hake im Generator für diese Phase weitere Sportarten an.',
   },
   difficulty: {
     label: 'gewählte Schwierigkeitsgrade',
-    remedy: 'Hake in diesem Segment weitere Schwierigkeitsgrade an.',
+    remedy: 'Hake im Generator für diese Phase weitere Schwierigkeitsgrade an.',
+  },
+  organization: {
+    label: 'gewählte Organisationsformen',
+    remedy:
+      'Hake im Generator für diese Phase weitere Organisationsformen an, nimm die Auswahl ganz heraus, oder trage die Organisationsform bei deinen Übungen nach.',
   },
 }
 
-const SOFT: GapCriterion[] = ['sport', 'difficulty']
+const SOFT: GapCriterion[] = ['sport', 'difficulty', 'organization']
 
 function remediesFor(detail: GapDetail): string[] {
   switch (detail.kind) {
     case 'no-phase':
       return [
-        `Ordne Übungen der Phase „${detail.phase}" zu, oder stelle dieses Segment auf eine Phase um, für die du schon Übungen hast.`,
+        `Ordne Übungen der Phase „${detail.phase}" zu, oder wähle hier eine andere Phase, für die du schon Übungen hast.`,
       ]
     case 'all-filtered':
-      return detail.blockedBy.map((entry) => CRITERIA[entry.criterion].remedy)
+      // Zuerst, was sich im Generator für dieses Segment ändern lässt („Hake im
+      // Generator …"), danach das, wofür man an Übungen, Gruppe oder Halle muss.
+      return [
+        ...detail.blockedBy.filter((entry) => SOFT.includes(entry.criterion)),
+        ...detail.blockedBy.filter((entry) => !SOFT.includes(entry.criterion)),
+      ].map((entry) => CRITERIA[entry.criterion].remedy)
     case 'exhausted':
       return [`Lege weitere Übungen der Phase „${detail.phase}" an.`]
     case 'too-short':
       return [
-        'Verlängere dieses Segment im Generator, oder lege kürzere Übungen an.',
+        'Verlängere diese Phase im Generator, oder lege kürzere Übungen an.',
       ]
   }
 }
 
-/** Lockern gibt nur Sportart und Schwierigkeitsgrad frei — alles andere bleibt hart. */
+/** Lockern gibt nur Organisationsform, Schwierigkeitsgrad und Sportart frei — alles andere bleibt hart. */
 function relaxCanHelp(detail: GapDetail | null): boolean {
   if (!detail || detail.relaxed) return false
   // Hat die Phase gar keine Übung, ist Lockern eine Sackgasse: `buildPool`
@@ -84,6 +101,7 @@ export function GapNotice({
   relaxing,
   onRelax,
   onInsert,
+  onDeclarePlanned,
 }: GapNoticeProps) {
   const missing = segmentMinutes - filledMinutes
   const canRelax = relaxCanHelp(detail)
@@ -150,10 +168,9 @@ export function GapNotice({
             </p>
           )}
 
-          {/* Im Bearbeiten-Modus steht die Lücke selbst zu füllen gleich neben dem
-              Lockern: beides nebeneinander ist womöglich eine Wahl zu viel, aber
-              das zeigt sich erst im Gebrauch (offene Frage in der Spec). */}
-          <div className="flex flex-col gap-2 sm:flex-row">
+          {/* Im Bearbeiten-Modus hat der Nutzer zwei Handhaben: füllen oder
+              erklären. In der Leseansicht bleibt das Lockern. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {onInsert && (
               <Button type="button" size="sm" onClick={onInsert}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -161,7 +178,14 @@ export function GapNotice({
               </Button>
             )}
 
-            {canRelax ? (
+            {onDeclarePlanned && (
+              <Button type="button" variant="outline" size="sm" onClick={onDeclarePlanned}>
+                <CalendarCheck className="mr-2 h-4 w-4" />
+                Als geplante Lücke stehen lassen
+              </Button>
+            )}
+
+            {!onRelax ? null : canRelax ? (
               <Button
                 type="button"
                 variant="outline"
@@ -179,11 +203,20 @@ export function GapNotice({
             ) : (
               <p className="text-xs text-muted-foreground">
                 {detail?.relaxed
-                  ? 'Die Kriterien sind für dieses Segment bereits gelockert.'
-                  : 'Lockern würde hier nichts bringen: Es gibt nur Sportart und Schwierigkeitsgrad frei, und daran liegt es nicht.'}
+                  ? 'Die Kriterien sind für diese Phase bereits gelockert.'
+                  : 'Lockern würde hier nichts bringen: Es gibt nur Organisationsform, Schwierigkeitsgrad und Sportart frei, und daran liegt es nicht.'}
               </p>
             )}
           </div>
+
+          {/* In der Leseansicht fehlen die zwei Handhaben des Bearbeiten-Modus —
+              der Hinweis sagt, wo sie sind. */}
+          {!onInsert && !onDeclarePlanned && (
+            <p className="text-xs text-muted-foreground">
+              Klicke oben auf &bdquo;Bearbeiten&ldquo; für weitere Optionen (Übungen einfügen
+              oder Lücke stehen lassen).
+            </p>
+          )}
         </div>
       </div>
     </div>

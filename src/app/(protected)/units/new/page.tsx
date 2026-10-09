@@ -35,6 +35,7 @@ export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
         sports: segment.sports,
         primarySport: segment.primarySport,
         difficulties: segment.difficulties,
+        organizationForms: segment.organizationForms,
         notes: segment.notes,
       }))
     : undefined
@@ -72,6 +73,7 @@ export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
             groups={groups}
             customPhases={categories.phase ?? []}
             customSports={categories.sport ?? []}
+            customOrganizationForms={categories.organization_form ?? []}
             initialGroupId={initialGroupId}
             initialSegments={initialSegments}
             initialEditorState={source?.editorState}

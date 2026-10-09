@@ -42,6 +42,7 @@ function segment(overrides: Partial<SegmentConfig> = {}): SegmentConfig {
     sports: ['Turnen'],
     primarySport: null,
     difficulties: ALL_DIFFICULTIES,
+    organizationForms: [],
     notes: '',
     ...overrides,
   }
@@ -706,7 +707,7 @@ describe('Kriterien lockern', () => {
       relax: true,
     })
     expect(result.segments[0].relaxLevel).toBe(0)
-    expect(result.segments[1].relaxLevel).toBe(1)
+    expect(result.segments[1].relaxLevel).toBe(2)
     expect(result.relaxedNote).toBe('„Hauptteil": Schwierigkeitsgrad gelockert — 1 Übung ergänzt.')
   })
 
@@ -942,7 +943,7 @@ describe('planSegment', () => {
       seed: 5,
       relax: true,
     })
-    expect(plan.relaxLevel).toBe(1)
+    expect(plan.relaxLevel).toBe(2)
     expect(plan.relaxNote).toBe('„Hauptteil": Schwierigkeitsgrad gelockert — 1 Übung ergänzt.')
   })
 
@@ -1025,5 +1026,132 @@ describe('failedCriteriaOf — Auskunft je Kandidat (PROJ-7)', () => {
         group()
       )
     ).toEqual(['difficulty'])
+  })
+})
+
+// ---- Organisationsform als weiches Kriterium (PROJ-7, Überarbeitung 2026-10-09) ----
+
+describe('Organisationsform je Phase', () => {
+  const kreis = candidate({ exerciseId: 'kreis', organizationForms: ['Kreis / Sitzkreis'] })
+  const gruppen = candidate({ exerciseId: 'gruppen', organizationForms: ['Kleingruppen'] })
+  const ohne = candidate({ exerciseId: 'ohne', organizationForms: [] })
+
+  it('schränkt ohne Auswahl nichts ein', () => {
+    const result = run({
+      segments: [segment({ minutes: 30 })],
+      candidates: [kreis, gruppen, ohne],
+    })
+    expect(usedIds(result).sort()).toEqual(['gruppen', 'kreis', 'ohne'])
+  })
+
+  it('nimmt nur Übungen mit einer der gewählten Organisationsformen', () => {
+    const result = run({
+      segments: [segment({ minutes: 30, organizationForms: ['Kleingruppen'] })],
+      candidates: [kreis, gruppen, ohne],
+    })
+    expect(usedIds(result)).toEqual(['gruppen'])
+  })
+
+  it('lässt eine Übung ohne Organisationsform nicht durch, sobald eine gewählt ist', () => {
+    expect(
+      failedCriteriaOf(ohne, segment({ organizationForms: ['Kleingruppen'] }), group())
+    ).toEqual(['organization'])
+  })
+
+  it('vergleicht ohne Rücksicht auf Groß- und Kleinschreibung', () => {
+    expect(
+      failedCriteriaOf(gruppen, segment({ organizationForms: ['  kleingruppen '] }), group())
+    ).toEqual([])
+  })
+
+  it('zählt eine Variante mit ihrer eigenen Organisationsform', () => {
+    const variante = candidate({
+      exerciseId: 'kreis',
+      variantId: 'v1',
+      organizationForms: ['Kleingruppen'],
+    })
+    const result = run({
+      segments: [segment({ minutes: 10, organizationForms: ['Kleingruppen'] })],
+      candidates: [kreis, variante],
+    })
+    expect(result.segments[0].items.map((item) => item.variantId)).toEqual(['v1'])
+  })
+
+  it('nennt die Organisationsform im Lückenhinweis als eigene Ursache mit Anzahl', () => {
+    const result = run({
+      segments: [segment({ organizationForms: ['Stationsbetrieb'] })],
+      candidates: [kreis, gruppen],
+    })
+    expect(result.segments[0].gapDetail?.blockedBy).toEqual([
+      { criterion: 'organization', count: 2 },
+    ])
+  })
+
+  it('gibt beim Lockern die Organisationsform als Erstes frei', () => {
+    const plan = planSegment({
+      segment: segment({ minutes: 10, organizationForms: ['Stationsbetrieb'] }),
+      segmentIndex: 0,
+      group: group(),
+      candidates: [kreis],
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 5,
+      relax: true,
+    })
+    expect(plan.relaxLevel).toBe(1)
+    expect(plan.relaxNote).toBe('„Hauptteil": Organisationsform gelockert — 1 Übung ergänzt.')
+  })
+
+  it('nennt im Hinweis alles, was freigegeben wurde', () => {
+    const plan = planSegment({
+      segment: segment({
+        minutes: 10,
+        difficulties: ['Leicht'],
+        organizationForms: ['Stationsbetrieb'],
+      }),
+      segmentIndex: 0,
+      group: group(),
+      candidates: [candidate({ exerciseId: 'schwer', difficulty: 'Schwer' })],
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 5,
+      relax: true,
+    })
+    expect(plan.relaxLevel).toBe(2)
+    expect(plan.relaxNote).toBe(
+      '„Hauptteil": Organisationsform und Schwierigkeitsgrad gelockert — 1 Übung ergänzt.'
+    )
+  })
+
+  it('überspringt die Stufe, wenn die Phase keine Organisationsform gewählt hat', () => {
+    const plan = planSegment({
+      segment: segment({ minutes: 10, sports: ['Volleyball'] }),
+      segmentIndex: 0,
+      group: group(),
+      candidates: [candidate({ exerciseId: 'turnen' })],
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 5,
+      relax: true,
+    })
+    expect(plan.relaxLevel).toBe(3)
+    expect(plan.relaxNote).toBe(
+      '„Hauptteil": Schwierigkeitsgrad und Sportart-Vorgabe gelockert — 1 Übung ergänzt.'
+    )
+  })
+
+  it('lässt harte Kriterien auch auf der letzten Stufe stehen', () => {
+    const plan = planSegment({
+      segment: segment({ minutes: 10, organizationForms: ['Stationsbetrieb'] }),
+      segmentIndex: 0,
+      group: group({ ageGroups: ['Senioren'] }),
+      candidates: [kreis],
+      recentExerciseIds: [],
+      blockedExerciseIds: [],
+      seed: 5,
+      relax: true,
+    })
+    expect(plan.items).toEqual([])
+    expect(plan.gapDetail?.blockedBy).toEqual([{ criterion: 'age', count: 1 }])
   })
 })

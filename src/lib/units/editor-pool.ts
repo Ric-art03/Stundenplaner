@@ -26,8 +26,14 @@ import type { SegmentConfig } from '@/lib/types/unit'
 export interface EditorCandidate extends Candidate {
   musicRequired: boolean
   musicLink: string | null
-  /** Varianten der Hauptübung — für „2 Varianten verfügbar" auf der Karte. */
-  variantCount: number
+  /** Alle Varianten der Übung mit Namen — für „Varianten (2)" auf der Karte. */
+  variants: { id: string; title: string }[]
+  /**
+   * Kam in den letzten zwei gespeicherten Einheiten der Gruppe vor. Solche
+   * Übungen würfelt der Editor erst, wenn sonst nichts frei ist — dieselbe
+   * Frische-Regel wie im Generator.
+   */
+  recentlyUsed: boolean
   /**
    * Leer = erfüllt alle Kriterien dieses Segments. Sonst die Kriterien, an denen
    * der Kandidat scheitert. Ausgerechnet hat das der Server aus derselben
@@ -51,6 +57,7 @@ export const CRITERION_LABELS: Record<CandidateCriterion, string> = {
   participants: 'Teilnehmerzahl',
   sport: 'Sportart',
   difficulty: 'Schwierigkeit',
+  organization: 'Organisationsform',
 }
 
 export function passes(candidate: EditorCandidate): boolean {
@@ -85,8 +92,11 @@ export function placementFrom(candidate: EditorCandidate): DraftPlacement {
       })),
       musicRequired: candidate.musicRequired,
       musicLink: candidate.musicLink,
-      variantCount: candidate.variantCount,
+      variants: candidate.variants,
       variantTitle: candidate.variantTitle,
+      // Die Arbeitsnotiz zeigt nur die Leseansicht, und die lädt die Einheit
+      // nach dem Speichern neu. Die Kandidatenliste bleibt dafür schlank.
+      workNotes: null,
     },
   }
 }
@@ -107,25 +117,62 @@ export function drawablePool(
   )
 }
 
+/** Was die Phase für die Gewichtung beim Auswürfeln vorgibt. */
+export interface DrawWeighting {
+  sports: string[]
+  primarySport: string | null
+}
+
+const NO_WEIGHTING: DrawWeighting = { sports: [], primarySport: null }
+
+function pickFrom<T>(items: T[], random: () => number): T {
+  return items[Math.min(items.length - 1, Math.floor(random() * items.length))]
+}
+
+function sameSport(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase()
+}
+
 /**
- * Eine Übung auswürfeln, oder `null`, wenn der Vorrat erschöpft ist. Dann
- * erscheint die Aufschlüsselung der Ursachen, die der Generator schon
- * formuliert — es gibt hier keinen zweiten Satz von Meldungen.
+ * Eine Übung auswürfeln, oder `null`, wenn der Vorrat erschöpft ist.
  *
- * Gleichverteilt gezogen, ohne die Gewichtung des Generators: „diese Gruppe
- * hatte das letzte Woche schon" gehört laut Spec zu PROJ-10, das die Regel für
- * Generator und Editor gemeinsam setzen soll.
+ * Gezogen wird nach den Regeln des Generators, übertragen auf einen einzelnen
+ * Platz:
+ *
+ * 1. **Frische zuerst** — Übungen aus den letzten zwei Einheiten der Gruppe
+ *    kommen erst dran, wenn sonst nichts frei ist
+ * 2. **Erst die Sportart, dann die Übung** — die Hauptsportart liegt zweimal im
+ *    Topf. Ein Gewicht je Übung hinge davon ab, wie viele Übungen jede Sportart
+ *    hat; so zählt die Sportart und nicht ihre Menge
+ * 3. Hat die gezogene Sportart nichts mehr, wird unter allen gezogen
+ *
+ * Was nicht übertragbar ist: das Abwechseln über eine Folge von Übungen. Ein
+ * einzelner Platz hat keine Folge.
  */
 export function drawCandidate(
   pool: EditorCandidate[],
   exclusions: DrawExclusions,
-  random: () => number = Math.random
+  random: () => number = Math.random,
+  weighting: DrawWeighting = NO_WEIGHTING
 ): EditorCandidate | null {
   const drawable = drawablePool(pool, exclusions)
   if (drawable.length === 0) return null
 
-  const index = Math.min(drawable.length - 1, Math.floor(random() * drawable.length))
-  return drawable[index]
+  const fresh = drawable.filter((candidate) => !candidate.recentlyUsed)
+  const base = fresh.length > 0 ? fresh : drawable
+
+  const sportPot = [...weighting.sports]
+  if (weighting.primarySport && weighting.sports.length >= 2) {
+    sportPot.push(weighting.primarySport)
+  }
+  if (sportPot.length === 0) return pickFrom(base, random)
+
+  const sport = pickFrom(sportPot, random)
+  const ofSport = base.filter((candidate) =>
+    candidate.sports.some((entry) => sameSport(entry, sport))
+  )
+
+  return pickFrom(ofSport.length > 0 ? ofSport : base, random)
 }
 
 /**
@@ -148,28 +195,90 @@ export function variantsOf(pool: EditorCandidate[], exerciseId: string): EditorC
 }
 
 /**
- * Teilt die Liste für den Auswahldialog: oben die passenden, darunter
- * aufklappbar die übrigen. Ein Suchbegriff filtert in beiden Gruppen.
+ * Eine Übung im Auswahldialog: die Grundübung und alle ihre Varianten in
+ * **einer** Zeile. In den Daten bleiben Varianten eigene Kandidaten, wie im
+ * Generator — zusammengefasst wird nur die Darstellung.
  */
-export function splitForPicker(
+export interface PickerEntry {
+  exerciseId: string
+  name: string
+  /** Grundübung zuerst, danach die Varianten in ihrer Reihenfolge. */
+  forms: EditorCandidate[]
+  /**
+   * Was ein Klick auf die Zeile einsetzt: die Grundübung, wenn sie passt —
+   * sonst die erste passende Variante. Passt keine Form, die Grundübung.
+   */
+  preferred: EditorCandidate
+  /** Passt mindestens eine Form? Dann steht die Zeile unter „Passend". */
+  fits: boolean
+}
+
+/**
+ * Teilt die Liste für den Auswahldialog: oben die Übungen, von denen
+ * mindestens eine Form passt, darunter aufklappbar die übrigen. Ein Suchbegriff
+ * filtert in beiden Gruppen und greift auf den Namen der Übung und die Titel
+ * aller Varianten.
+ */
+export function groupForPicker(
   pool: EditorCandidate[],
   search: string
-): { fitting: EditorCandidate[]; others: EditorCandidate[] } {
+): { fitting: PickerEntry[]; others: PickerEntry[] } {
   const term = search.trim().toLowerCase()
-  const matches = (candidate: EditorCandidate) =>
-    term === '' ||
-    candidate.name.toLowerCase().includes(term) ||
-    (candidate.variantTitle?.toLowerCase().includes(term) ?? false)
 
-  const found = pool.filter(matches)
+  const order: string[] = []
+  const byExercise = new Map<string, EditorCandidate[]>()
+  for (const candidate of pool) {
+    const forms = byExercise.get(candidate.exerciseId)
+    if (forms) {
+      forms.push(candidate)
+    } else {
+      byExercise.set(candidate.exerciseId, [candidate])
+      order.push(candidate.exerciseId)
+    }
+  }
+
+  const entries: PickerEntry[] = order.flatMap((exerciseId) => {
+    const forms = variantsOf(byExercise.get(exerciseId) ?? [], exerciseId)
+    const found =
+      term === '' ||
+      forms.some(
+        (form) =>
+          form.name.toLowerCase().includes(term) ||
+          (form.variantTitle?.toLowerCase().includes(term) ?? false)
+      )
+    if (!found) return []
+
+    const base = forms[0]
+    const firstFitting = forms.find(passes)
+
+    return [
+      {
+        exerciseId,
+        name: base.name,
+        forms,
+        preferred: firstFitting ?? base,
+        fits: firstFitting !== undefined,
+      },
+    ]
+  })
 
   return {
-    fitting: found.filter(passes),
-    others: found.filter((candidate) => !passes(candidate)),
+    fitting: entries.filter((entry) => entry.fits),
+    others: entries.filter((entry) => !entry.fits),
   }
 }
 
 // ---- Aufbau auf dem Server ----
+
+/** Die Varianten einer Übung mit Namen. Ohne stabile Kennung lässt sich eine
+ *  Variante nicht einsetzen — sie zählt dann nicht mit (wie bei den Kandidaten). */
+export function variantNamesOf(
+  source: Pick<CandidateSource, 'variants'>
+): { id: string; title: string }[] {
+  return source.variants.flatMap((variant) =>
+    variant.id ? [{ id: variant.id, title: variant.title }] : []
+  )
+}
 
 /** Was der Editor über den Generator-Zuschnitt hinaus von einer Übung braucht. */
 export interface EditorSource extends CandidateSource {
@@ -192,9 +301,11 @@ export interface EditorSource extends CandidateSource {
 export function buildEditorPool(
   sources: EditorSource[],
   segment: SegmentConfig,
-  group: GeneratorGroup
+  group: GeneratorGroup,
+  recentExerciseIds: Iterable<string> = []
 ): EditorCandidate[] {
   const bySource = new Map(sources.map((source) => [source.id, source]))
+  const recent = new Set(recentExerciseIds)
 
   return buildCandidates(sources).flatMap((candidate) => {
     const source = bySource.get(candidate.exerciseId)
@@ -205,7 +316,8 @@ export function buildEditorPool(
         ...candidate,
         musicRequired: source.musicRequired,
         musicLink: source.musicLink,
-        variantCount: source.variants.length,
+        variants: variantNamesOf(source),
+        recentlyUsed: recent.has(candidate.exerciseId),
         failedCriteria: failedCriteriaOf(candidate, segment, group),
         needsCompletion: source.needsCompletion,
       },
@@ -250,7 +362,14 @@ export function describeExhaustion(
 
   const causes: string[] = []
 
-  for (const criterion of ['sport', 'difficulty', 'material', 'age', 'participants'] as const) {
+  for (const criterion of [
+    'sport',
+    'difficulty',
+    'organization',
+    'material',
+    'age',
+    'participants',
+  ] as const) {
     const count = inPhase.filter((candidate) => candidate.failedCriteria.includes(criterion)).length
     if (count > 0) causes.push(`${count} × ${CRITERION_LABELS[criterion]}`)
   }

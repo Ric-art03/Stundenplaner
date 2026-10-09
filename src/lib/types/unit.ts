@@ -35,7 +35,13 @@ export interface SegmentConfig {
    */
   primarySport: string | null
   difficulties: DifficultyLevel[]
-  /** Freie Notiz, vor allem für Segmente die der Nutzer selbst füllt. */
+  /**
+   * Leer = keine Einschränkung. Sonst kommen nur Übungen in Frage, die
+   * mindestens eine dieser Organisationsformen tragen — ein weiches Kriterium,
+   * das beim Lockern als Erstes fällt.
+   */
+  organizationForms: string[]
+  /** Die Arbeitsnotiz der Phase, vor allem für Segmente die der Nutzer selbst füllt. */
   notes: string
 }
 
@@ -69,8 +75,14 @@ export interface UnitItemExercise {
   materials: ExerciseMaterial[]
   musicRequired: boolean
   musicLink: string | null
-  variantCount: number
+  /**
+   * Alle Varianten der Übung mit Namen — nicht nur ihre Anzahl, damit die
+   * Karte sie ohne Server aufklappen kann.
+   */
+  variants: { id: string; title: string }[]
   variantTitle: string | null
+  /** Die Arbeitsnotiz der Übung; bei einer Variante die der Grundübung. */
+  workNotes: string | null
 }
 
 export interface UnitItem {
@@ -91,7 +103,14 @@ export interface UnitSegment {
   sports: string[]
   primarySport: string | null
   difficulties: DifficultyLevel[]
+  organizationForms: string[]
   notes: string
+  /**
+   * Bis zu so viele freie Minuten sind in diesem Segment **geplant**. Eine
+   * Zahl und kein Ja/Nein: werden später mehr Minuten frei, ist die Lücke von
+   * selbst wieder offen.
+   */
+  plannedGapMinutes: number
   gapReason: string | null
   /** Aufschlüsselung aller Ursachen, damit der Nutzer gezielt nachbessern kann. */
   gapDetail: GapDetail | null

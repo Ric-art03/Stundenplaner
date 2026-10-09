@@ -12,6 +12,8 @@ export const segmentConfigSchema = z
     difficulties: z
       .array(z.enum(DIFFICULTY_LEVELS))
       .min(1, 'Mindestens einen Schwierigkeitsgrad auswählen'),
+    // Leer = keine Einschränkung.
+    organizationForms: z.array(z.string().min(1).max(100)).max(30).default([]),
     notes: z.string().max(2000, 'Maximal 2.000 Zeichen'),
   })
   .refine(
@@ -35,13 +37,13 @@ export const unitConfigSchema = z
       .int()
       .min(5, 'Mindestens 5 Minuten')
       .max(300, 'Maximal 300 Minuten'),
-    segments: z.array(segmentConfigSchema).min(1, 'Mindestens ein Segment'),
+    segments: z.array(segmentConfigSchema).min(1, 'Mindestens eine Phase'),
     editorState: editorStateSchema,
   })
   .refine(
     (data) => data.segments.reduce((sum, s) => sum + s.minutes, 0) === data.totalMinutes,
     {
-      message: 'Die Summe der Segmente muss der Einheitsdauer entsprechen',
+      message: 'Die Summe der Phasen muss der Einheitsdauer entsprechen',
       path: ['segments'],
     }
   )
@@ -77,7 +79,9 @@ export const unitDraftSchema = z.object({
     .array(
       z.object({
         id: z.string().uuid(),
-        notes: z.string().max(2000, 'Eine Notiz darf höchstens 2.000 Zeichen haben'),
+        notes: z.string().max(2000, 'Eine Arbeitsnotiz darf höchstens 2.000 Zeichen haben'),
+        /** Bis zu so viele freie Minuten gelten in diesem Segment als geplant. */
+        plannedGapMinutes: z.number().int().min(0).max(MAX_PLANNED_MINUTES).default(0),
         items: z
           .array(draftItemSchema)
           .max(MAX_ITEMS_PER_SEGMENT, 'Zu viele Übungen in einem Abschnitt'),

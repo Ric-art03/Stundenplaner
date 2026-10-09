@@ -19,6 +19,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
 import { DeleteConfirmDialog } from './delete-confirm-dialog'
+import { WorkNote } from './work-note'
 import type { Exercise } from '@/lib/types/exercise'
 
 interface ExerciseDetailProps {
@@ -298,11 +299,10 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
         </section>
       )}
 
-      {/* Arbeitsnotizen */}
+      {/* Arbeitsnotiz */}
       {exercise.workNotes && (
-        <section className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <h2 className="text-sm font-medium text-primary mb-2">Arbeitsnotizen</h2>
-          <p className="whitespace-pre-wrap text-sm">{exercise.workNotes}</p>
+        <section>
+          <WorkNote text={exercise.workNotes} className="p-4" />
         </section>
       )}
 

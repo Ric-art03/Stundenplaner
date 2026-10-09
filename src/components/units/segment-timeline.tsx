@@ -205,7 +205,7 @@ export function SegmentTimeline({
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>0 Min</span>
         <span className="hidden sm:inline">
-          Grenzen ziehen zum Verteilen · Segment seitwärts ziehen zum Umsortieren
+          Grenzen ziehen zum Verteilen · Phase seitwärts ziehen zum Umsortieren
         </span>
         <span>{totalMinutes} Min</span>
       </div>

@@ -39,8 +39,12 @@ export interface GeneratedItem {
   position: number
 }
 
-/** 0 = streng, 1 = Schwierigkeitsgrad frei, 2 = zusätzlich Sportart frei. */
-export type RelaxLevel = 0 | 1 | 2
+/**
+ * 0 = streng, 1 = Organisationsform frei, 2 = zusätzlich Schwierigkeitsgrad
+ * frei, 3 = zusätzlich Sportart frei. Stufe 1 gibt es nur, wenn die Phase eine
+ * Organisationsform gewählt hat — sonst würde sie nichts ändern.
+ */
+export type RelaxLevel = 0 | 1 | 2 | 3
 
 export interface GeneratedSegment {
   segment: SegmentConfig
@@ -120,6 +124,16 @@ function matchesDifficulty(candidate: Candidate, difficulties: string[]): boolea
 }
 
 /**
+ * Eine gewählte Organisationsform genügt. Anders als bei der Altersgruppe
+ * passt eine Übung **ohne** Organisationsform hier nicht: wer „Kleingruppen"
+ * verlangt, will Übungen, von denen er weiß, dass sie so laufen.
+ */
+function matchesOrganization(candidate: Candidate, forms: string[]): boolean {
+  const wanted = forms.map(normalize)
+  return candidate.organizationForms.some((form) => wanted.includes(normalize(form)))
+}
+
+/**
  * Pro Übung geprüft, nicht kumulativ über das Segment: Übungen laufen
  * nacheinander und konkurrieren nicht um dasselbe Material.
  */
@@ -193,7 +207,13 @@ export interface GapDetail {
   participants?: number | null
 }
 
-export type GapCriterion = 'age' | 'material' | 'participants' | 'sport' | 'difficulty'
+export type GapCriterion =
+  | 'age'
+  | 'material'
+  | 'participants'
+  | 'sport'
+  | 'difficulty'
+  | 'organization'
 
 /** Einzeilige Zusammenfassung; die Aufschlüsselung steckt in `GapDetail`. */
 export function summarizeGap(detail: GapDetail): string {
@@ -238,12 +258,20 @@ function criteriaFor(
     { criterion: 'participants', passes: (c) => participantsFit(c, group.participants) },
   ]
 
-  // Weiche Kriterien — fallen beim Lockern stufenweise weg.
-  if (relaxLevel < 2) {
+  // Weiche Kriterien — fallen beim Lockern stufenweise weg: zuerst die
+  // Organisationsform, dann der Schwierigkeitsgrad, zuletzt die Sportart.
+  if (relaxLevel < 3) {
     checks.push({ criterion: 'sport', passes: (c) => matchesSports(c, segment.sports) })
   }
-  if (relaxLevel < 1) {
+  if (relaxLevel < 2) {
     checks.push({ criterion: 'difficulty', passes: (c) => matchesDifficulty(c, segment.difficulties) })
+  }
+  // Ohne Auswahl in der Phase gibt es das Kriterium nicht — leer heißt „egal".
+  if (relaxLevel < 1 && segment.organizationForms.length > 0) {
+    checks.push({
+      criterion: 'organization',
+      passes: (c) => matchesOrganization(c, segment.organizationForms),
+    })
   }
 
   return checks
@@ -507,11 +535,24 @@ function fillSegment(
 
 // ---- Einheit ----
 
-function relaxLabel(level: RelaxLevel): string {
-  return level === 1
-    ? 'Schwierigkeitsgrad gelockert'
-    : 'Schwierigkeitsgrad und Sportart-Vorgabe gelockert'
+/** Nennt nur, was tatsächlich freigegeben wurde — ohne gewählte
+ *  Organisationsform taucht sie im Hinweis nicht auf. */
+function relaxLabel(level: RelaxLevel, hasOrganization: boolean): string {
+  const freed: string[] = []
+  if (hasOrganization) freed.push('Organisationsform')
+  if (level >= 2) freed.push('Schwierigkeitsgrad')
+  if (level >= 3) freed.push('Sportart-Vorgabe')
+
+  const last = freed.pop()
+  return `${freed.length > 0 ? `${freed.join(', ')} und ` : ''}${last} gelockert`
 }
+
+/**
+ * Der Anteil der Stufe am Startwert. Nicht die Stufe selbst: Schwierigkeit und
+ * Sportart behalten die Werte, die sie vor der Organisationsform hatten — eine
+ * Phase ohne Organisationsform würfelt damit genau wie vorher.
+ */
+const RELAX_SEED_STEP: Record<RelaxLevel, number> = { 0: 0, 1: 3, 2: 1, 3: 2 }
 
 export interface SegmentPlanInput {
   segment: SegmentConfig
@@ -568,8 +609,13 @@ export function planSegment(input: SegmentPlanInput): SegmentPlan {
       level,
       // Eigener Startwert je Segment und Stufe: ein zweiter Versuch
       // verschiebt damit nicht die Auswahl der folgenden Segmente.
-      createRandom(input.seed + input.segmentIndex * 1013 + level * 7919)
+      createRandom(input.seed + input.segmentIndex * 1013 + RELAX_SEED_STEP[level] * 7919)
     )
+
+  // Ohne gewählte Organisationsform würde Stufe 1 nichts ändern und im Hinweis
+  // etwas behaupten, das nicht stattgefunden hat.
+  const hasOrganization = segment.organizationForms.length > 0
+  const relaxLevels: RelaxLevel[] = hasOrganization ? [1, 2, 3] : [2, 3]
 
   const filledOf = (attempt: Attempt) => sum(attempt.items.map((item) => item.plannedDuration))
 
@@ -578,11 +624,11 @@ export function planSegment(input: SegmentPlanInput): SegmentPlan {
   let bestLevel: RelaxLevel = 0
   // Der tiefste tatsächlich unternommene Versuch. Bringt Lockern nichts, ist
   // dessen Diagnose die ehrliche: Sie nennt nur noch die harten Kriterien,
-  // die auch nach dem Freigeben von Sportart und Schwierigkeitsgrad bleiben.
+  // die auch nach dem Freigeben der weichen bleiben.
   let deepest = strict
 
   if (input.relax) {
-    for (const level of [1, 2] as RelaxLevel[]) {
+    for (const level of relaxLevels) {
       if (filledOf(best) >= segment.minutes) break
       const attempt = attemptAt(level)
       deepest = attempt
@@ -603,7 +649,7 @@ export function planSegment(input: SegmentPlanInput): SegmentPlan {
   if (bestLevel > 0) {
     const added = best.items.length - strict.items.length
     const detail = added > 0 ? ` — ${added} ${added === 1 ? 'Übung' : 'Übungen'} ergänzt` : ''
-    relaxNote = `„${segment.name}": ${relaxLabel(bestLevel)}${detail}.`
+    relaxNote = `„${segment.name}": ${relaxLabel(bestLevel, hasOrganization)}${detail}.`
   } else if (input.relax && report.gapDetail) {
     // Auch ein erfolgloser Lockerungsversuch bekommt eine Begründung — sonst
     // klickt der Nutzer auf den Knopf und sieht nur, dass nichts passiert.

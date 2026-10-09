@@ -27,7 +27,7 @@ import { SegmentTimeline } from './segment-timeline'
 import { SegmentEditor } from './segment-editor'
 import { generateUnit } from '@/lib/actions/units'
 import { unitConfigSchema } from '@/lib/validations/unit'
-import { DIFFICULTY_LEVELS, PHASES, SPORTS } from '@/lib/types/exercise'
+import { DIFFICULTY_LEVELS, ORGANIZATION_FORMS, PHASES, SPORTS } from '@/lib/types/exercise'
 import type { DifficultyLevel } from '@/lib/types/exercise'
 import {
   addSegment,
@@ -45,6 +45,7 @@ interface UnitConfigFormProps {
   groups: Group[]
   customPhases: string[]
   customSports: string[]
+  customOrganizationForms?: string[]
   initialGroupId?: string
   /**
    * Konfiguration einer bestehenden Einheit, wenn der Nutzer über „Zurück zum
@@ -58,6 +59,7 @@ export function UnitConfigForm({
   groups,
   customPhases,
   customSports,
+  customOrganizationForms = [],
   initialGroupId,
   initialSegments,
   initialEditorState,
@@ -144,6 +146,12 @@ export function UnitConfigForm({
     }
   }
 
+  // Dieselbe Auswahl wie im Übungs-Wizard: die vordefinierten und die eigenen.
+  const organizationFormOptions = React.useMemo(
+    () => Array.from(new Set([...ORGANIZATION_FORMS, ...customOrganizationForms])),
+    [customOrganizationForms]
+  )
+
   /** Bearbeitungen landen immer im individuellen Stand, nie in der Standardvorlage. */
   function applySegments(next: SegmentConfig[]) {
     setCustomSegments(next)
@@ -174,9 +182,9 @@ export function UnitConfigForm({
     if (next.length === segments.length) {
       toast({
         variant: 'destructive',
-        title: 'Kein Platz für ein weiteres Segment',
+        title: 'Kein Platz für eine weitere Phase',
         description:
-          'Kein Segment kann noch Minuten abgeben. Verlängere die Einheitsdauer im Gruppenprofil.',
+          'Keine Phase kann noch Minuten abgeben. Verlängere die Einheitsdauer im Gruppenprofil.',
       })
       return
     }
@@ -296,7 +304,7 @@ export function UnitConfigForm({
                 <div>
                   <Label className="text-base font-semibold">Zeitverlauf</Label>
                   <p className="text-xs text-muted-foreground">
-                    Grenzen ziehen zum Verteilen, Segmente seitwärts ziehen zum Umsortieren.
+                    Grenzen ziehen zum Verteilen, Phasen seitwärts ziehen zum Umsortieren.
                   </p>
                 </div>
                 <Button
@@ -350,6 +358,7 @@ export function UnitConfigForm({
                         totalMinutes={totalMinutes}
                         phaseOptions={phaseOptions}
                         sportOptions={sportOptions}
+                        organizationFormOptions={organizationFormOptions}
                         onChange={(updated) =>
                           applySegments(
                             segments.map((s) => (s.id === updated.id ? updated : s))
@@ -372,7 +381,7 @@ export function UnitConfigForm({
 
               <Button type="button" variant="outline" size="sm" onClick={handleAddSegment}>
                 <Plus className="mr-2 h-4 w-4" />
-                Segment hinzufügen
+                Phase hinzufügen
               </Button>
             </section>
           )}
@@ -380,7 +389,7 @@ export function UnitConfigForm({
           {minutesMismatch && (
             <Alert variant="destructive">
               <AlertDescription>
-                Die Segmente ergeben {sumMinutes(segments)} Minuten, die Einheit hat aber{' '}
+                Die Phasen ergeben {sumMinutes(segments)} Minuten, die Einheit hat aber{' '}
                 {totalMinutes} Minuten.
               </AlertDescription>
             </Alert>

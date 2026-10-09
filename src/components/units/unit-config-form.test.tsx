@@ -62,6 +62,7 @@ function segment(overrides: Partial<SegmentConfig> = {}): SegmentConfig {
     sports: ['Turnen'],
     primarySport: null,
     difficulties: ['Leicht', 'Mittel', 'Schwer'],
+    organizationForms: [],
     notes: '',
     ...overrides,
   }

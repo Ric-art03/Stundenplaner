@@ -77,7 +77,7 @@ export function PhaseSelect({ options, value, onChange, error }: PhaseSelectProp
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Für eine neue Phase gibt es noch keine Übungen — das Segment bleibt dann leer,
+          Für eine neue Phase gibt es noch keine Übungen — sie bleibt dann leer,
           bis du Übungen dieser Phase zuordnest.
         </p>
       </div>

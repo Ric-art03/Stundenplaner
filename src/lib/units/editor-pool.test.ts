@@ -5,10 +5,11 @@ import {
   drawCandidate,
   drawablePool,
   failureLabel,
+  groupForPicker,
   keyOf,
   passes,
   placementFrom,
-  splitForPicker,
+  variantNamesOf,
   variantsOf,
   type EditorCandidate,
   type EditorSource,
@@ -36,7 +37,8 @@ function candidate(
     duration: 10,
     musicRequired: false,
     musicLink: null,
-    variantCount: 0,
+    variants: [],
+    recentlyUsed: false,
     failedCriteria: [],
     needsCompletion: false,
     ...options,
@@ -204,7 +206,7 @@ describe('variantsOf', () => {
 
 // ---- Auswahldialog ----
 
-describe('splitForPicker', () => {
+describe('groupForPicker — eine Zeile je Übung', () => {
   const pool = [
     candidate('a', { name: 'Hasenhüpfen' }),
     candidate('b', { name: 'Ballschule' }),
@@ -212,33 +214,81 @@ describe('splitForPicker', () => {
   ]
 
   it('trennt passende von unpassenden', () => {
-    const { fitting, others } = splitForPicker(pool, '')
+    const { fitting, others } = groupForPicker(pool, '')
 
-    expect(fitting.map((c) => c.name)).toEqual(['Hasenhüpfen', 'Ballschule'])
-    expect(others.map((c) => c.name)).toEqual(['Hasenjagd'])
+    expect(fitting.map((entry) => entry.name)).toEqual(['Hasenhüpfen', 'Ballschule'])
+    expect(others.map((entry) => entry.name)).toEqual(['Hasenjagd'])
   })
 
   it('filtert in beiden Gruppen', () => {
-    const { fitting, others } = splitForPicker(pool, 'hase')
+    const { fitting, others } = groupForPicker(pool, 'hase')
 
-    expect(fitting.map((c) => c.name)).toEqual(['Hasenhüpfen'])
-    expect(others.map((c) => c.name)).toEqual(['Hasenjagd'])
+    expect(fitting.map((entry) => entry.name)).toEqual(['Hasenhüpfen'])
+    expect(others.map((entry) => entry.name)).toEqual(['Hasenjagd'])
   })
 
   it('sucht ohne Rücksicht auf Groß- und Kleinschreibung', () => {
-    expect(splitForPicker(pool, 'BALL').fitting).toHaveLength(1)
-  })
-
-  it('sucht auch im Variantentitel', () => {
-    const withVariant = [candidate('a', { name: 'Fangen', variantTitle: 'im Kreis' })]
-    expect(splitForPicker(withVariant, 'kreis').fitting).toHaveLength(1)
+    expect(groupForPicker(pool, 'BALL').fitting).toHaveLength(1)
   })
 
   it('findet bei einem Suchbegriff ohne Treffer nichts — dann greift „Schnell anlegen"', () => {
-    const { fitting, others } = splitForPicker(pool, 'Trampolin')
+    const { fitting, others } = groupForPicker(pool, 'Trampolin')
 
     expect(fitting).toEqual([])
     expect(others).toEqual([])
+  })
+
+  describe('mit Varianten', () => {
+    const failing = ['material'] as GapCriterion[]
+    const fangen = [
+      candidate('f', { name: 'Fangen' }),
+      candidate('f', { name: 'Fangen', variantId: 'v1', variantTitle: 'im Kreis' }),
+      candidate('f', { name: 'Fangen', variantId: 'v2', variantTitle: 'mit Ball' }),
+    ]
+
+    it('fasst Grundübung und Varianten zu einer Zeile zusammen, Grundübung zuerst', () => {
+      const shuffled = [fangen[2], fangen[0], fangen[1]]
+      const { fitting } = groupForPicker(shuffled, '')
+
+      expect(fitting).toHaveLength(1)
+      expect(fitting[0].forms.map((form) => form.variantId)).toEqual([null, 'v2', 'v1'])
+    })
+
+    it('zählt Übungen, nicht Formen', () => {
+      expect(groupForPicker([...fangen, candidate('b')], '').fitting).toHaveLength(2)
+    })
+
+    it('setzt die Grundübung ein, wenn sie passt', () => {
+      expect(groupForPicker(fangen, '').fitting[0].preferred.variantId).toBeNull()
+    })
+
+    it('steht unter „Passend", wenn nur eine Variante passt — und setzt genau die ein', () => {
+      const onlyVariant = [
+        { ...fangen[0], failedCriteria: failing },
+        { ...fangen[1], failedCriteria: failing },
+        fangen[2],
+      ]
+      const { fitting, others } = groupForPicker(onlyVariant, '')
+
+      expect(others).toEqual([])
+      expect(fitting[0].fits).toBe(true)
+      expect(fitting[0].preferred.variantId).toBe('v2')
+    })
+
+    it('steht unter den unpassenden, wenn keine Form passt, und setzt die Grundübung ein', () => {
+      const none = fangen.map((form) => ({ ...form, failedCriteria: failing }))
+      const { fitting, others } = groupForPicker(none, '')
+
+      expect(fitting).toEqual([])
+      expect(others[0].preferred.variantId).toBeNull()
+    })
+
+    it('findet die Übung über den Titel einer Variante und zeigt dann alle Formen', () => {
+      const { fitting } = groupForPicker(fangen, 'kreis')
+
+      expect(fitting).toHaveLength(1)
+      expect(fitting[0].forms).toHaveLength(3)
+    })
   })
 })
 
@@ -272,6 +322,7 @@ describe('buildEditorPool', () => {
     sports: ['Turnen'],
     primarySport: null,
     difficulties: ['Mittel' as const],
+    organizationForms: [],
     notes: '',
   }
   const group = { ageGroups: ['Kinder (7–10)'], participants: 12, venueMaterials: null }
@@ -303,7 +354,11 @@ describe('buildEditorPool', () => {
     )
 
     expect(pool.map((entry) => entry.variantId)).toEqual([null, 'v1', 'v2'])
-    expect(pool.every((entry) => entry.variantCount === 2)).toBe(true)
+    expect(pool.every((entry) => entry.variants.length === 2)).toBe(true)
+    expect(pool[0].variants).toEqual([
+      { id: 'v1', title: 'Mit Ball' },
+      { id: 'v2', title: 'Zu zweit' },
+    ])
   })
 
   it('beurteilt eine Variante nach ihrem eigenen Material', () => {
@@ -397,5 +452,109 @@ describe('describeExhaustion', () => {
     expect(text).toBe(
       'Eine Übung trägt die Phase „Cool-Down", ist aber nicht mehr frei. Woran es hängt: 1 × steht schon in dieser Einheit.'
     )
+  })
+})
+
+// ---- Auswürfeln nach den Regeln des Generators (Überarbeitung 2026-10-09) ----
+
+describe('drawCandidate — Frische und Hauptsportart', () => {
+  /** Liefert die gegebenen Zufallswerte der Reihe nach. */
+  function sequence(...values: number[]): () => number {
+    let index = 0
+    return () => values[Math.min(index++, values.length - 1)]
+  }
+
+  it('zieht frische Übungen zuerst', () => {
+    const pool = [candidate('alt', { recentlyUsed: true }), candidate('neu')]
+
+    for (const value of [0, 0.3, 0.6, 0.99]) {
+      expect(drawCandidate(pool, exclusions(), () => value)?.exerciseId).toBe('neu')
+    }
+  })
+
+  it('zieht kürzlich verwendete erst, wenn sonst nichts frei ist', () => {
+    const pool = [candidate('alt', { recentlyUsed: true }), candidate('neu')]
+    expect(drawCandidate(pool, exclusions(['neu']))?.exerciseId).toBe('alt')
+  })
+
+  it('zieht erst die Sportart, dann die Übung — die Hauptsportart liegt zweimal im Topf', () => {
+    // Zehn Volleyball-Übungen, eine Turnübung: bei einem Gewicht je Übung käme
+    // Turnen kaum dran. Gezogen wird aber zuerst die Sportart.
+    const pool = [
+      ...Array.from({ length: 10 }, (_, i) => candidate(`v${i}`, { sports: ['Volleyball'] })),
+      candidate('turnen', { sports: ['Turnen'] }),
+    ]
+    const weighting = { sports: ['Volleyball', 'Turnen'], primarySport: 'Turnen' }
+    const random = createSeeded(11)
+
+    let turnen = 0
+    for (let i = 0; i < 3000; i += 1) {
+      if (drawCandidate(pool, exclusions(), random, weighting)?.exerciseId === 'turnen') turnen += 1
+    }
+
+    // Topf: Volleyball, Turnen, Turnen → zwei von drei.
+    expect(turnen / 3000).toBeGreaterThan(0.62)
+    expect(turnen / 3000).toBeLessThan(0.72)
+  })
+
+  it('gewichtet ohne Hauptsportart alle Sportarten gleich', () => {
+    const pool = [
+      candidate('v', { sports: ['Volleyball'] }),
+      candidate('t', { sports: ['Turnen'] }),
+    ]
+    const weighting = { sports: ['Volleyball', 'Turnen'], primarySport: null }
+
+    expect(drawCandidate(pool, exclusions(), sequence(0, 0), weighting)?.exerciseId).toBe('v')
+    expect(drawCandidate(pool, exclusions(), sequence(0.99, 0), weighting)?.exerciseId).toBe('t')
+  })
+
+  it('zieht unter allen, wenn die gezogene Sportart nichts mehr hat', () => {
+    const pool = [candidate('v', { sports: ['Volleyball'] })]
+    const weighting = { sports: ['Volleyball', 'Turnen'], primarySport: 'Turnen' }
+
+    // Turnen wird gezogen, hat aber keine Übung — also nicht „nichts".
+    expect(drawCandidate(pool, exclusions(), sequence(0.99, 0), weighting)?.exerciseId).toBe('v')
+  })
+
+  it('stellt Frische vor die Sportart', () => {
+    const pool = [
+      candidate('t-alt', { sports: ['Turnen'], recentlyUsed: true }),
+      candidate('v-neu', { sports: ['Volleyball'] }),
+    ]
+    const weighting = { sports: ['Volleyball', 'Turnen'], primarySport: 'Turnen' }
+
+    expect(drawCandidate(pool, exclusions(), sequence(0.99, 0), weighting)?.exerciseId).toBe('v-neu')
+  })
+
+  it('meldet einen erschöpften Vorrat auch mit Gewichtung als null', () => {
+    const weighting = { sports: ['Turnen'], primarySport: null }
+    expect(drawCandidate([candidate('a')], exclusions(['a']), Math.random, weighting)).toBeNull()
+  })
+})
+
+/** Kleiner, fester Zufall für die Häufigkeitsprüfung — unabhängig vom Generator. */
+function createSeeded(seed: number): () => number {
+  let state = seed
+  return () => {
+    state = (state * 1664525 + 1013904223) % 4294967296
+    return state / 4294967296
+  }
+}
+
+describe('variantNamesOf und „kürzlich verwendet"', () => {
+  it('liefert die Varianten mit Namen und lässt solche ohne Kennung weg', () => {
+    expect(
+      variantNamesOf({
+        variants: [
+          { id: 'v1', title: 'Mit Ball', description: 'x' },
+          { title: 'Noch nicht gespeichert', description: 'x' },
+        ],
+      })
+    ).toEqual([{ id: 'v1', title: 'Mit Ball' }])
+  })
+
+  it('gibt die Varianten an den Platz weiter', () => {
+    const variants = [{ id: 'v1', title: 'Mit Ball' }]
+    expect(placementFrom(candidate('a', { variants })).exercise.variants).toEqual(variants)
   })
 })

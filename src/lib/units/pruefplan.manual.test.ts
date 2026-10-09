@@ -434,7 +434,7 @@ describe('Prüffall 10–15: Generatorverhalten', () => {
         segments: [{
           id: 's1', name: 'Hauptteil', minutes: 60, fillMode: 'generate',
           sports: group.sports, primarySport: null,
-          difficulties: ALL_DIFFICULTIES, notes: '', ...overrides,
+          difficulties: ALL_DIFFICULTIES, organizationForms: [], notes: '', ...overrides,
         }],
         candidates: data.candidates,
         recentExerciseIds: [],
@@ -464,6 +464,7 @@ describe('Prüffall 10–15: Generatorverhalten', () => {
           sports: group.sports,
           primarySport: null,
           difficulties: ALL_DIFFICULTIES,
+          organizationForms: [],
           notes: '',
         },
       ],

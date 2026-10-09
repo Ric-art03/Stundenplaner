@@ -10,6 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ExerciseFactsRow } from './exercise-facts-row'
+import { variantFacts } from './variant-facts'
 import type { Exercise } from '@/lib/types/exercise'
 
 interface ExerciseListViewProps {
@@ -23,9 +25,12 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
       {exercises.map((exercise) => (
         <div
           key={exercise.id}
-          className="flex items-center gap-3 p-4 hover:bg-accent/50 transition-colors"
+          className="flex items-start gap-3 p-4 hover:bg-accent/50 transition-colors"
         >
-          <Link href={`/exercises/${exercise.id}`} className="flex-1 min-w-0 space-y-1.5">
+          {/* Die Übungszeile steht neben dem Verweis, nicht in ihm: „Varianten (n)"
+              klappt auf, ohne die Detailseite zu öffnen. */}
+          <div className="flex-1 min-w-0 space-y-1.5">
+          <Link href={`/exercises/${exercise.id}`} className="block space-y-1.5">
             <div className="flex items-center gap-2">
               <h3 className="font-medium truncate">{exercise.name}</h3>
               <DifficultyDot difficulty={exercise.difficulty} />
@@ -70,6 +75,12 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
               )}
             </div>
           </Link>
+          <ExerciseFactsRow
+            materials={exercise.materials}
+            organizationForms={exercise.organizationForms}
+            variants={variantFacts(exercise.variants)}
+          />
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">

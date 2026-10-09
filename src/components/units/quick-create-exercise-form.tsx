@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { WorkNoteField } from '@/components/exercises/work-note'
 import type { EditorCandidate } from '@/lib/units/editor-pool'
 
 /** Was aus Segment und Gruppe übernommen wird, damit die Übung ein gültiger
@@ -48,7 +49,7 @@ interface QuickCreateExerciseFormProps {
  * „Übung fehlt? Schnell anlegen" — das Kurzformular im Auswahldialog.
  *
  * Getippt werden nur Name, Dauer und Beschreibung, wahlweise dazu die
- * Arbeitsnotizen — das eine Feld, das in der Halle neben der Übung steht. Sportart, Phase,
+ * Arbeitsnotiz — das eine Feld, das in der Halle neben der Übung steht. Sportart, Phase,
  * Schwierigkeit und Altersgruppen kommen aus Segment und Gruppe und werden
  * **angezeigt**, nicht abgefragt: der Nutzer soll sehen, dass die Übung
  * eingeordnet ist, ohne sie einordnen zu müssen.
@@ -144,21 +145,14 @@ export function QuickCreateExerciseForm({
         />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="schnell-arbeitsnotizen">
-          Arbeitsnotizen <span className="font-normal text-muted-foreground">(optional)</span>
-        </Label>
-        <p className="text-xs text-muted-foreground">
-          Werden angezeigt, wenn die Übung in der fertigen Stunde dran ist.
-        </p>
-        <Textarea
-          id="schnell-arbeitsnotizen"
-          value={workNotes}
-          onChange={(event) => setWorkNotes(event.target.value.slice(0, 2000))}
-          placeholder="Hinweise zur Durchführung, Aufbau-Details..."
-          rows={2}
-        />
-      </div>
+      <WorkNoteField
+        id="schnell-arbeitsnotiz"
+        scope="exercise"
+        value={workNotes}
+        onChange={setWorkNotes}
+        placeholder="Hinweise zur Durchführung, Aufbau-Details..."
+        optional
+      />
 
       <div className="space-y-1.5">
         <p className="text-xs text-muted-foreground">

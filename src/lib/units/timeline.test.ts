@@ -145,8 +145,8 @@ describe('addSegment', () => {
 
   it('fügt nichts hinzu, wenn kein Segment genug Minuten abgeben kann', () => {
     const segments = [
-      { id: 'a', name: 'Aufwärmen', minutes: 1, fillMode: 'generate' as const, sports: SPORTS, primarySport: null, difficulties: DIFFICULTIES, notes: '' },
-      { id: 'b', name: 'Hauptteil', minutes: 1, fillMode: 'generate' as const, sports: SPORTS, primarySport: null, difficulties: DIFFICULTIES, notes: '' },
+      { id: 'a', name: 'Aufwärmen', minutes: 1, fillMode: 'generate' as const, sports: SPORTS, primarySport: null, difficulties: DIFFICULTIES, organizationForms: [], notes: '' },
+      { id: 'b', name: 'Hauptteil', minutes: 1, fillMode: 'generate' as const, sports: SPORTS, primarySport: null, difficulties: DIFFICULTIES, organizationForms: [], notes: '' },
     ]
     expect(addSegment(segments, 'Cool-Down', SPORTS, DIFFICULTIES)).toHaveLength(2)
   })
