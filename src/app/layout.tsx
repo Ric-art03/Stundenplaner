@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { Toaster } from "@/components/ui/sonner";
+// Die Anzeige zu `useToast` — über sie melden alle Seiten der App. Eingebunden
+// war hier lange die Anzeige der anderen Bibliothek (`ui/sonner`), die niemand
+// benutzt: jede Meldung wurde erzeugt und nie gezeigt (BUG-17).
+import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 export const metadata: Metadata = {

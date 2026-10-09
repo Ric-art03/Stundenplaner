@@ -413,13 +413,20 @@ export function usedExerciseIds(draft: UnitDraft): string[] {
 
 export interface DrawExclusions {
   /**
-   * Übungen, die in dieser Einheit schon stehen. Nach Übung und nicht nach
-   * Kandidat: eine andere Variante derselben Übung wäre dieselbe Übung zweimal
-   * in einer Stunde — genau der Fehler, den der Generator vermeidet.
+   * Übungen, die in **anderen** Plätzen dieser Einheit stehen. Nach Übung und
+   * nicht nach Kandidat: eine andere Variante derselben Übung wäre dieselbe
+   * Übung zweimal in einer Stunde — genau der Fehler, den der Generator
+   * vermeidet.
+   *
+   * Die Übung im eigenen Platz gehört bewusst **nicht** dazu: der Tausch im
+   * selben Platz bringt sie nicht ein zweites Mal in die Stunde, und ihre
+   * übrigen Formen sind vollwertige Kandidaten (BUG-20).
    */
   exerciseIds: Set<string>
   /** Was an diesem Platz schon weggewürfelt wurde. */
   keys: Set<string>
+  /** Die Form, die gerade im Platz steht — sie zu ziehen wäre kein Wurf. */
+  current: string | null
 }
 
 /**
@@ -435,9 +442,20 @@ export function exclusionsFor(
   const segment = draft.segments.find((entry) => entry.id === segmentId)
   const item = segment?.items.find((entry) => entry.key === itemKey)
 
+  const elsewhere = new Set<string>()
+  for (const other of draft.segments) {
+    for (const entry of other.items) {
+      if (entry.exerciseId === null) continue
+      if (other.id === segmentId && entry.key === itemKey) continue
+      elsewhere.add(entry.exerciseId)
+    }
+  }
+
   return {
-    exerciseIds: new Set(usedExerciseIds(draft)),
+    exerciseIds: elsewhere,
     keys: new Set(item?.rejected ?? []),
+    current:
+      item && item.exerciseId !== null ? candidateKey(item.exerciseId, item.variantId) : null,
   }
 }
 

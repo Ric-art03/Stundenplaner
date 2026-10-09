@@ -147,6 +147,25 @@ test.describe('PROJ-7 — Bearbeiten-Modus betreten und verlassen', () => {
     await expect(page).toHaveURL(/\/units\/[0-9a-f-]{36}$/)
     await expect(bar(page).getByText('1 offene Änderung')).toBeVisible()
   })
+
+  test('AC: „Speichern" in der Nachfrage speichert und führt dann zur angeklickten Seite', async ({
+    page,
+  }) => {
+    const unit = await open(page, full())
+    await edit(page)
+    await page.getByRole('button', { name: /Nach unten, derzeit Platz 1 von 3/ }).click()
+
+    await page.getByRole('link', { name: /Zurück zum Generator/ }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Speichern' }).click()
+
+    // Nicht in der Leseansicht stehen bleiben: der Nutzer wollte in den Generator.
+    await expect(page).toHaveURL(/\/units\/new\?from=/)
+    expect((await itemsOf(unit)).map((item) => item.exercise_id)).toEqual([
+      fx.exercises.beta,
+      fx.exercises.alpha,
+      fx.exercises.gamma,
+    ])
+  })
 })
 
 // ---- Entfernen, Dauer, Reihenfolge, Rückgängig ----
@@ -431,9 +450,9 @@ test.describe('PROJ-7 — Entwurf mit offener Lücke speichern', () => {
 // ---- Auswürfeln ----
 
 test.describe('PROJ-7 — Neu auswürfeln', () => {
-  /** Würfelt am ersten Platz und wartet, bis der Vorgang durch ist. */
-  async function roll(page: Page) {
-    await menu(page, 1)
+  /** Würfelt an einem Platz und wartet, bis der Vorgang durch ist. */
+  async function roll(page: Page, position = 1) {
+    await menu(page, position)
     await page.getByRole('menuitem', { name: 'Neu auswürfeln' }).click()
     await expect(page.getByText('Wird gewürfelt …')).toHaveCount(0)
   }
@@ -451,47 +470,48 @@ test.describe('PROJ-7 — Neu auswürfeln', () => {
     await open(page, [{ minutes: 5, items: [{ exerciseId: fx.exercises.beta, minutes: 5 }] }])
     await edit(page)
 
-    // Zu ziehen sind Gamma, Alpha und die zwei Varianten von Alpha. Wie viele
-    // Würfe das ergibt, hängt von der Reihenfolge ab: steht eine Form von Alpha
-    // im Platz, gilt die ganze Übung als „in dieser Einheit" und ihre übrigen
-    // Formen werden nicht gezogen. Zwei Würfe sind es mindestens, vier höchstens.
+    // Zu ziehen sind vier Formen: Gamma, Alpha und die zwei Varianten von Alpha.
+    // Jede Variante ist eine vollwertige Übung — auch die Geschwister der Form,
+    // die gerade im Platz steht, werden gezogen (BUG-20). Es sind deshalb immer
+    // genau vier Würfe, in welcher Reihenfolge auch immer.
     const seen = new Set<string>([await formInPlace(page)])
-    let changes = 0
 
-    for (let attempt = 1; attempt <= 6; attempt += 1) {
-      const before = await formInPlace(page)
+    for (let count = 1; count <= 4; count += 1) {
       await roll(page)
+      await expect(bar(page).getByText(new RegExp(`^${count} offene Änderung`))).toBeVisible()
+
       const form = await formInPlace(page)
-
-      // Der Vorrat ist erschöpft: der Platz bleibt, wie er ist.
-      if (form === before) break
-
       expect(seen.has(form), `„${form}" stand hier schon`).toBe(false)
       seen.add(form)
-      changes += 1
-      await expect(bar(page).getByText(new RegExp(`^${changes} offene Änderung`))).toBeVisible()
     }
 
-    expect(changes).toBeGreaterThanOrEqual(2)
-    expect(changes).toBeLessThanOrEqual(4)
-    expect([...seen]).toContain(fx.names.gamma)
-    expect([...seen].some((form) => form.startsWith(fx.names.alpha))).toBe(true)
+    expect([...seen].sort()).toEqual(
+      [
+        fx.names.beta,
+        fx.names.gamma,
+        fx.names.alpha,
+        `${fx.names.alpha} — Variante: Mit Ball`,
+        `${fx.names.alpha} — Variante: Zu zweit`,
+      ].sort()
+    )
     await expect(page.getByLabel('Plandauer')).toHaveValue('5')
 
-    // Ein weiterer Wurf findet nichts mehr und zählt nicht als Änderung.
+    // Ein fünfter Wurf findet nichts mehr und zählt nicht als Änderung.
     const settled = await formInPlace(page)
     await roll(page)
     expect(await formInPlace(page)).toBe(settled)
-    await expect(bar(page).getByText(new RegExp(`^${changes} offene Änderung`))).toBeVisible()
+    await expect(bar(page).getByText('4 offene Änderungen')).toBeVisible()
   })
 
   test('AC: was in der Einheit schon steht, wird nicht gewürfelt', async ({ page }) => {
     await open(page, full())
     await edit(page)
 
-    // Alle drei passenden Übungen stehen schon im Plan — es gibt nichts zu ziehen.
-    await roll(page)
+    // Am zweiten Platz (Beta, ohne Varianten): Alpha und Gamma stehen in
+    // anderen Plätzen und scheiden mit allen Formen aus — es gibt nichts zu ziehen.
+    await roll(page, 2)
     expect(await order(page)).toEqual([fx.names.alpha, fx.names.beta, fx.names.gamma])
+    await expect(page.getByText(/^Variante:/)).toHaveCount(0)
     await expect(bar(page).getByText('Keine Änderungen')).toBeVisible()
   })
 
@@ -500,11 +520,13 @@ test.describe('PROJ-7 — Neu auswürfeln', () => {
   }) => {
     await open(page, full())
     await edit(page)
-    await roll(page)
+    await roll(page, 2)
 
-    // Kein stilles Nichts-Passiert: die Begründung muss zu sehen sein.
+    // Kein stilles Nichts-Passiert: die Begründung muss zu sehen sein. Alpha
+    // zählt mit ihren drei Formen, dazu Gamma — vier stehen anderswo im Plan.
     await expect(page.getByText('Keine weitere passende Übung').first()).toBeVisible()
-    await expect(page.getByText(/3 × steht schon in dieser Einheit/).first()).toBeVisible()
+    await expect(page.getByText(/4 × steht schon in dieser Einheit/).first()).toBeVisible()
+    await expect(page.getByText(/1 × steht gerade in diesem Platz/).first()).toBeVisible()
     await expect(page.getByText(/1 × Schwierigkeit/).first()).toBeVisible()
   })
 })

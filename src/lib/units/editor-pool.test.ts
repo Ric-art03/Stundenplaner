@@ -45,8 +45,12 @@ function candidate(
   }
 }
 
-function exclusions(exerciseIds: string[] = [], keys: string[] = []): DrawExclusions {
-  return { exerciseIds: new Set(exerciseIds), keys: new Set(keys) }
+function exclusions(
+  exerciseIds: string[] = [],
+  keys: string[] = [],
+  current: string | null = null
+): DrawExclusions {
+  return { exerciseIds: new Set(exerciseIds), keys: new Set(keys), current }
 }
 
 /** Zieht immer den Kandidaten an der gegebenen Stelle. */
@@ -556,5 +560,38 @@ describe('variantNamesOf und „kürzlich verwendet"', () => {
   it('gibt die Varianten an den Platz weiter', () => {
     const variants = [{ id: 'v1', title: 'Mit Ball' }]
     expect(placementFrom(candidate('a', { variants })).exercise.variants).toEqual(variants)
+  })
+})
+
+// ---- Varianten als vollwertige Kandidaten beim Auswürfeln (BUG-20) ----
+
+describe('drawablePool — die Übung im eigenen Platz', () => {
+  const pool = [
+    candidate('a'),
+    candidate('a', { variantId: 'v1', variantTitle: 'Mit Ball' }),
+    candidate('a', { variantId: 'v2', variantTitle: 'Zu zweit' }),
+    candidate('b'),
+  ]
+
+  it('lässt die übrigen Formen der Übung im Platz ziehen, nicht aber die, die dasteht', () => {
+    const drawable = drawablePool(pool, exclusions([], [], 'a:v1'))
+    expect(drawable.map(keyOf)).toEqual(['a:', 'a:v2', 'b:'])
+  })
+
+  it('schließt alle Formen einer Übung aus, die in einem anderen Platz steht', () => {
+    const drawable = drawablePool(pool, exclusions(['a'], [], 'b:'))
+    expect(drawable).toEqual([])
+  })
+
+  it('lässt eine weggewürfelte Grundübung als Variante wiederkommen', () => {
+    const drawable = drawablePool(pool, exclusions([], ['a:'], 'b:'))
+    expect(drawable.map(keyOf)).toEqual(['a:v1', 'a:v2'])
+  })
+
+  it('nennt die Form im Platz in der Begründung als das, was sie ist', () => {
+    const text = describeExhaustion([candidate('b')], exclusions([], [], 'b:'), 'Aufwärmen')
+    expect(text).toBe(
+      'Eine Übung trägt die Phase „Aufwärmen", ist aber nicht mehr frei. Woran es hängt: 1 × steht gerade in diesem Platz.'
+    )
   })
 })

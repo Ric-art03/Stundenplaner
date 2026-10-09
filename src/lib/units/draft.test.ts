@@ -428,16 +428,31 @@ describe('segmentBalance', () => {
 // ---- Ausschlüsse beim Auswürfeln ----
 
 describe('exclusionsFor', () => {
-  it('schließt alle Übungen der ganzen Einheit aus, nicht nur die des Segments', () => {
+  it('schließt die Übungen der anderen Plätze aus — in der ganzen Einheit, nicht nur im Segment', () => {
     const draft = createDraft(
       unit([
-        segment('s1', 5, [item('i1', 'a', 5, 0)]),
+        segment('s1', 10, [item('i1', 'a', 5, 0), item('i3', 'c', 5, 1)]),
         segment('s2', 5, [item('i2', 'b', 5, 0)]),
       ])
     )
 
     const exclusions = exclusionsFor(draft, 's1', 'i1')
-    expect([...exclusions.exerciseIds].sort()).toEqual(['a', 'b'])
+    expect([...exclusions.exerciseIds].sort()).toEqual(['b', 'c'])
+  })
+
+  it('schließt die Übung im eigenen Platz nicht aus, merkt sich aber ihre Form', () => {
+    const draft = createDraft(unit([segment('s1', 5, [item('i1', 'a', 5, 0)])]))
+
+    const exclusions = exclusionsFor(draft, 's1', 'i1')
+    expect([...exclusions.exerciseIds]).toEqual([])
+    expect(exclusions.current).toBe('a:')
+  })
+
+  it('schließt die Übung doch aus, wenn sie zusätzlich in einem anderen Platz steht', () => {
+    const draft = createDraft(
+      unit([segment('s1', 10, [item('i1', 'a', 5, 0), item('i2', 'a', 5, 1)])])
+    )
+    expect([...exclusionsFor(draft, 's1', 'i1').exerciseIds]).toEqual(['a'])
   })
 
   it('schließt zusätzlich die an diesem Platz weggewürfelten aus', () => {
@@ -454,7 +469,9 @@ describe('exclusionsFor', () => {
     const draft = createDraft(
       unit([segment('s1', 10, [item('i1', 'a', 5, 0), item('i2', null, 5, 1)])])
     )
-    expect([...exclusionsFor(draft, 's1', 'i1').exerciseIds]).toEqual(['a'])
+    const exclusions = exclusionsFor(draft, 's1', 'i2')
+    expect([...exclusions.exerciseIds]).toEqual(['a'])
+    expect(exclusions.current).toBeNull()
   })
 })
 

@@ -1648,7 +1648,7 @@ Kein neuer Sicherheitsbefund.
   4. Erwartet nach dem Satz der Spec („werden danach weitere Minuten frei, ist die Lücke wieder offen"): offene Lücke
   5. Tatsächlich: geplante Lücke, weil wieder genau so viel frei ist wie einmal erklärt
 - **Einordnung:** Folge der Entscheidung im Nachtrag, die Erklärung als Zahl zu speichern („nichts frei → die Zahl bleibt ohne Wirkung"). Die Akzeptanzkriterien decken nur den Fall „mehr frei als erklärt" ab, und der stimmt. Eher eine Frage an den Nutzer als ein Fehler
-- **Priorität:** entscheiden, dann ggf. nach der Auslieferung
+- **Vom Nutzer am 2026-10-09 entschieden: kein Fehler, bleibt so.** Der Nutzer hatte genau diese Minuten schon einmal bewusst frei gelassen; wird die Lücke größer als damals, ist sie ohnehin wieder offen. **Geschlossen**
 
 #### BUG-20: Auswürfeln und Varianten — zwei Folgen der Regeln, die überraschen können
 
@@ -1659,6 +1659,21 @@ Kein neuer Sicherheitsbefund.
 - **Vom Nutzer am 2026-10-09 entschieden:** jede Variante ist eine vollwertige Übung. **Beobachtung 1 ist richtig so** und bleibt. **Beobachtung 2 ist ein Fehler und wird behoben:** die übrigen Formen der Übung, die gerade **in diesem Platz** steht, müssen ziehbar sein — der Tausch im selben Platz bringt die Übung ja nicht ein zweites Mal in die Stunde. Was in **anderen** Plätzen der Einheit steht, bleibt mit allen Formen ausgeschlossen
 - **Schwere damit:** Mittel
 - **Priorität:** zusammen mit BUG-17 beheben
+
+### Nach der QA behoben (2026-10-09)
+
+Auf Wunsch des Nutzers direkt im Anschluss behoben. **Der Nachtest im Browser steht noch aus** —
+Typprüfung und Lint sind sauber, **426 Unit-Tests grün** (420 plus 6 neue zur Varianten-Regel).
+
+| Fehler | Abhilfe |
+|---|---|
+| **BUG-17** | `src/app/layout.tsx` bindet jetzt die Anzeige zu `useToast` ein (`ui/toaster`) statt der ungenutzten aus `ui/sonner`. Betrifft die ganze App: Meldungen erscheinen damit zum ersten Mal — zu prüfen ist, ob sie am Handy etwas verdecken |
+| **BUG-20** | `exclusionsFor` in `draft.ts` schließt nur noch die Übungen **anderer** Plätze aus und merkt sich die Form im eigenen Platz gesondert; `drawablePool` lässt deren Geschwister zu. Die Begründung bei erschöpftem Vorrat nennt die Form im Platz eigens („1 × steht gerade in diesem Platz"), damit die Rechnung aufgeht |
+| **BUG-18** | Wählt der Nutzer in der Nachfrage beim Verlassen „Speichern", merkt sich `unit-plan-view.tsx` den angehaltenen Seitenwechsel und setzt ihn nach dem gelungenen Speichern fort — auch über den Namensdialog eines Entwurfs hinweg. Neuer Browser-Test dazu |
+| **BUG-19** | kein Fehler, vom Nutzer geschlossen |
+
+Die Browser-Tests sind an die neue Varianten-Regel angepasst: aus einem Platz mit vier ziehbaren
+Formen sind es jetzt immer genau vier Würfe.
 
 ### Hinweis zur Testumgebung
 
@@ -1673,7 +1688,7 @@ PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npx playwright test --workers=2
 ### Zusammenfassung
 
 - **Akzeptanzkriterien:** 110 von 115 bestanden
-- **Fehler:** 4 — 0 kritisch, **1 hoch** (BUG-17), 1 mittel (BUG-20, vom Nutzer am 2026-10-09 als Fehler bestätigt), 2 niedrig (BUG-18, BUG-19; BUG-19 ist eine Frage an den Nutzer)
+- **Fehler:** 4 gefunden — 0 kritisch, **1 hoch** (BUG-17), 1 mittel (BUG-20), 2 niedrig (BUG-18, BUG-19). **Stand danach:** BUG-17, BUG-18 und BUG-20 behoben, Nachtest im Browser ausstehend; BUG-19 vom Nutzer als „kein Fehler" geschlossen
 - **Sicherheit:** bestanden, kein neuer Befund
 - **Regression:** keine
 - **Bereit für die Auslieferung:** **NEIN**

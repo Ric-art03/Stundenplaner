@@ -102,8 +102,9 @@ export function placementFrom(candidate: EditorCandidate): DraftPlacement {
 }
 
 /**
- * Was an diesem Platz noch gezogen werden darf: passend, nicht schon in der
- * Einheit, an diesem Platz noch nicht weggewürfelt.
+ * Was an diesem Platz noch gezogen werden darf: passend, nicht in einem anderen
+ * Platz der Einheit, an diesem Platz noch nicht weggewürfelt — und nicht die
+ * Form, die gerade dasteht.
  */
 export function drawablePool(
   pool: EditorCandidate[],
@@ -113,7 +114,8 @@ export function drawablePool(
     (candidate) =>
       passes(candidate) &&
       !exclusions.exerciseIds.has(candidate.exerciseId) &&
-      !exclusions.keys.has(keyOf(candidate))
+      !exclusions.keys.has(keyOf(candidate)) &&
+      keyOf(candidate) !== exclusions.current
   )
 }
 
@@ -378,10 +380,20 @@ export function describeExhaustion(
   const inUnit = fitting.filter((candidate) => exclusions.exerciseIds.has(candidate.exerciseId))
   const rolledAway = fitting.filter(
     (candidate) =>
-      !exclusions.exerciseIds.has(candidate.exerciseId) && exclusions.keys.has(keyOf(candidate))
+      !exclusions.exerciseIds.has(candidate.exerciseId) &&
+      keyOf(candidate) !== exclusions.current &&
+      exclusions.keys.has(keyOf(candidate))
+  )
+
+  // Die Form im eigenen Platz ist weder weggewürfelt noch anderswo verplant —
+  // sie steht nur gerade da. Ohne eigene Nennung ginge die Rechnung nicht auf.
+  const inPlace = fitting.filter(
+    (candidate) =>
+      !exclusions.exerciseIds.has(candidate.exerciseId) && keyOf(candidate) === exclusions.current
   )
 
   if (inUnit.length > 0) causes.push(`${inUnit.length} × steht schon in dieser Einheit`)
+  if (inPlace.length > 0) causes.push('1 × steht gerade in diesem Platz')
   if (rolledAway.length > 0) causes.push(`${rolledAway.length} × hier schon weggewürfelt`)
 
   const head = countOf(

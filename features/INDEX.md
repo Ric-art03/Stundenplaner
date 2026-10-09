@@ -101,7 +101,9 @@ Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, zehn Fäl
 - **BUG-17 (hoch): die App zeigt nirgends eine Meldung an** — weder „gespeichert" noch Fehler. Elf Stellen im Code melden über die eine Bibliothek, im Seitengerüst ist die Anzeige der anderen eingebunden. Besteht seit PROJ-1, betrifft alle Features und ist auch in Produktion so. **Das ist die eigentliche Ursache des „Auswürfeln, nichts passiert"** — die Begründung wurde jedes Mal erzeugt und nie gezeigt. Alle fünf nicht bestandenen Kriterien hängen daran
 - **BUG-18 (niedrig):** „Speichern" in der Nachfrage beim Verlassen speichert, wechselt die Seite aber nicht
 - **BUG-20 (mittel, am 2026-10-09 vom Nutzer als Fehler bestätigt):** steht eine Variante im Platz, werden die übrigen Formen derselben Übung nicht gewürfelt — das Auswürfeln meldet „nichts mehr frei", obwohl eine Variante nie gezeigt wurde. Jede Variante ist eine vollwertige Übung; dass eine weggewürfelte Grundübung als Variante wiederkommt, ist dagegen richtig
-- **BUG-19 (niedrig, Frage an den Nutzer):** eine gefüllte und wieder geleerte Lücke gilt als geplant, ohne dass der Nutzer sie noch einmal dazu erklärt
+- **BUG-19:** vom Nutzer am 2026-10-09 als „kein Fehler" geschlossen — eine gefüllte und wieder geleerte Lücke darf geplant bleiben
+
+**BUG-17, BUG-18 und BUG-20 sind am 2026-10-09 behoben, der Nachtest im Browser steht aus.** 426 Unit-Tests grün. Die Meldungen erscheinen damit in der ganzen App zum ersten Mal — zu prüfen ist, ob sie am Handy etwas verdecken
 
 Die Browser-Tests laufen auf diesem Rechner stabil mit `--workers=2` (rund 12 Minuten).
 
@@ -112,7 +114,7 @@ Die Browser-Tests laufen auf diesem Rechner stabil mit `--workers=2` (rund 12 Mi
 2. **Eine bekannte Abweichung:** eine fremde Übung im Speicheraufruf wird als Platzhalter abgelegt statt den Aufruf abzuweisen — sie ist für die Funktion von einer gelöschten nicht unterscheidbar. Am lebenden System bestätigt: der fremde Verweis wird nicht geschrieben. In der Spec begründet, für `/qa` zu bewerten
 3. **Beim Ausrollen:** die Migration ist schon in der Datenbank, der Code kann also jederzeit folgen
 
-**Nächster Schritt:** BUG-17 und BUG-20 über `/frontend PROJ-7` beheben, danach `/qa PROJ-7` erneut.
+**Nächster Schritt:** Nachtest der Browser-Tests auswerten (`/qa PROJ-7`), bei Grün `/deploy PROJ-7`.
 
 ## Features
 

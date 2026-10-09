@@ -188,6 +188,12 @@ export function UnitPlanView({
    * Leseansicht. Sie überdauert den Umweg über den Namensdialog.
    */
   const pendingDraft = React.useRef<UnitDraft | null>(null)
+  /**
+   * Der Seitenwechsel, den die Nachfrage beim Verlassen angehalten hat. Wählt
+   * der Nutzer dort „Speichern", geht es nach dem Speichern dorthin weiter —
+   * sonst müsste er den Verweis ein zweites Mal anklicken (BUG-18).
+   */
+  const leaveAfterSave = React.useRef<(() => void) | null>(null)
 
   function change(apply: (current: UnitDraft) => UnitDraft) {
     setHistory((current) => applyChange(current, apply))
@@ -397,6 +403,7 @@ export function UnitPlanView({
   /** Der eine Einstieg ins Speichern — aus dem Bearbeiten-Modus und aus der Leseansicht. */
   function requestSave() {
     pendingDraft.current = null
+    leaveAfterSave.current = null
     if (gaps.length > 0 || overfills.length > 0) {
       setPrompt({ mode: 'confirm' })
       return
@@ -454,6 +461,8 @@ export function UnitPlanView({
       }
 
       const wasDraft = !unit.saved
+      const leave = leaveAfterSave.current
+      leaveAfterSave.current = null
       pendingDraft.current = null
       setPrompt(null)
       setNaming(false)
@@ -461,7 +470,10 @@ export function UnitPlanView({
       // Speichern beendet das Bearbeiten — es gibt keinen zweiten Knopf dafür.
       setEditing(false)
       toast({ title: wasDraft ? 'Einheit gespeichert' : 'Änderungen gespeichert' })
-      router.refresh()
+      // Kam das Speichern aus der Nachfrage beim Verlassen, geht es jetzt zur
+      // angeklickten Seite. Sonst lädt die Einheit ihren neuen Stand.
+      if (leave) leave()
+      else router.refresh()
     } catch {
       toast({
         variant: 'destructive',
@@ -727,7 +739,10 @@ export function UnitPlanView({
         open={naming}
         onOpenChange={(open) => {
           setNaming(open)
-          if (!open) pendingDraft.current = null
+          if (!open) {
+            pendingDraft.current = null
+            leaveAfterSave.current = null
+          }
         }}
         title="Einheit speichern"
         description="Unter diesem Namen findest du die Einheit später wieder. Der Vorschlag aus Gruppe und Datum lässt sich überschreiben."
@@ -823,8 +838,14 @@ export function UnitPlanView({
         overfills={overfills}
         quickCreated={quickCreated}
         saving={saving}
-        onSave={() => void savePlan()}
-        onAcceptGapsAndSave={acceptGapsAndSave}
+        onSave={() => {
+          leaveAfterSave.current = prompt?.proceed ?? null
+          void savePlan()
+        }}
+        onAcceptGapsAndSave={() => {
+          leaveAfterSave.current = prompt?.proceed ?? null
+          acceptGapsAndSave()
+        }}
         onDiscard={discardAndLeave}
         onEdit={
           editing
