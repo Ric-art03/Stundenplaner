@@ -109,7 +109,7 @@ Die Browser-Tests laufen auf diesem Rechner stabil mit `--workers=2` (rund 12 Mi
 
 ### Was vor und bei der Auslieferung von PROJ-7 zu tun ist
 
-Geprüft am 2026-10-09: Build, Lint, 426 Unit-Tests und 156 Browser-Tests grün; Register 15 zu 15
+Geprüft am 2026-10-09, Browser-Tests zuletzt am 2026-10-10 gegen den Endstand: Build, Lint, 426 Unit-Tests und **158 von 158 Browser-Tests** grün; Register 15 zu 15
 und in der Datenbank angewendet; keine Tabelle ohne Zugriffsschutz; keine Geheimnisse im
 Repository; Testkonto aufgeräumt; keine neue Umgebungsvariable.
 
