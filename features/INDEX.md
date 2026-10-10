@@ -128,7 +128,9 @@ Eines bleibt daraus: **der Editor ist in der Produktion noch nicht von Hand durc
 
 Am selben Tag erledigt: `NEXT_PUBLIC_SITE_URL` fehlte seit PROJ-2 in `.env.local.example` und ist nachgetragen; in Vercel ist die Variable richtig gesetzt, vom Nutzer im Dashboard nachgesehen.
 
-**Nächster Schritt:** `/write-spec PROJ-14` (Live-Modus) oder `/write-spec PROJ-4` (Starter-Datenbank) — beide P0, beide noch ohne Spec.
+**PROJ-14 (Live-Modus) hat seit dem 2026-10-10 eine Spec** — [PROJ-14-live-modus.md](PROJ-14-live-modus.md), vom Nutzer noch nicht abgenommen. Der Live-Modus ist ein eigener Bildschirm, der **eine Übung groß** zeigt, ihre Restzeit herunterzählt, nie selbst weiterschaltet und in einer Zeile sagt, wie die Stunde im Plan liegt. Vor dem Start steht ein Bereitschaftsbild mit dem Material der ganzen Einheit; eingegriffen wird nur mit Auslassen und Pause, der Plan selbst bleibt beim Editor. Nach dem Start läuft die Stunde ohne Netz auf demselben Gerät. Neu an den Daten: jede **Durchführung** wird festgehalten (Zeitpunkt, je Schritt gemacht oder ausgelassen, tatsächliche Dauer, eine Notiz) und steht an der Einheit. Am selben Tag nachgeschärft: der Bildschirm ist **ungleich geteilt** — unter der aktuellen Übung steht fest die nächste, mit dem, was sich an Material und Organisationsform ändert; der **Bildschirm bleibt an**, und das Bereitschaftsbild erklärt nur dann etwas, wenn das Gerät es nicht zulässt; und in der **Nachbereitung** gehen Erkenntnisse direkt in die Übung (Notiz anhängen, Dauer übernehmen, bearbeiten, löschen — eine Erweiterung an PROJ-3). Zurückgestellt und eigens zu besprechen: ein Pool „bewährter" Übungen, die der Generator bevorzugt. Offen gelassen für PROJ-10: ob die Rotation sich künftig nach der Durchführung statt nach dem Speichern richtet.
+
+**Nächster Schritt:** `/architecture` für PROJ-14 — oder `/write-spec PROJ-4` (Starter-Datenbank), P0 und noch ohne Spec.
 
 ## Features
 
@@ -146,7 +148,7 @@ Am selben Tag erledigt: `NEXT_PUBLIC_SITE_URL` fehlte seit PROJ-2 in `.env.local
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |
 | PROJ-12 | Community-Features (Übungen teilen) | P2 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
-| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Roadmap | — | 2026-10-01 |
+| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Planned | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Eigene Kategorien verwalten | P0 | PROJ-3 | Roadmap | — | 2026-10-04 |
 | PROJ-17 | Stundenmuster (wiederverwendbare Einheiten-Konfigurationen) | P1 | PROJ-6 | Roadmap | — | 2026-10-04 |
