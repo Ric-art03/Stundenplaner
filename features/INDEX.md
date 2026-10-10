@@ -127,7 +127,7 @@ Repository; Testkonto aufgeräumt; keine neue Umgebungsvariable.
 Zwei Dinge bleiben daraus:
 
 - **Der Editor ist in der Produktion noch nicht von Hand durchgespielt** — einmal anmelden, eine Einheit bearbeiten und speichern. Ohne Anmeldung ist das von außen nicht prüfbar
-- **`NEXT_PUBLIC_SITE_URL` fehlt in `.env.local.example`** — seit PROJ-2. Ob sie in Vercel gesetzt ist, wurde nicht nachgesehen; fehlt sie dort, zeigen die Links in Bestätigungs- und Reset-Mails auf `localhost:3000`
+- **`NEXT_PUBLIC_SITE_URL` fehlt in `.env.local.example`** — seit PROJ-2, reine Dokumentation. **In Vercel ist die Variable richtig gesetzt**, vom Nutzer am 2026-10-10 im Dashboard nachgesehen
 
 **Nächster Schritt:** `/write-spec PROJ-14` (Live-Modus) oder `/write-spec PROJ-4` (Starter-Datenbank) — beide P0, beide noch ohne Spec.
 

@@ -1749,10 +1749,9 @@ PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npx playwright test --workers=2
 | `get_advisors` (Sicherheit) | ✅ nur der bekannte Hinweis zum Passwortschutz |
 
 > **Offen, klein:** `NEXT_PUBLIC_SITE_URL` steht nicht in `.env.local.example`, obwohl die App sie
-> seit PROJ-2 für die Links in Bestätigungs- und Reset-Mails liest. Ob sie in Vercel gesetzt ist,
-> wurde bei dieser Auslieferung nicht nachgesehen; fehlt sie, zeigen die Mail-Links auf
-> `localhost:3000`. Die Zeile in der Vorlage ist nicht nachgetragen — die Datei liegt in einem für
-> das Werkzeug gesperrten Bereich.
+> seit PROJ-2 für die Links in Bestätigungs- und Reset-Mails liest. **In Vercel ist sie richtig
+> gesetzt** — vom Nutzer am 2026-10-10 im Dashboard nachgesehen. Offen ist nur noch die Zeile in
+> der Vorlage, reine Dokumentation.
 
 ### Nachprüfung in der Produktion — 2026-10-10
 
