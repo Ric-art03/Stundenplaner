@@ -1,6 +1,6 @@
 # PROJ-14: Live-Modus (Stundenbegleitung)
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-10
 **Last Updated:** 2026-10-10
 
@@ -534,6 +534,17 @@ Dazu gilt:
       eine eigene ID
 - [ ] Der Editor von PROJ-7 ist in der Produktion noch nicht von Hand durchgespielt (siehe
       INDEX.md) — vor dem Bau des Live-Modus nachholen, weil er auf denselben Einheiten aufsetzt
+- [x] **Aus `/architecture` (2026-10-10), vom Nutzer am selben Tag entschieden:** Wird eine
+      vergessene Stunde mit „Beenden und festhalten" abgeschlossen, bekommt der Schritt, der die
+      ganze Zeit offen stand, **höchstens seine Plandauer** — damit im Protokoll keine Übung mit
+      drei Stunden steht und „Dauer übernehmen" nichts Unsinniges vorschlägt
+- [ ] **Aus `/architecture` (2026-10-10):** Verhält sich der Stromsparmodus des iPhones so, wie
+      die Anleitung annimmt (Wachhalten wird abgelehnt, nach dem Ausschalten gewährt)? In keiner
+      Quelle belegt — in `/qa` an einem echten Gerät zu prüfen; stimmt es nicht, wird der erste
+      Schritt der Anleitung angepasst
+- [ ] **Aus `/architecture` (2026-10-10), für PROJ-11:** Das Wachhalten war bei Seiten, die vom
+      Home-Bildschirm des iPhones gestartet wurden, laut Dokumentation bis iOS 18.4 defekt. Vor
+      der PWA nachsehen, ob das auf aktuellen Geräten behoben ist
 
 ## Decision Log
 
@@ -584,12 +595,403 @@ Dazu gilt:
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Die laufende Stunde lebt als „Stundenakte" auf dem Gerät, nicht in der Datenbank | Die Spec verlangt: kein Netz nach dem Start, dasselbe Gerät, Neuladen ändert nichts. Eine Stunde, die der Server führt, bräuchte in der Halle Verbindung | 2026-10-10 |
+| Die Akte trennt den Plan vom Start (fest) vom Verlauf (ändert sich) | Damit läuft die Stunde unverändert weiter, wenn die Einheit anderswo geändert oder gelöscht wird — ohne eigene Regel dafür | 2026-10-10 |
+| Speicher des Browsers für die Akte, eigene Ablage für die Bilder | Die Akte ist klein und muss sofort lesbar sein; der Browser meldet Änderungen von selbst an andere Tabs. Bildadressen gelten nur 60 Minuten, also wird das Bild selbst abgelegt | 2026-10-10 |
+| Zeit wird aus Zeitpunkten gerechnet, nie mitgezählt | Ein Zähler steht, sobald das Handy die Seite schlafen legt. Zeitpunkte überstehen Sperren und Neuladen und machen die Logik ohne Warten prüfbar | 2026-10-10 |
+| Vier Logikbausteine ohne Oberfläche: Schritte, Material, Verlauf, Uhr | Bewährtes Muster aus PROJ-7. Die schwierigen Regeln (Gesamtstand, Zurück, Auslassen, Materialvergleich) sind so einzeln testbar | 2026-10-10 |
+| Die Schritte werden einmal beim Start gebildet | Der Live-Bildschirm muss weder Segmente noch Lückenregeln kennen; freie Zeit und Platzhalter sind dann Schritte wie alle anderen | 2026-10-10 |
+| Kleiner Offline-Baustein nur für `/live`, von Hand statt per Paket | Vom Nutzer entschieden. Handys laden Seiten von sich aus neu; ohne Baustein stünde in einer Halle ohne Empfang die Fehlerseite. Auf einen Bildschirm begrenzt, damit die übrige App davon unberührt bleibt und PROJ-11 nichts vorweggenommen wird | 2026-10-10 |
+| `/live` ist eine feste Adresse ohne Einheit und fragt den Server beim Öffnen nach nichts | Nur so lässt sich der Bildschirm ablegen und ohne Netz wieder öffnen; welche Stunde läuft, steht in der Akte | 2026-10-10 |
+| `/live` verlangt keine Anmeldung vom Server; die Akte trägt das Konto | Die Spec fordert, dass eine laufende Stunde bei abgelaufener Sitzung bedienbar bleibt. Der Bildschirm zeigt nur, was schon auf dem Gerät liegt; alles Serverseitige prüft weiter die Anmeldung | 2026-10-10 |
+| Zwei Tabellen: Durchführung und Schritt der Durchführung | Eigene Zeilen je Schritt, weil PROJ-10 später nach einzelnen Übungen fragen wird. An bestehenden Tabellen ändert sich nichts | 2026-10-10 |
+| Der Schritt trägt den Namen als Abschrift und einen Verweis auf die Übung | Der Name bleibt, was auch immer mit der Übung geschieht; der Verweis fällt beim Löschen von selbst weg und nimmt die Nachbereitung an dem Schritt mit | 2026-10-10 |
+| Gespeichert wird sofort bei „Stunde beenden"; „Fertig" trägt nur die Notiz nach | Vom Nutzer entschieden. Wer die Zusammenfassung schließt, verliert nichts, und es gibt keinen Zustand „beendet, aber nicht gespeichert", an den die App erinnern müsste | 2026-10-10 |
+| Speichern in einem Zug über eine Datenbank-Funktion, mit einer Kennung, die das Gerät beim Start vergibt | Die Durchführung steht ganz oder gar nicht da; kommt sie zweimal an, wird sie wiedererkannt — „erscheint genau einmal" ohne Abgleich von Hand | 2026-10-10 |
+| „Zuletzt durchgeführt" wird aus den Durchführungen gelesen | Ein eigenes Feld müsste beim Löschen einer Durchführung nachgezogen werden | 2026-10-10 |
+| Notiz anhängen und Dauer übernehmen ändern Übung und Vermerk im selben Zug, auf dem heutigen Stand der Übung | Kein Vermerk ohne Änderung und umgekehrt; nichts wird überschrieben, was seit dem Start anderswo geändert wurde | 2026-10-10 |
+| Eine Zusammenfassung für Live-Bildschirm und Detailseite | Zwei Orte, dieselbe Form der Daten — sonst laufen zwei Ansichten auseinander | 2026-10-10 |
+| Das Wachhalten wird ausprobiert, nicht aus Gerät oder Akkustand erraten | Wann Geräte ablehnen, ist nur ungefähr dokumentiert; für den Stromsparmodus des iPhones fand sich kein Beleg | 2026-10-10 |
+| Die Anleitung nennt den Bereich der Einstellungen, nicht jeden Menüpunkt | Die Wege heißen je Hersteller und Version anders, iOS 26 hat sie gerade umgebaut. Die Spec verlangt, nichts Falsches zu nennen | 2026-10-10 |
+| Der Ton wird im Gerät erzeugt | Keine Datei zu laden oder abzulegen; funktioniert damit auch ohne Netz | 2026-10-10 |
+| Vergessene Stunde: der offen gebliebene Schritt zählt mit höchstens seiner Plandauer | Vom Nutzer entschieden. Sonst stünde eine Übung mit Stunden im Protokoll, und „Dauer übernehmen" schlüge Unsinn vor | 2026-10-10 |
+| Keine neuen Pakete | Alles Nötige kann der Browser. Ein PWA-Paket würde die ganze App offline-fähig machen wollen | 2026-10-10 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+**Erstellt:** 2026-10-10
+
+### Die Grundidee in drei Sätzen
+
+Beim Tippen auf „Stunde starten" holt die App **einmal alles, was die Stunde braucht**, und legt es
+als **Stundenakte auf dem Gerät** ab. Ab da spricht der Live-Bildschirm nur noch mit dieser Akte —
+nicht mit dem Server —, und jede Uhr wird aus festgehaltenen Zeitpunkten **ausgerechnet**, nicht
+mitgezählt. Erst am Ende geht die fertige Durchführung in einem Zug an die Datenbank; klappt das
+nicht, wartet sie auf dem Gerät.
+
+Daraus folgt fast alles Übrige: kein Netz nötig, Sperren und Neuladen ändern nichts, die Einheit
+kann währenddessen geändert werden, und zwei Tabs zeigen dasselbe, weil beide dieselbe Akte lesen.
+
+### A) Komponentenstruktur
+
+```
+/units/[id]  (Detailseite)                         [vorhanden, wird erweitert]
+├── Kopfbereich
+│   └── „Stunde starten"                           NEU — nur gespeichert, nur Leseansicht
+├── Stundenverlauf                                 [vorhanden, unverändert]
+└── Durchführungen                                 NEU
+    └── Eintrag: Datum · Dauer · ausgelassen · Notiz
+        ├── aufgeklappt: Zusammenfassung           NEU — derselbe Baustein wie im Live-Modus
+        └── Notiz ändern · Durchführung löschen
+
+/units  (Übersicht)                                [vorhanden, wird erweitert]
+└── Einheit
+    ├── „Stunde starten"                           NEU
+    └── „Zuletzt durchgeführt am …"                NEU
+
+„Stunde starten" (ein Baustein, zwei Einbauorte)   NEU
+└── Nachfrage, falls schon eine Stunde läuft:
+    fortsetzen · beenden · abbrechen
+
+/live  (eigener Bildschirm, ohne Navigation)       NEU
+├── Bereitschaftsbild
+│   ├── Einheit · Gruppe · Halle · Gesamtdauer
+│   ├── Materialliste (größter gleichzeitiger Bedarf)
+│   ├── Musik-Hinweis · Platzhalter-Hinweis
+│   ├── Bildschirm-an-Prüfung
+│   │   └── Anleitung in zwei Schritten + „Erneut prüfen"   — nur wenn nötig
+│   ├── Warnung „übersteht kein Neuladen"                   — nur wenn die Ablage nicht geht
+│   └── „Los geht's"
+│
+├── Laufende Stunde
+│   ├── Gesamtstand-Zeile (bleibt stehen)
+│   │   └── Ton-Schalter · Hinweis „Bildschirm kann ausgehen"
+│   ├── Aktueller Schritt (scrollt)
+│   │   ├── Phase und Stand · Name
+│   │   ├── Restzeit (bleibt stehen)
+│   │   ├── Übungszeile: Material · Organisationsform    [vorhanden, wiederverwendet]
+│   │   ├── Arbeitsnotiz Übung / Phase                    [vorhanden, wiederverwendet]
+│   │   └── eingeklappt: Beschreibung · Bild · Varianten
+│   ├── „Danach" (scrollt)
+│   │   ├── Name · Dauer · neue Phase
+│   │   ├── Was sich ändert: neu holen · kann weg · andere Menge · Organisationsform
+│   │   └── Arbeitsnotiz · Beschreibung
+│   ├── Bedienleiste (bleibt stehen)
+│   │   └── Zurück · Auslassen · Pause · Weiter
+│   └── Menü: Stunde beenden · Abbrechen
+│
+├── Pausiert (Überlagerung mit „Fortsetzen")
+├── Vergessene Stunde (Entscheidung: festhalten · verwerfen)
+│
+└── Zusammenfassung                                — ein Baustein, auch auf der Detailseite
+    ├── geplant / tatsächlich
+    ├── je Schritt: gemacht · ausgelassen · Dauern · Vermerke
+    │   └── Nachbereitung: Notiz anhängen · Dauer übernehmen · bearbeiten · löschen
+    ├── „Wie lief's?"
+    └── „Fertig"
+
+In der ganzen App (Kopfzeile)                      NEU
+└── Stunden-Hinweis
+    ├── „Stunde läuft — fortsetzen"
+    ├── „Durchführung wartet auf Verbindung"
+    └── „Konnte nicht gespeichert werden" + Grund + „Verwerfen"
+
+/exercises/[id]/edit  (Bearbeiten-Maske)           [vorhanden, wird erweitert]
+└── Hinweis „Steht in n gespeicherten Einheiten" (aufklappbar)   NEU
+```
+
+Aus vorhandenen Bausteinen kommen: die Übungszeile und die Arbeitsnotiz aus PROJ-7, der
+Löschen-Dialog mit seiner Einheiten-Warnung aus PROJ-3, die Meldungen, Dialoge, Auf- und Zuklapper
+und Schalter aus shadcn/ui. Neu gebaut wird nur, was es noch nicht gibt.
+
+### B) Die Stundenakte — was auf dem Gerät liegt
+
+Eine Akte je Gerät und Konto. Sie besteht aus zwei Teilen, die nie vermischt werden:
+
+**Der Plan vom Start** — fest, wird nach dem Start nicht mehr angefasst:
+- Einheit, Gruppe, Halle, Teilnehmerzahl, Gesamtdauer
+- die **Schritte in ihrer Reihenfolge**, jeder mit allem, was der Bildschirm zeigt: Art (Übung,
+  freie Zeit, Platzhalter), Phase, Name, Beschreibung, Plandauer, Material mit ausgerechneten
+  Mengen, Organisationsform, Arbeitsnotiz von Übung und Phase, weitere Varianten, Titelbild
+
+**Der Verlauf** — ändert sich bei jedem Tipp:
+- Zustand der Stunde: bereit, läuft, pausiert, beendet
+- welcher Schritt offen ist und **seit welchem Zeitpunkt**
+- je Schritt: bisher gelaufene Zeit, und ob gemacht, ausgelassen oder noch offen
+- seit wann pausiert ist
+- der angefangene Text bei „Wie lief's?"
+
+Dazu eine **Warteliste** für beendete Durchführungen, die noch nicht in der Datenbank sind.
+
+**Abgelegt im Speicher des Browsers** — klein, sofort lesbar, und er sagt anderen Tabs von selbst
+Bescheid, wenn sich etwas ändert. Das **Titelbild** jedes Schritts wird beim Start eigens
+heruntergeladen und auf dem Gerät abgelegt: die Adressen, unter denen die App Bilder holt, gelten
+nur eine Stunde, und eine Stunde kann länger dauern.
+
+**Die Schritte entstehen einmal, beim Start**, aus der gespeicherten Einheit: Übungen in
+Planreihenfolge, die geplante Lücke eines Segments als „Freie Zeit" an dessen Ende, ein frei
+gelassenes Segment als „Freie Zeit" über seine ganze Länge, ein Platzhalter als eigener Schritt.
+Danach gibt es nur noch diese Liste — der Live-Bildschirm kennt weder Segmente noch Lückenregeln.
+
+### C) Wie die Zeit gerechnet wird
+
+Es läuft **kein Zähler**. Festgehalten wird nur, *wann* etwas geschah; jede Anzeige ist eine
+Rechnung aus „jetzt" und diesen Zeitpunkten, einmal pro Sekunde neu gezeichnet.
+
+- **Restzeit** = Plandauer − (bisher gelaufene Zeit des Schritts + Zeit seit dem Betreten)
+- **Pause** hält einen Zeitpunkt fest; solange er steht, gilt er als „jetzt"
+- **Gesamtstand** = dieselbe Rechnung über alle Schritte
+- Springt die Uhr des Geräts, wird das Ergebnis in die erlaubten Grenzen zurückgeholt
+
+Deshalb kann das Handy gesperrt, die App gewechselt, die Seite neu geladen werden: beim nächsten
+Hinsehen wird einfach neu gerechnet. Und deshalb lässt sich die ganze Zeitlogik **ohne Bildschirm
+und ohne Warten prüfen** — man gibt ihr einen Verlauf und ein „jetzt" und liest das Ergebnis.
+
+Vier Logikbausteine tragen den Live-Modus, alle ohne Oberfläche und ohne Datenbank testbar (wie
+`draft.ts` im Editor):
+
+| Baustein | Aufgabe |
+|---|---|
+| Schritte | macht aus einer Einheit die Schrittliste |
+| Material | größter gleichzeitiger Bedarf fürs Bereitschaftsbild; Vergleich zweier Schritte für „Danach" |
+| Verlauf | Weiter, Zurück, Auslassen, Pause, Beenden — jeweils alter Verlauf hinein, neuer heraus |
+| Uhr | Restzeit, „über", Gesamtstand, vergessene Stunde — aus Verlauf und „jetzt" |
+
+### D) Ohne Netz
+
+Drei Dinge müssen ohne Verbindung da sein, und jedes hat seinen eigenen Ort:
+
+| Was | Wo es liegt |
+|---|---|
+| Inhalte und Stand der Stunde | Stundenakte im Speicher des Browsers |
+| Titelbilder | beim Start auf dem Gerät abgelegt |
+| **Der Live-Bildschirm selbst** | **kleiner Offline-Baustein, nur für `/live`** |
+
+Der dritte Punkt ist am 2026-10-10 vom Nutzer entschieden. Ohne ihn zeigt ein Neuladen in einer
+Halle ohne Empfang die Fehlerseite des Browsers — und Handys laden Seiten von sich aus neu, etwa
+nach einem Anruf.
+
+**Der Offline-Baustein ist eng begrenzt:**
+- Er wirkt **nur auf den Live-Bildschirm**. Alle anderen Seiten merken nichts von ihm und laden
+  wie bisher
+- Er hält bereit, was der Bildschirm zum Anzeigen braucht, und sonst nichts — **keine Daten**, die
+  liegen in der Stundenakte
+- Mit Netz holt er immer die aktuelle Fassung; die abgelegte dient nur als Rückfall. Eine neue
+  Auslieferung kommt also an, sobald das Gerät wieder Verbindung hat
+- Er wird beim Öffnen des Bereitschaftsbilds eingerichtet — das ist immer mit Netz
+
+Damit das geht, ist `/live` **eine feste Adresse ohne Einheit darin** und kommt ohne Server aus:
+welche Stunde läuft, steht in der Akte. Der Bildschirm fragt den Server beim Öffnen nach nichts.
+
+Das ist ein **Vorgriff auf PROJ-11 (PWA)**, aber kein Ersatz: installieren, Start ganz ohne Netz
+und die übrige App offline bleiben dort. PROJ-11 kann den Baustein übernehmen und erweitern.
+
+### E) Was in der Datenbank neu ist
+
+Zwei neue Tabellen, sonst nichts. An Einheiten, Segmenten und Übungen ändert sich **kein Feld**.
+
+**Durchführung** — eine Zeile je gelaufener Stunde:
+- zu welcher Einheit und welchem Nutzer sie gehört
+- Beginn und Ende
+- geplante und tatsächliche Gesamtdauer (ohne Pausen), Dauer der Pausen
+- die Notiz „Wie lief's?"
+- eine Kennung, die **das Gerät beim Start vergibt** (siehe F)
+
+**Schritt der Durchführung** — eine Zeile je Schritt, in der Reihenfolge von damals:
+- Art (Übung, freie Zeit, Platzhalter), Phase, **Name als Abschrift**
+- geplante und tatsächliche Dauer; gemacht oder ausgelassen
+- ein **Verweis auf die Übung** und gegebenenfalls die Variante
+- die Vermerke der Nachbereitung: Notiz übernommen (wohin), Dauer übernommen (welcher Wert)
+
+**Abschrift plus Verweis** löst zwei Forderungen der Spec ohne eigene Logik: der Name bleibt
+stehen, was auch immer mit der Übung passiert — und wird die Übung gelöscht, fällt der Verweis
+von selbst weg, womit auch die vier Wege der Nachbereitung an diesem Schritt verschwinden.
+
+Eigene Zeilen je Schritt statt einer Liste in der Durchführung, weil PROJ-10 (Rotation) später
+fragen wird „wann lief diese Übung zuletzt wirklich?" — das ist dann eine einfache Abfrage.
+
+**Zugriff:** beide Tabellen sind nur für den Eigentümer les- und schreibbar, in der Datenbank
+durchgesetzt, nach dem Muster der gehärteten Richtlinien aus BUG-4. Wird die Einheit gelöscht,
+gehen ihre Durchführungen mit.
+
+**„Zuletzt durchgeführt am …"** wird aus den Durchführungen gelesen, nicht eigens gespeichert —
+ein zweites Feld müsste beim Löschen einer Durchführung nachgezogen werden.
+
+### F) Wie die Durchführung gespeichert wird
+
+**Sofort bei „Stunde beenden"**, nicht erst bei „Fertig" (am 2026-10-10 vom Nutzer entschieden,
+kleine Abweichung vom Wortlaut der Spec). „Fertig" trägt nur noch die Notiz nach und führt zur
+Detailseite. Wer die Zusammenfassung einfach schließt, verliert nichts.
+
+- **In einem Zug**, über eine neue Datenbank-Funktion — die Durchführung steht ganz da oder gar
+  nicht, wie beim Speichern im Editor
+- **Genau einmal.** Die Kennung der Durchführung vergibt das Gerät schon beim Start. Kommt
+  dieselbe Durchführung ein zweites Mal an (Verbindung brach nach dem Absenden ab, zwei Tabs
+  versuchen es gleichzeitig), erkennt die Datenbank sie wieder und legt nichts doppelt an
+- **Ohne Netz** wandert sie in die Warteliste. Nachgereicht wird beim nächsten Öffnen der App,
+  sobald das Gerät wieder Verbindung meldet, und wenn der Nutzer zurückkehrt. Solange etwas
+  wartet, sagt es der Stunden-Hinweis in der Kopfzeile
+- **Scheitert es endgültig** — Einheit gelöscht, anderes Konto angemeldet —, nennt der Server den
+  Grund, und der Hinweis bietet „Verwerfen" an. Kein stilles Weiterprobieren
+
+Die Zusammenfassung ist **ein Baustein für beide Orte**: im Live-Bildschirm liest sie aus der
+Stundenakte, auf der Detailseite aus der Datenbank. Beide liefern dieselbe Form.
+
+### G) Nachbereitung
+
+Die vier Wege brauchen eine gespeicherte Durchführung und Verbindung — beides ist direkt nach
+„Stunde beenden" in der Regel gegeben, und ohne Netz sind sie laut Spec ohnehin nicht bedienbar.
+
+- **Notiz anhängen** und **Dauer übernehmen** sind zwei schmale Server-Stellen, die genau ein Feld
+  der Übung ändern und **im selben Zug den Vermerk am Schritt setzen**. So kann nicht das eine
+  ohne das andere geschehen
+- Beide Dialoge **holen beim Öffnen den heutigen Stand der Übung** — die Vorschau zeigt, was
+  wirklich entsteht, auch wenn die Übung seit dem Start geändert wurde. Wurde sie zwischen Öffnen
+  und Bestätigen noch einmal geändert, wird nicht überschrieben, sondern neu vorgelegt
+- Höchstlänge und Mindestdauer prüft der Server nach denselben Regeln wie die Bearbeiten-Maske
+- **Übung bearbeiten** öffnet die vorhandene Maske mit einer Rücksprungadresse; Speichern und
+  Abbrechen führen dorthin zurück. Angenommen werden nur Adressen innerhalb der App. Die Notiz
+  „Wie lief's?" übersteht den Ausflug, weil der angefangene Text in der Stundenakte liegt
+- **Übung löschen** benutzt den vorhandenen Dialog samt Einheiten-Warnung
+- **Der Hinweis in der Bearbeiten-Maske** („steht in n gespeicherten Einheiten") benutzt die
+  Abfrage, die die Löschwarnung schon hat — sie zählt bereits nur gespeicherte Einheiten, keine
+  Entwürfe
+
+### H) Bildschirm an — Ergebnis der Prüfung
+
+Die Spec verlangt, das hier nachzusehen. Stand der Recherche am 2026-10-10:
+
+| | Stand |
+|---|---|
+| **iPhone, Safari** | ab iOS 16.4 (Frühjahr 2023) |
+| **Android, Chrome** | seit 2020 |
+| **Firefox** | ab Version 126 (2024) |
+| **iPhone, vom Home-Bildschirm gestartet** | laut Dokumentation bis iOS 18.4 defekt — betrifft erst PROJ-11 |
+
+**Wann das Gerät ablehnt:** die Dokumentation nennt „systembedingt, etwa Energiesparmodus oder
+niedriger Akkustand", ohne je Gerät genauer zu werden. Dass der **Stromsparmodus des iPhones** die
+Anfrage ablehnt, ist plausibel, aber **in keiner Quelle belegt**. Außerdem gibt jedes Gerät das
+Wachhalten ab, sobald die Seite nicht mehr sichtbar ist.
+
+Daraus zwei Entscheidungen:
+
+1. **Die App rät nicht, sie probiert.** Das Bereitschaftsbild fordert das Wachhalten wirklich an
+   und zeigt das Ergebnis. Es schließt nicht vom Gerät oder vom Akkustand auf die Antwort. Geht
+   das Wachhalten später verloren, merkt es der Live-Bildschirm an der Rückmeldung des Geräts
+   und fordert es beim Zurückkehren neu an
+2. **Die Anleitung nennt den Bereich, nicht jeden Menüpunkt.** Die Wege heißen je Hersteller und
+   Version anders; iOS 26 hat die Batterie-Einstellungen gerade umgebaut, und die Quellen
+   widersprechen sich im Detail. Belegt sind:
+   - iPhone: Einstellungen → **Batterie** (Stromsparmodus) · Einstellungen → **Anzeige &
+     Helligkeit** → **Automatische Sperre**
+   - Android: Einstellungen → **Akku** (Energiesparmodus) · Einstellungen → **Display** →
+     Bildschirm-Timeout — der letzte Punkt heißt je Hersteller verschieden
+
+   Die Texte werden so geschrieben, dass sie bei beiden Schreibweisen stimmen, und in `/qa` an
+   einem echten iPhone und einem echten Android-Gerät gegengelesen.
+
+Quellen: [caniuse — Screen Wake Lock](https://caniuse.com/wake-lock),
+[WebKit-Fehler 254545](https://bugs.webkit.org/show_bug.cgi?id=254545),
+[MDN — WakeLock.request](https://docs.w3cub.com/dom/wakelock/request),
+[W3C — Screen Wake Lock API](https://www.w3.org/TR/2024/WD-screen-wake-lock-20241024/),
+[apfelpatient — Einstellungen iOS 26](https://www.apfelpatient.de/tipps-tricks/iphone-akku-schnell-leer-tipps-einstellungen-ios-26),
+[iphone-ticker — iOS 26 Energiesparfunktion](https://www.iphone-ticker.de/apple-verteilt-neue-betas-ios-26-mit-zusaetzlicher-energiesparfunktion-262166/)
+
+### I) Signal
+
+Der Ton wird **im Gerät erzeugt**, es gibt keine Tondatei — nichts zu laden, nichts zu lagern.
+Handys lassen Töne erst nach einer Berührung zu; der Tipp auf „Los geht's" schaltet ihn frei.
+Vibration gibt es auf Android; das iPhone kann sie aus dem Browser nicht, und das bleibt ohne
+Meldung. Die Stummschaltung merkt sich das Gerät über den vorhandenen Baustein, der schon den
+Schalter „Arbeitsnotizen anzeigen" trägt.
+
+### J) Konto und Gerät
+
+- Die Stundenakte trägt das **Konto**, zu dem sie gehört. Ist ein anderes Konto angemeldet, wird
+  sie weder gezeigt noch nachgereicht
+- **Abmelden bei laufender Stunde** fragt vorher: beenden und festhalten, verwerfen oder
+  angemeldet bleiben. Danach liegt keine Akte mehr auf dem Gerät
+- `/live` verlangt beim Öffnen **keine Anmeldung vom Server** — sonst wäre eine laufende Stunde
+  bei abgelaufener Sitzung ohne Netz nicht mehr bedienbar, was die Spec ausdrücklich fordert. Der
+  Bildschirm zeigt nur, was schon auf dem Gerät liegt; ohne Akte leitet er zur Übersicht. Alles,
+  was den Server berührt (starten, speichern, Nachbereitung), prüft die Anmeldung wie bisher
+
+### K) Zwei Tabs
+
+Beide lesen dieselbe Akte. Ändert ein Tab sie, bekommt der andere vom Browser Bescheid und liest
+neu; zusätzlich liest jeder Tab neu, wenn er in den Vordergrund kommt. Eine eigene Abstimmung
+gibt es nicht — bei gleichzeitigem Tippen gilt der letzte Tipp.
+
+### L) Was an Vorhandenem angefasst wird
+
+| Stelle | Änderung |
+|---|---|
+| Detailseite der Einheit | „Stunde starten", Liste der Durchführungen |
+| Einheiten-Übersicht | „Stunde starten", „Zuletzt durchgeführt am …" |
+| Kopfzeile der App | Stunden-Hinweis |
+| Abmelden-Knopf | Nachfrage bei laufender Stunde |
+| Bearbeiten-Maske der Übung | Einheiten-Hinweis, Rücksprungadresse |
+| Löschen-Dialog der Übung | aus der Zusammenfassung aufrufbar |
+| Übungszeile, Arbeitsnotiz | unverändert wiederverwendet |
+
+Der Editor, der Generator und ihre Datenbank-Funktionen bleiben unberührt.
+
+### M) Pakete
+
+**Keine neuen.** Wachhalten, Ton, Vibration, Ablage auf dem Gerät und der Offline-Baustein sind
+Fähigkeiten des Browsers. Ein fertiges PWA-Paket würde die ganze App offline-fähig machen wollen —
+genau das soll hier noch nicht geschehen.
+
+### N) Mobil, Tastatur, Screenreader
+
+- Drei feste Zonen (Gesamtstand, Restzeit, Bedienleiste), dazwischen scrollt der Inhalt. Die
+  Bedienleiste hält Abstand zum unteren Rand, den iPhones für ihre Wischgeste brauchen
+- Tippflächen mindestens 44 × 44 px, „Weiter" deutlich größer als der Rest
+- Die Restzeit wird für Screenreader **nicht** jede Sekunde angesagt, sondern beim Schrittwechsel
+  und beim Ablauf
+- „Über der Zeit" und „Pausiert" sind nie nur Farbe, immer auch Wort
+
+### O) Reihenfolge des Bauens
+
+**`/frontend`**
+1. Die vier Logikbausteine mit Tests — Schritte, Material, Verlauf, Uhr
+2. Stundenakte auf dem Gerät, samt Bescheid an andere Tabs
+3. Live-Bildschirm: Bereitschaftsbild, laufende Stunde, Pause — zunächst mit einer Einheit aus
+   den vorhandenen Daten, ohne Speichern
+4. Wachhalten, Ton, Vibration
+5. Zusammenfassung, Stunden-Hinweis in der Kopfzeile, „Stunde starten" an beiden Orten
+6. Offline-Baustein und Ablage der Bilder
+7. Dialoge der Nachbereitung, Hinweis in der Bearbeiten-Maske
+
+**`/backend`**
+8. Migration: zwei Tabellen, Zugriffsregeln, Speicher-Funktion
+9. Server-Stellen: alles für den Start holen · Durchführung speichern · Durchführungen lesen,
+   Notiz ändern, löschen · Notiz anhängen · Dauer übernehmen
+10. Warteliste anschließen, Liste der Durchführungen, „Zuletzt durchgeführt"
+
+Die Uhr und der Offline-Baustein lassen sich in den Browser-Tests gezielt prüfen: die Tests können
+die Zeit vorstellen und das Netz abschalten.
+
+### P) Was dieses Design offen lässt
+
+- **Nicht nachweisbar auf diesem Rechner:** ob der Bildschirm auf einem echten iPhone und einem
+  echten Android-Gerät wirklich an bleibt, wie sich der Stromsparmodus verhält, und ob der Ton
+  kommt. Das braucht zwei echte Geräte in `/qa`
+- **Die Ablage im Browser ist kein Tresor.** Löscht der Nutzer die Website-Daten oder räumt das
+  Handy bei Speichermangel auf, ist eine laufende Stunde und eine wartende Durchführung weg. Das
+  ist bei jeder Web-App so und wird hier nicht verhindert, nur benannt
+- **Im privaten Fenster** geht der Offline-Baustein nicht; die Warnung auf dem Bereitschaftsbild
+  deckt das mit ab
+- Zwei Fragen stehen unter „Open Questions" (Stromsparmodus des iPhones, Wachhalten vom
+  Home-Bildschirm); die dritte — die Dauer des offenen Schritts einer vergessenen Stunde — ist
+  am 2026-10-10 entschieden
+
+**Vom Nutzer am 2026-10-10 abgenommen**, einschließlich der beiden eigens vorgelegten Punkte:
+`/live` ohne Anmeldeprüfung durch den Server, und die Anleitung nennt den Bereich der
+Einstellungen statt jeden Menüpunkt.
 
 ## QA Test Results
 _To be added by /qa_
