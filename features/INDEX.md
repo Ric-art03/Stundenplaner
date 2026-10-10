@@ -124,10 +124,9 @@ Repository; Testkonto aufgeräumt; keine neue Umgebungsvariable.
 
 **PROJ-7 (Einheiten-Editor) ist am 2026-10-10 ausgeliefert** — https://stundenplaner-self.vercel.app, Tag `v1.6.0-PROJ-7`, Commit `0bfa3a6`. Abschnitt „Deployment" in der Spec. Vor dem Hochladen noch einmal geprüft: Build, Lint, 426 Unit-Tests, Register 15 zu 15, kein Geheimnis im Diff. Nach dem Hochladen: Vercel meldet die Auslieferung als abgeschlossen, öffentliche Seiten 200, geschützte Seiten 307 auf `/login`, Sicherheits-Kopfzeilen liegen an, keine Fehler in den Supabase-Protokollen.
 
-Zwei Dinge bleiben daraus:
+Eines bleibt daraus: **der Editor ist in der Produktion noch nicht von Hand durchgespielt** — einmal anmelden, eine Einheit bearbeiten und speichern. Ohne Anmeldung ist das von außen nicht prüfbar.
 
-- **Der Editor ist in der Produktion noch nicht von Hand durchgespielt** — einmal anmelden, eine Einheit bearbeiten und speichern. Ohne Anmeldung ist das von außen nicht prüfbar
-- **`NEXT_PUBLIC_SITE_URL` fehlt in `.env.local.example`** — seit PROJ-2, reine Dokumentation. **In Vercel ist die Variable richtig gesetzt**, vom Nutzer am 2026-10-10 im Dashboard nachgesehen
+Am selben Tag erledigt: `NEXT_PUBLIC_SITE_URL` fehlte seit PROJ-2 in `.env.local.example` und ist nachgetragen; in Vercel ist die Variable richtig gesetzt, vom Nutzer im Dashboard nachgesehen.
 
 **Nächster Schritt:** `/write-spec PROJ-14` (Live-Modus) oder `/write-spec PROJ-4` (Starter-Datenbank) — beide P0, beide noch ohne Spec.
 
