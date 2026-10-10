@@ -1,8 +1,8 @@
 # PROJ-7: Einheiten-Editor
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-06
-**Last Updated:** 2026-10-09
+**Last Updated:** 2026-10-10
 
 > **Überarbeitet am 2026-10-09 nach dem Test im Browser** (`/refine`). Acht Punkte, alle unten
 > eingearbeitet und im Decision Log begründet. Zwei Entscheidungen vom 2026-10-06 sind dabei
@@ -1727,4 +1727,51 @@ PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npx playwright test --workers=2
 - **Empfehlung:** die Meldungen einmal am Handy ansehen, dann `/deploy PROJ-7`
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://stundenplaner-self.vercel.app
+- **Deployed:** 2026-10-10
+- **Tag:** `v1.6.0-PROJ-7`
+- **Ausgelieferter Commit:** `0bfa3a6`
+- **Weg:** Push auf `main` (`4cc0eb5..0bfa3a6`, 19 Commits seit PROJ-6), Vercel liefert automatisch aus
+
+### Vorprüfung
+
+| Punkt | Ergebnis |
+|---|---|
+| `npm run build` | ✅ 20 Routen |
+| `npm run lint` | ✅ 0 Fehler, 4 vorbestehende `<img>`-Warnungen aus PROJ-3 |
+| `npm test` | ✅ 426 Tests in 14 Dateien |
+| `npm run test:e2e` | ✅ 158 von 158, Lauf vom 2026-10-10 gegen den Endstand — bei der Auslieferung **nicht** wiederholt |
+| QA-Freigabe, 0 kritisch/hoch | ✅ 115 von 115 Akzeptanzkriterien, kein offener Fehler |
+| Secrets im Repo | ✅ nur `.env.example` und `.env.local.example`; kein Treffer auf Schlüsselmuster im Diff seit `v1.5.0-PROJ-6` |
+| Env-Variablen | ✅ keine neue; weiter die drei aus PROJ-6 |
+| Migrationen | ✅ Register 15 zu 15, Dateiliste und Datenbank stimmen Version für Version überein |
+| `get_advisors` (Sicherheit) | ✅ nur der bekannte Hinweis zum Passwortschutz |
+
+> **Offen, klein:** `NEXT_PUBLIC_SITE_URL` steht nicht in `.env.local.example`, obwohl die App sie
+> seit PROJ-2 für die Links in Bestätigungs- und Reset-Mails liest. Ob sie in Vercel gesetzt ist,
+> wurde bei dieser Auslieferung nicht nachgesehen; fehlt sie, zeigen die Mail-Links auf
+> `localhost:3000`. Die Zeile in der Vorlage ist nicht nachgetragen — die Datei liegt in einem für
+> das Werkzeug gesperrten Bereich.
+
+### Nachprüfung in der Produktion — 2026-10-10
+
+| Prüfung | Ergebnis |
+|---|---|
+| Neue Auslieferung erkennbar | ✅ GitHub führt zum Commit `0bfa3a6` eine Auslieferung in die Umgebung „Production", Vercel meldet dazu „Deployment has completed" |
+| Öffentliche Seiten | ✅ `/`, `/login`, `/register`, `/forgot-password` → 200 |
+| Zugriffsschutz | ✅ `/dashboard`, `/units`, `/units/new`, `/exercises`, `/groups` → **307 auf `/login`** |
+| Sicherheits-Kopfzeilen | ✅ X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS liegen weiter an |
+| Oberfläche geladen | ✅ „Anmelden", „Passwort" im ausgelieferten HTML, keine Fehlerseite |
+| Supabase-Protokolle | ✅ keine Fehlereinträge im Zeitraum der Auslieferung |
+
+**Nicht geprüft:** der Editor selbst in der Produktion. Dafür braucht es eine Anmeldung, und die
+Browser-Tests laufen bewusst nicht gegen die Produktion. Ebenso wenig die Vercel-Funktionsprotokolle
+und die Browser-Konsole — beides ist von diesem Rechner aus nicht einsehbar. Der letzte Schritt
+bleibt beim Nutzer: einmal anmelden, eine Einheit bearbeiten und speichern.
+
+### Zurückrollen
+
+Die Migration ist rein hinzufügend, die Fassung von PROJ-6 läuft mit dem neuen Schema unverändert.
+Zurückrollen heißt deshalb nur: Vercel Dashboard → Deployments → vorige Auslieferung → „Promote to
+Production". An der Datenbank ist dafür nichts zu tun.

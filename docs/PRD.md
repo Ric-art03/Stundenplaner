@@ -33,7 +33,7 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 | P0 (MVP) | Starter-Datenbank (50–100 kuratierte Übungen) | Planned |
 | P0 (MVP) | Gruppenprofile (Sportart, Alter, Halle, Material) | Deployed |
 | P0 (MVP) | Einheiten-Generator (automatische Zusammenstellung) | Deployed |
-| P0 (MVP) | Einheiten-Editor (Phasen anpassen, tauschen, Lücken) | Planned |
+| P0 (MVP) | Einheiten-Editor (Phasen anpassen, tauschen, Lücken) | Deployed |
 | P0 (MVP) | Live-Modus (Stundenbegleitung) | Planned |
 | P0 (MVP) | Eigene Kategorien verwalten (löschen) | Planned |
 | P1 | Kalenderansicht & Langzeitplanung | Planned |

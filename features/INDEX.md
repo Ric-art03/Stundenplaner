@@ -122,7 +122,14 @@ Repository; Testkonto aufgeräumt; keine neue Umgebungsvariable.
 
 **Für später, kein Hindernis:** Supabase meldet zur Leistung 52 Richtlinien, die den angemeldeten Nutzer je Zeile neu auswerten, zwei Fremdschlüssel ohne Index und neun ungenutzte Indizes. Alles aus der Zeit vor PROJ-7, bei der heutigen Datenmenge ohne Wirkung — vor der Marktreife in einem Zug aufzuräumen.
 
-**Nächster Schritt:** `/deploy PROJ-7`.
+**PROJ-7 (Einheiten-Editor) ist am 2026-10-10 ausgeliefert** — https://stundenplaner-self.vercel.app, Tag `v1.6.0-PROJ-7`, Commit `0bfa3a6`. Abschnitt „Deployment" in der Spec. Vor dem Hochladen noch einmal geprüft: Build, Lint, 426 Unit-Tests, Register 15 zu 15, kein Geheimnis im Diff. Nach dem Hochladen: Vercel meldet die Auslieferung als abgeschlossen, öffentliche Seiten 200, geschützte Seiten 307 auf `/login`, Sicherheits-Kopfzeilen liegen an, keine Fehler in den Supabase-Protokollen.
+
+Zwei Dinge bleiben daraus:
+
+- **Der Editor ist in der Produktion noch nicht von Hand durchgespielt** — einmal anmelden, eine Einheit bearbeiten und speichern. Ohne Anmeldung ist das von außen nicht prüfbar
+- **`NEXT_PUBLIC_SITE_URL` fehlt in `.env.local.example`** — seit PROJ-2. Ob sie in Vercel gesetzt ist, wurde nicht nachgesehen; fehlt sie dort, zeigen die Links in Bestätigungs- und Reset-Mails auf `localhost:3000`
+
+**Nächster Schritt:** `/write-spec PROJ-14` (Live-Modus) oder `/write-spec PROJ-4` (Starter-Datenbank) — beide P0, beide noch ohne Spec.
 
 ## Features
 
@@ -134,7 +141,7 @@ Repository; Testkonto aufgeräumt; keine neue Umgebungsvariable.
 | PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
-| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Approved | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
+| PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Deployed | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
 | PROJ-9 | Kalenderansicht & Langzeitplanung | P1 | PROJ-6, PROJ-7 | Roadmap | — | 2026-09-28 |
 | PROJ-10 | Übungsrotation (Abwechslung über Wochen) | P1 | PROJ-6, PROJ-9 | Roadmap | — | 2026-09-28 |
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |
