@@ -179,7 +179,7 @@ Was das **nicht** belegt und in `/qa` gehört:
 - **BUG-25 (niedrig):** „Fertig" ohne Netz führt auf die Fehlerseite des Browsers. Durchführung und Notiz warten unversehrt auf dem Gerät
 - **BUG-26 (niedrig):** „Stunde starten" an einer Einheit ohne Schritt ist bedienbar; die Begründung kommt erst danach. Der Fall kann laut Speicherregel nicht entstehen
 
-**Regression:** kein Hinweis auf eine. Der Gesamtlauf war in einem Zug aber **nicht grün** — drei Editor-Tests scheiterten am Zeitfenster und bestanden einzeln nachgelaufen; der Rechner war heute rund dreimal so langsam wie am 2026-10-10 (Ursache nicht belegt). **Ein Gesamtlauf mit zwei Arbeitern und ohne Entwicklungsserver steht noch aus.**
+**Regression: keine.** Der Gesamtlauf aller Features ist grün — **333 von 333 Browser-Tests in einem Zug**, 16,8 Minuten, mit zwei Arbeitern und ohne Entwicklungsserver. Ein erster Gesamtlauf am selben Tag war es nicht: drei Editor-Tests scheiterten am Zeitfenster, während der Entwicklungsserver nebenher lief und die Live-Läufe mit drei Arbeitern gestartet waren. Für diesen Rechner gilt weiter: `--workers=2`, und nichts nebenher.
 
 Zwischendurch sah es nach einem Absturz der ganzen App aus („Application error"): das war ein alter Testserver mit veraltetem Build auf Port 3100, kein Fehler der App.
 

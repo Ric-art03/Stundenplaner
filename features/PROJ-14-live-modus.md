@@ -1308,7 +1308,7 @@ Befund am Zugriffsschutz der Datenbank.
 |---|---|
 | Unit-Tests | **512 grün** (496 plus 16 neue für die Ablage auf dem Gerät), einer davon als erwarteter Fehlschlag markiert (BUG-22) |
 | Browser-Tests PROJ-14 | **175**: 85 je Projekt (Rechner, Handybreite) plus 5 ohne Anmeldung. **168 bestanden, 7 als erwartete Fehlschläge markiert** — sie stellen die vier Befunde nach und werden rot, sobald ein Befund behoben ist |
-| Regression PROJ-3, -5, -6, -7 | 162 Tests: **159 bestanden, 3 fehlgeschlagen** im Gesamtlauf; die drei (alle im Editor) **einzeln nachgelaufen: bestanden**. Siehe „Hinweis zur Testumgebung" |
+| Gesamtlauf aller Features | **333 von 333 grün in einem Zug** (16,8 Minuten, zwei Arbeiter, ohne Entwicklungsserver): 158 aus PROJ-3, -5, -6, -7, 175 aus PROJ-14. Ein erster Gesamtlauf am selben Tag war es nicht — siehe „Hinweis zur Testumgebung" |
 | Datenbank | zwei Nachweise in zurückgerollten Transaktionen aus `/backend` (16 und 15 Fälle), dazu die Löschfälle jetzt wirklich ausgeführt (Browser-Tests) |
 | Breiten | 375, 768 und 1440 px in allen drei Zuständen (Bereitschaftsbild, laufende Stunde, Zusammenfassung): kein waagerechtes Scrollen. Dazu die ganze Suite in der Emulation „iPhone 13" (390 px) |
 | Browser | **nur Chromium** (Edge). Firefox und echtes Safari sind auf diesem Rechner nicht prüfbar |
@@ -1463,14 +1463,15 @@ genau der Weg, auf dem sie in der Halle rechnet.
 
 ### Hinweis zur Testumgebung
 
-- **Der Gesamtlauf war heute in einem Zug nicht grün.** Drei Editor-Tests von PROJ-7 scheiterten
+- **Der erste Gesamtlauf war in einem Zug nicht grün, der zweite schon.** Drei Editor-Tests von PROJ-7 scheiterten
   am Zeitfenster von 15 Sekunden (der Seitenabzug zeigt die Einheit nach „Speichern" noch als
   Entwurf, ohne Fehlermeldung); einzeln nachgelaufen bestanden beide Titel. Der Lauf brauchte
   33,6 Minuten für 159 Tests, am 2026-10-10 waren es rund 12 für 158. Belegt ist die Langsamkeit,
   nicht ihre Ursache: bekannt sind auf diesem Rechner der Echtzeit-Virenscan (Avast) und zu viele
   gleichzeitige Arbeiter; heute lief außerdem der Entwicklungsserver nebenher, und die Live-Läufe
-  starteten mit drei Arbeitern statt mit zwei. **Ein Gesamtlauf mit zwei Arbeitern und ohne
-  Entwicklungsserver steht noch aus**
+  starteten mit drei Arbeitern statt mit zwei. **Der zweite Gesamtlauf — zwei Arbeiter, ohne
+  Entwicklungsserver — lief in 16,8 Minuten durch: 333 von 333 grün, kein Zeitlimit gerissen.**
+  Das spricht dafür, dass es an diesen beiden Dingen lag; getrennt geprüft habe ich sie nicht
 - **Vor Browser-Tests den Port prüfen.** `playwright.config.ts` nimmt einen schon laufenden Server
   stillschweigend weiter — auch einen mit veraltetem Build. `netstat` meldet auf diesem Rechner
   „ABHÖREN", nicht „LISTENING"
@@ -1497,7 +1498,7 @@ genau der Weg, auf dem sie in der Halle rechnet.
   Gerät, 1 halb, 1 nicht eigens geprüft, 2 entfallen
 - **Fehler:** 5 (0 kritisch, **1 hoch**, 2 mittel, 2 niedrig)
 - **Sicherheit:** ein Befund (BUG-24, mittel); der Zugriffsschutz der Datenbank hält
-- **Regression:** kein Hinweis auf eine Regression; der Gesamtlauf in einem Zug steht noch aus
+- **Regression:** keine — der Gesamtlauf ist mit 333 von 333 grün
 - **Production Ready:** **NEIN**
 - **Empfehlung:** BUG-23 beheben, BUG-25 im selben Zug; BUG-22 und BUG-24 vor der Auslieferung.
   Danach `/qa` erneut
