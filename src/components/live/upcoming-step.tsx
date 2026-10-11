@@ -194,9 +194,9 @@ export function UpcomingStep({ label, current, next, className }: UpcomingStepPr
             Arbeitsnotiz verschwimmen. Ihr grüner Name bleibt.
 
             Zuerst die der Phase, dann die der Übung. Die der Phase steht hier
-            nur, wenn sie neu ist: innerhalb einer Phase steht sie schon oben
-            am laufenden Schritt. */}
-        {(newPhase || current === null || next.kind === 'free') && next.phaseNote && (
+            **nur, wenn die Phase als Nächstes beginnt** — ihr regulärer Platz
+            ist oben am laufenden Schritt, dort steht sie die ganze Phase über. */}
+        {(newPhase || current === null) && next.phaseNote && (
           <WorkNote
             text={next.phaseNote}
             label={PHASE_NOTE_LABEL}

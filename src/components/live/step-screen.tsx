@@ -86,6 +86,10 @@ function CurrentDetails({ step }: { step: LiveStep }) {
 
   return (
     <div className="space-y-3">
+      {/* Der reguläre Platz der Arbeitsnotiz der Phase: sie gilt für die ganze
+          Phase und steht deshalb an jedem ihrer Schritte — als Erstes, noch
+          vor allem, was nur diese eine Übung betrifft. */}
+      {step.phaseNote && <WorkNote text={step.phaseNote} label={PHASE_NOTE_LABEL} clamp={3} />}
       <ExerciseFactsRow
         materials={factsMaterials(step)}
         organizationForms={step.organizationForms}
@@ -112,10 +116,7 @@ function CurrentDetails({ step }: { step: LiveStep }) {
           </CollapsibleContent>
         </Collapsible>
       )}
-      {/* Erst die Beschreibung, darunter die Arbeitsnotiz — überall gleich. */}
-      {/* Die Arbeitsnotiz der Phase gilt für die ganze Phase und bleibt
-          deshalb an jedem ihrer Schritte stehen — zuerst, dann die der Übung. */}
-      {step.phaseNote && <WorkNote text={step.phaseNote} label={PHASE_NOTE_LABEL} clamp={3} />}
+      {/* Erst die Beschreibung, darunter die Arbeitsnotiz der Übung — überall gleich. */}
       {step.workNote && <WorkNote text={step.workNote} label={EXERCISE_NOTE_LABEL} clamp={3} />}
     </div>
   )

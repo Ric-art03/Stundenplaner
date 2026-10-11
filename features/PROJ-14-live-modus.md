@@ -1106,6 +1106,10 @@ Punkten, die am selben Tag eingebaut sind:
 - **Erst die Arbeitsnotiz der Phase, dann die der Übung**, und beide tragen im Live-Modus ihren
   vollen Namen: „Arbeitsnotiz der Phase" und „Arbeitsnotiz der Übung". In „Danach" steht die der
   Phase weiterhin nur, wenn eine neue Phase beginnt — innerhalb der Phase steht sie schon oben
+- **Vom Nutzer am selben Tag genauer gefasst:** der reguläre Platz der Arbeitsnotiz der Phase ist
+  **oben bei der aktuellen Übung, als Erstes** — noch vor Material, Organisationsform und
+  Beschreibung. In „Danach" steht sie **nur, wenn die Phase als Nächstes beginnt**; auch vor
+  freier Zeit innerhalb derselben Phase nicht mehr, dort steht sie schon oben
 - **Im Dreipunkt-Menü steht „Live-Modus verlassen" vor „Stunde beenden"**
 - **Die Zusammenfassung sagt, dass sich die Stunde auch später nachbereiten lässt** — an der
   Einheit unter „Durchführungen"
