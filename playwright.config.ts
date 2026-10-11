@@ -45,6 +45,13 @@ const port = process.env.PLAYWRIGHT_PORT ?? '3000'
 
 /** Die Tests des Einheiten-Editors — sie laufen in einer eigenen Stufe, siehe unten. */
 const EDITOR_TESTS = /PROJ-7-.*\.spec\.ts/
+/**
+ * Die Tests des Live-Modus (PROJ-14) — eine eigene Stufe **nach** dem Editor.
+ * Sie bauen wie dieser gespeicherte Einheiten auf und legen eigene Übungen an;
+ * liefen sie neben dem Editor, stünden diese Übungen in dessen Kandidatenlisten.
+ * Die Datei ohne Anmeldung (`.anon.`) gehört nicht dazu.
+ */
+const LIVE_TESTS = /PROJ-14-(?!.*\.anon\.).*\.spec\.ts/
 const baseURL = `http://localhost:${port}`
 
 export default defineConfig({
@@ -99,7 +106,7 @@ export default defineConfig({
     // geschützte Seiten auf /login umleiten.
     {
       name: 'chromium',
-      testIgnore: [/.*\.anon\.spec\.ts/, /.*\.exklusiv\.spec\.ts/, EDITOR_TESTS],
+      testIgnore: [/.*\.anon\.spec\.ts/, /.*\.exklusiv\.spec\.ts/, EDITOR_TESTS, LIVE_TESTS],
       use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
     },
@@ -118,6 +125,7 @@ export default defineConfig({
         /.*\.exklusiv\.spec\.ts/,
         /PROJ-6-einheiten-generator\.spec\.ts/,
         EDITOR_TESTS,
+        LIVE_TESTS,
       ],
       use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
@@ -142,6 +150,20 @@ export default defineConfig({
       dependencies: ['chromium', 'Mobile Safari', 'abgemeldet'],
     },
 
+    // Der Live-Modus (PROJ-14), nach dem Editor — siehe `LIVE_TESTS`.
+    {
+      name: 'live',
+      testMatch: LIVE_TESTS,
+      use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
+      dependencies: ['editor', 'editor mobil'],
+    },
+    {
+      name: 'live mobil',
+      testMatch: LIVE_TESTS,
+      use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
+      dependencies: ['editor', 'editor mobil'],
+    },
+
     // Tests, die den Bestand des Testkontos leerräumen und deshalb niemanden
     // neben sich dulden. Über `dependencies` laufen sie garantiert erst,
     // wenn alle übrigen Projekte durch sind.
@@ -149,7 +171,15 @@ export default defineConfig({
       name: 'exklusiv',
       testMatch: /.*\.exklusiv\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
-      dependencies: ['chromium', 'Mobile Safari', 'abgemeldet', 'editor', 'editor mobil'],
+      dependencies: [
+        'chromium',
+        'Mobile Safari',
+        'abgemeldet',
+        'editor',
+        'editor mobil',
+        'live',
+        'live mobil',
+      ],
     },
   ],
   // Produktionsbuild statt Entwicklungsserver: Letzterer übersetzt jede Route

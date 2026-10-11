@@ -171,7 +171,21 @@ Was das **nicht** belegt und in `/qa` gehört:
 
 **Vom Nutzer am 2026-10-11 von Hand durchgespielt — es klappt alles** (Stunde starten, beenden, Durchführung an der Einheit, Notiz und Dauer übernehmen). Der Weg vom Knopf bis zur Zeile ist damit einmal gelaufen. Dazu drei Änderungen, in der Spec unter „Nach dem Durchspielen durch den Nutzer geändert": der Dialog **„Notiz anhängen" zeigt das Notizfeld der Übung selbst** — umschaltbar zwischen Arbeitsnotiz und Anmerkungen, beide direkt änderbar und gemeinsam gespeichert, statt „Dein Satz" und Vorschau (ersetzt fünf Akzeptanzkriterien der Spec); der Vermerk **„Notiz übernommen" nennt beides**, wenn beide geändert wurden (zweite Migration `20261011140000_exercise_notes_follow_up.sql`, Funktion `update_exercise_notes` statt `append_exercise_note`); die **Bilder sind auch in „Danach" und „Zuerst" aufklappbar**; nach „Fertig" blitzt nicht mehr „Es läuft gerade keine Stunde" auf; **„Übung löschen" ist aus der Nachbereitung entfernt** — es bleiben drei Wege, und vier Akzeptanzkriterien der Spec sind damit überholt; im Live-Modus lässt sich **durch alle Bilder der Übung blättern**. **496 Unit-Tests grün**, Typprüfung, Lint und Build sauber. Die zweite Migration ist angewendet (**Register 17 zu 17**) und am lebenden System in einer zurückgerollten Transaktion nachgewiesen, fünfzehn Fälle. **Im Browser sind der neue Notiz-Dialog und die Bilder in „Danach" noch ungesehen.**
 
-**Nächster Schritt:** `/qa` für PROJ-14.
+**PROJ-14 ist seit dem 2026-10-11 in der QA — nicht bereit für die Auslieferung.** Abschnitt „QA Test Results" in der Spec. **Kein Akzeptanzkriterium ist durchgefallen** (105 von 114 bestanden, 5 ohne echtes Gerät nicht prüfbar, 2 entfallen), kein Befund am Zugriffsschutz der Datenbank, kein Datenverlust in einem der Fälle. 512 Unit-Tests grün; 175 neue Browser-Tests für den Live-Modus (Rechner, Handybreite, ohne Anmeldung), davon 7 als erwartete Fehlschläge markiert, die die Befunde nachstellen.
+
+- **BUG-23 (hoch): der Offline-Baustein greift auf dem normalen Weg nicht.** Wer über „Stunde starten" in den Live-Modus kommt, hat den Bildschirm nicht auf dem Gerät — ein Neuladen ohne Netz zeigt doch die Fehlerseite des Browsers. Nachgestellt: der Baustein ist angemeldet, seine Ablage bleibt leer; erst ein vollständiges Laden von `/live` füllt sie. Der Stand der Stunde bleibt in jedem Fall erhalten. Das Bereitschaftsbild sagt nichts davon
+- **BUG-22 (mittel):** die Notiz „Wie lief's?" geht verloren, wenn „Fertig" das noch laufende Speichern überholt — nur bei langsamer Verbindung
+- **BUG-24 (mittel):** eine *beendete* Stunde bleibt nach dem Abmelden unter `/live` einsehbar (Namen und Zeiten). Betrifft geteilte Geräte; ein anderes angemeldetes Konto sieht sie nicht
+- **BUG-25 (niedrig):** „Fertig" ohne Netz führt auf die Fehlerseite des Browsers. Durchführung und Notiz warten unversehrt auf dem Gerät
+- **BUG-26 (niedrig):** „Stunde starten" an einer Einheit ohne Schritt ist bedienbar; die Begründung kommt erst danach. Der Fall kann laut Speicherregel nicht entstehen
+
+**Regression:** kein Hinweis auf eine. Der Gesamtlauf war in einem Zug aber **nicht grün** — drei Editor-Tests scheiterten am Zeitfenster und bestanden einzeln nachgelaufen; der Rechner war heute rund dreimal so langsam wie am 2026-10-10 (Ursache nicht belegt). **Ein Gesamtlauf mit zwei Arbeitern und ohne Entwicklungsserver steht noch aus.**
+
+Zwischendurch sah es nach einem Absturz der ganzen App aus („Application error"): das war ein alter Testserver mit veraltetem Build auf Port 3100, kein Fehler der App.
+
+Weiter nicht belegbar auf diesem Rechner: Wachhalten, Stromsparmodus, Ton und Vibration (zwei echte Geräte), Firefox und Safari, die Bilder der Übungen (die Testübungen haben keine).
+
+**Nächster Schritt:** entscheiden, welche Fehler zuerst behoben werden — empfohlen BUG-23 und BUG-25 zusammen (`/frontend`), dann BUG-22 und BUG-24 —, danach `/qa` erneut.
 
 ## Features
 
@@ -189,7 +203,7 @@ Was das **nicht** belegt und in `/qa` gehört:
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |
 | PROJ-12 | Community-Features (Übungen teilen) | P2 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
-| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | In Progress | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
+| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | In Review | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Eigene Kategorien verwalten | P0 | PROJ-3 | Roadmap | — | 2026-10-04 |
 | PROJ-17 | Stundenmuster (wiederverwendbare Einheiten-Konfigurationen) | P1 | PROJ-6 | Roadmap | — | 2026-10-04 |

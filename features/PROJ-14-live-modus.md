@@ -1,6 +1,6 @@
 # PROJ-14: Live-Modus (Stundenbegleitung)
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-10-10
 **Last Updated:** 2026-10-10
 
@@ -1290,7 +1290,217 @@ in „Danach" und „Zuerst".
 - **Die Ablage der Bilder** ist ungesehen: sie braucht eine Übung mit Bild und eine Anmeldung
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-11
+**App URL:** http://localhost:3100 (Produktionsbuild)
+**Tester:** QA Engineer (AI)
+
+### Ergebnis in einem Satz
+
+**Nicht bereit für die Auslieferung:** kein Akzeptanzkriterium ist durchgefallen, aber der
+Offline-Baustein — vom Nutzer eigens entschieden — greift auf dem normalen Weg in den Live-Modus
+nicht (BUG-23, hoch). Dazu drei kleinere Befunde. Kein Datenverlust in einem der Fälle, kein
+Befund am Zugriffsschutz der Datenbank.
+
+### Was gelaufen ist
+
+| | Ergebnis |
+|---|---|
+| Unit-Tests | **512 grün** (496 plus 16 neue für die Ablage auf dem Gerät), einer davon als erwarteter Fehlschlag markiert (BUG-22) |
+| Browser-Tests PROJ-14 | **175**: 85 je Projekt (Rechner, Handybreite) plus 5 ohne Anmeldung. **168 bestanden, 7 als erwartete Fehlschläge markiert** — sie stellen die vier Befunde nach und werden rot, sobald ein Befund behoben ist |
+| Regression PROJ-3, -5, -6, -7 | 162 Tests: **159 bestanden, 3 fehlgeschlagen** im Gesamtlauf; die drei (alle im Editor) **einzeln nachgelaufen: bestanden**. Siehe „Hinweis zur Testumgebung" |
+| Datenbank | zwei Nachweise in zurückgerollten Transaktionen aus `/backend` (16 und 15 Fälle), dazu die Löschfälle jetzt wirklich ausgeführt (Browser-Tests) |
+| Breiten | 375, 768 und 1440 px in allen drei Zuständen (Bereitschaftsbild, laufende Stunde, Zusammenfassung): kein waagerechtes Scrollen. Dazu die ganze Suite in der Emulation „iPhone 13" (390 px) |
+| Browser | **nur Chromium** (Edge). Firefox und echtes Safari sind auf diesem Rechner nicht prüfbar |
+
+Zeit vergeht in den Browser-Tests nicht durch Warten: die festgehaltenen Zeitpunkte der
+Stundenakte werden zurückgerückt. Für die App ist das dasselbe wie ein gesperrtes Handy — und
+genau der Weg, auf dem sie in der Halle rechnet.
+
+### Akzeptanzkriterien
+
+114 Kriterien. **Durchgefallen: keines.**
+
+| Abschnitt | Kriterien | bestanden | Anmerkung |
+|---|---|---|---|
+| Start und Bereitschaftsbild | 12 | 12 | |
+| Der Schritt | 11 | 11 | „Arbeitsnotiz der Phase beim ersten Schritt" ist durch „an jedem Schritt der Phase" ersetzt und so geprüft |
+| „Danach" | 15 | 15 | drei davon am Bildschirmfoto, nicht im Test: das Kürzen langer Texte mit „mehr" (2) und „klar getrennt, Restzeit das größte Element" |
+| Bildschirm an | 9 | 4 | **4 nicht prüfbar** ohne echtes Gerät (bleibt an während der Stunde, in der Pause, nach dem Zurückkehren, gibt nach dem Ende frei); **1 nur halb**: der Hinweis im Live-Modus ist am Gerät geprüft, das das Wachhalten gar nicht kennt — nicht am Verlust mitten in der Stunde |
+| Zeit | 7 | 6 | **1 nicht prüfbar**: dass der Ton genau einmal kommt |
+| Bedienung | 9 | 9 | |
+| Robustheit | 5 | 5 | „zwei Minuten gesperrt" durch Zurückrücken der Zeitpunkte nachgestellt |
+| Laufende Stunde | 4 | 4 | Abmelden: geprüft ist die Nachfrage. Das Abmelden selbst nicht ausgeführt — es hätte die Sitzung aller übrigen Tests beendet |
+| Abschluss und Durchführungen | 12 | 12 | |
+| Nachbereitung | 30 | 27 | **2 entfallen** („Übung löschen" ist auf Wunsch des Nutzers entfernt). **1 nicht eigens geprüft**: dass der Hinweis in der Bearbeiten-Maske auch erscheint, wenn sie aus der Nachbereitung geöffnet wird — es ist dieselbe Seite. Vier weitere sind in ihrer **neuen Fassung** geprüft (drei statt vier Wege; der Dialog zeigt das Notizfeld selbst) |
+| **Summe** | **114** | **105** | 5 nicht prüfbar · 1 halb · 1 nicht eigens · 2 entfallen |
+
+### Edge Cases
+
+| Fall | Ergebnis |
+|---|---|
+| Einheit ohne jeden Schritt | **BUG-26** (niedrig): der Knopf ist bedienbar, die Begründung kommt erst nach dem Tippen. Am Code gelesen, nicht nachgestellt — der Fall kann laut Speicherregel nicht entstehen |
+| Einheit wird während der Stunde gelöscht | bestanden — die App nennt den Grund und bietet „Verwerfen" |
+| Uhr des Geräts springt | bestanden (Unit-Test) |
+| Zwei Tabs | bestanden — ein Tipp im einen ist im anderen zu sehen |
+| Schritt mit 0 Minuten | kommt nicht vor |
+| Überfülltes Segment | bestanden (Unit-Test) |
+| Mehrfaches schnelles Tippen | bestanden (Unit-Test: unter zwei Sekunden gilt als ausgelassen) |
+| Speicher des Browsers nicht verfügbar | bestanden — Warnung auf dem Bereitschaftsbild, die Stunde startet |
+| Ton vom Browser blockiert | am Code gelesen, nicht prüfbar |
+| Nachgereichte Durchführung scheitert dauerhaft | bestanden |
+| Sehr lange Beschreibung, viele Materialien | bestanden |
+| Dieselbe Übung zweimal in der Stunde | bestanden — jeder Schritt ist eine eigene Zeile mit eigener Dauer |
+| Dieselbe Übung folgt auf sich selbst | bestanden |
+| Übung seit dem Start anderswo geändert | bestanden — der Dialog arbeitet auf dem heutigen Stand, überschreibt nichts |
+| Tatsächliche Dauer unter einer Minute | bestanden — vorgeschlagen wird 1 |
+| Notiz über der Höchstlänge | bestanden |
+| Wachhalten endet mitten in der Stunde | nicht prüfbar ohne echtes Gerät |
+| Handy in der Tasche, versehentliches „Weiter" | bestanden — „Zurück" nimmt es zurück |
+| Abgemeldet beim Öffnen des Live-Modus | bestanden: eine laufende Stunde bleibt bedienbar und wartet auf dem Gerät. **Nicht geprüft:** das Nachreichen nach erneuter Anmeldung |
+
+### Sicherheit
+
+- [x] **Anmeldung:** jede Server-Stelle prüft sie; ohne Anmeldung nimmt der Server keine Durchführung an (sie bleibt auf dem Gerät)
+- [x] **Datentrennung in der Datenbank:** fremdes Konto sieht 0 Durchführungen und 0 Schritte, kann nicht speichern, keine Notiz und keine Dauer setzen und keinen Schritt einfügen; Rolle `anon` darf keine der drei Funktionen ausführen (Nachweise aus `/backend`)
+- [x] **Welche Übung gemeint ist, sagt der Schritt:** ein manipulierter Aufruf der Nachbereitung kann keine fremde oder andere Übung treffen
+- [x] **Eingaben:** Übungsnamen, Beschreibungen, Arbeitsnotizen und die Notiz zur Stunde mit Markup werden als Text gezeigt, nichts wird ausgeführt
+- [x] **Rücksprungadresse** (`?zurueck=`): Adressen nach außen (`https://…`, `//…`, `/\…`) werden nicht angenommen
+- [x] **Musik-Link:** nur `http(s)` wird zum Verweis, öffnet in neuem Tab mit `noopener`
+- [x] **`/live` ohne Anmeldung:** liefert für alle dieselbe Seite ohne Daten; der Offline-Baustein legt keine Daten und keine Zugänge ab und trägt die Sicherheits-Kopfzeilen
+- [x] **Keine Geheimnisse** im ausgelieferten Code des Live-Modus
+- [ ] **BUG-24:** eine **beendete** Stunde bleibt nach dem Abmelden auf dem Gerät einsehbar
+- **Begrenzung der Anfragen:** gibt es an den neuen Server-Stellen nicht — wie im Rest der App. Kein neuer Befund, aber vor der Marktreife mit zu entscheiden
+
+### Gefundene Fehler
+
+#### BUG-23: Der Offline-Baustein wird auf dem Weg aus der App nicht eingerichtet
+- **Severity:** High
+- **Was der Nutzer erlebt:** Wer über „Stunde starten" in den Live-Modus kommt — also jeder —, hat
+  den Bildschirm **nicht** auf dem Gerät. Lädt das Handy die Seite in einer Halle ohne Empfang neu,
+  steht dort die Fehlerseite des Browsers. Der Stand der Stunde geht dabei **nicht** verloren; mit
+  Netz ist alles wieder da. Es ist genau der Fall, den der Baustein verhindern sollte
+- **Steps to Reproduce:**
+  1. Eine gespeicherte Einheit öffnen, „Stunde starten", „Los geht's"
+  2. Das Netz trennen und die Seite neu laden
+  3. Erwartet: derselbe Schritt mit richtiger Restzeit
+  4. Tatsächlich: „Keine Internetverbindung"
+- **Was dahintersteckt (nachgestellt, nicht vermutet):** nach dem Wechsel aus der App ist der
+  Baustein angemeldet und aktiv, aber **die Seite gehört ihm nicht, und seine Ablage ist leer** —
+  auch nach zehn Sekunden. Wird `/live` dagegen **vollständig geladen** (Adresse eingeben oder
+  einmal mit Netz neu laden), liegen sofort 20 Dateien samt der Seite auf dem Gerät, und das
+  Neuladen ohne Netz gelingt. Der Wechsel aus der App lädt die Seite nicht neu; der Baustein
+  wartet auf etwas, das dabei nie eintritt
+- **Zweiter Teil desselben Fehlers:** das Bereitschaftsbild **sagt es nicht**. Der Zustand bleibt
+  „wird eingerichtet"; der vorgesehene Hinweis erscheint nur bei „nicht möglich"
+- **Tests:** `der Live-Bildschirm lädt auch ohne Verbindung neu` (erwarteter Fehlschlag) und, als
+  Gegenprobe, `nach einem Neuladen mit Netz liegt der Live-Bildschirm auf dem Gerät` (bestanden)
+- **Priority:** Fix before deployment
+
+#### BUG-22: Die Notiz „Wie lief's?" geht verloren, wenn „Fertig" das laufende Speichern überholt
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Bei langsamer Verbindung „Stunde beenden" — die Durchführung ist unterwegs zum Server
+  2. Einen Satz bei „Wie lief's?" eintragen und „Fertig" tippen, bevor die Antwort da ist
+  3. Erwartet: die Notiz steht an der Durchführung
+  4. Tatsächlich: die Durchführung ist gespeichert, **ohne Notiz**
+- **Was dahintersteckt:** die Notiz wird an die noch wartende Durchführung gehängt — die aber
+  schon ohne sie abgeschickt ist. Kommt die Antwort, wird die wartende Durchführung samt Notiz
+  weggeräumt. Im Browser mit vier Sekunden Verzögerung nachgestellt, und ohne Browser im Unit-Test
+- **Wie oft:** nur bei wirklich langsamer Verbindung; sonst ist das Speichern durch, bevor ein
+  Satz getippt ist. Die Notiz lässt sich an der Durchführung nachtragen
+- **Tests:** Unit `verliert eine Notiz nicht, die nachgetragen wird …` und Browser `die Notiz geht
+  nicht verloren, wenn „Fertig" getippt wird …` (beide erwartete Fehlschläge)
+- **Priority:** Fix before deployment
+
+#### BUG-24: Eine beendete Stunde bleibt nach dem Abmelden auf dem Gerät einsehbar
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Eine Stunde beenden und die Zusammenfassung **nicht** mit „Fertig" schließen
+  2. Abmelden — es kommt keine Nachfrage, die gibt es nur bei *laufender* Stunde
+  3. `/live` öffnen, ohne angemeldet zu sein
+  4. Erwartet: „Es läuft gerade keine Stunde"
+  5. Tatsächlich: die Zusammenfassung mit Name der Einheit, Übungen und Zeiten
+- **Einordnung:** betrifft nur ein Gerät, das sich mehrere Leute teilen. Ein *anderes angemeldetes*
+  Konto sieht die Stunde nicht (geprüft). Zu sehen sind Namen und Zeiten, keine Zugänge; ändern
+  lässt sich ohne Anmeldung nichts. Dasselbe gilt für ein offen gelassenes Bereitschaftsbild und
+  für die Warteliste, die im Speicher des Browsers liegen bleibt
+- **Abzuwägen beim Beheben:** eine *laufende* Stunde muss ohne Anmeldung bedienbar bleiben
+  (Spec) — für eine beendete gibt es diesen Grund nicht
+- **Test:** `eine beendete Stunde eines früheren Nutzers ist ohne Anmeldung nicht mehr einsehbar`
+  (erwarteter Fehlschlag)
+- **Priority:** Fix before deployment
+
+#### BUG-25: „Fertig" ohne Netz führt auf die Fehlerseite des Browsers
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Ohne Netz eine Stunde beenden, bei „Wie lief's?" etwas eintragen, „Fertig"
+  2. Erwartet: die App sagt, dass die Durchführung nachgereicht wird, und bleibt bedienbar
+  3. Tatsächlich: „Keine Internetverbindung" — die Detailseite der Einheit lässt sich nicht laden
+- **Es geht nichts verloren:** nachgesehen — die Durchführung wartet samt Notiz auf dem Gerät und
+  wird beim nächsten Öffnen der App nachgereicht. Aber so sieht es nicht aus, und es ist der
+  Augenblick direkt nach der Stunde in der Halle
+- **Test:** `ohne Netz geht „Fertig" trotzdem …` (erwarteter Fehlschlag)
+- **Priority:** Fix before deployment — liegt im selben Feld wie BUG-23
+
+#### BUG-26: „Stunde starten" an einer Einheit ohne Schritt ist bedienbar
+- **Severity:** Low
+- **Befund:** die Spec verlangt „nicht bedienbar, mit Begründung". Gebaut ist: der Knopf lässt
+  sich tippen, danach erscheint die Begründung als Meldung
+- **Einordnung:** der Fall kann laut Speicherregel nicht entstehen; am Code gelesen
+- **Priority:** Nice to have
+
+### Was kein Fehler ist
+
+- **„Application error" während der Tests.** Zwischendurch zeigte jede Seite einen Absturz. Es
+  war der Testaufbau: auf Port 3100 lief noch ein Server aus einem früheren Durchgang mit
+  veraltetem Build. Mit frischem Server tritt nichts davon auf
+- **Ein 404 in der Browser-Konsole auf jeder Seite:** `/favicon.ico` fehlt. Besteht seit PROJ-1,
+  hat mit dem Live-Modus nichts zu tun — beim Aufräumen vor der Marktreife mitzunehmen
+- **„5 Min voraus" statt 6 nach dem Auslassen eines 6-Minuten-Schritts,** wenn das Auslassen
+  selbst eine Sekunde gekostet hat: angezeigt werden ganze Minuten, abgerundet. Passt zu „unter
+  einer Minute gilt als im Plan"
+
+### Hinweis zur Testumgebung
+
+- **Der Gesamtlauf war heute in einem Zug nicht grün.** Drei Editor-Tests von PROJ-7 scheiterten
+  am Zeitfenster von 15 Sekunden (der Seitenabzug zeigt die Einheit nach „Speichern" noch als
+  Entwurf, ohne Fehlermeldung); einzeln nachgelaufen bestanden beide Titel. Der Lauf brauchte
+  33,6 Minuten für 159 Tests, am 2026-10-10 waren es rund 12 für 158. Belegt ist die Langsamkeit,
+  nicht ihre Ursache: bekannt sind auf diesem Rechner der Echtzeit-Virenscan (Avast) und zu viele
+  gleichzeitige Arbeiter; heute lief außerdem der Entwicklungsserver nebenher, und die Live-Läufe
+  starteten mit drei Arbeitern statt mit zwei. **Ein Gesamtlauf mit zwei Arbeitern und ohne
+  Entwicklungsserver steht noch aus**
+- **Vor Browser-Tests den Port prüfen.** `playwright.config.ts` nimmt einen schon laufenden Server
+  stillschweigend weiter — auch einen mit veraltetem Build. `netstat` meldet auf diesem Rechner
+  „ABHÖREN", nicht „LISTENING"
+- **Aufruf:** `PLAYWRIGHT_CHANNEL=msedge PLAYWRIGHT_PORT=3100 npx playwright test --workers=2`.
+  Die Live-Tests laufen als eigene Stufe nach dem Editor (Projekte „live" und „live mobil")
+- **Erwartete Fehlschläge:** sieben Browser-Tests und ein Unit-Test sind mit `test.fail` bzw.
+  `it.fails` markiert und tragen die Nummer ihres Befunds. Sie halten die Suite grün, solange der
+  Fehler besteht, und werden rot, sobald er behoben ist — dann gehört die Markierung weg
+
+### Was diese QA nicht abdeckt
+
+- **Echte Geräte.** Ob der Bildschirm an bleibt, wie sich der Stromsparmodus verhält, ob der Ton
+  kommt und das Handy vibriert: nichts davon lässt sich hier belegen. Dazu ein echtes iPhone und
+  ein echtes Android-Gerät — und dabei die Texte der Anleitung gegenlesen
+- **Firefox und Safari**
+- **Die Bilder der Übungen:** die Ablage auf dem Gerät und das Blättern sind ungeprüft — die
+  Testübungen haben keine Bilder
+- **Zwei gleichzeitige Sendungen** derselben Durchführung
+- **Das Abmelden bei laufender Stunde** über die Nachfrage hinaus
+
+### Zusammenfassung
+
+- **Akzeptanzkriterien:** 105 von 114 bestanden, **0 durchgefallen**; 5 nicht prüfbar ohne echtes
+  Gerät, 1 halb, 1 nicht eigens geprüft, 2 entfallen
+- **Fehler:** 5 (0 kritisch, **1 hoch**, 2 mittel, 2 niedrig)
+- **Sicherheit:** ein Befund (BUG-24, mittel); der Zugriffsschutz der Datenbank hält
+- **Regression:** kein Hinweis auf eine Regression; der Gesamtlauf in einem Zug steht noch aus
+- **Production Ready:** **NEIN**
+- **Empfehlung:** BUG-23 beheben, BUG-25 im selben Zug; BUG-22 und BUG-24 vor der Auslieferung.
+  Danach `/qa` erneut
 
 ## Deployment
 _To be added by /deploy_
