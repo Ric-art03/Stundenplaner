@@ -1158,10 +1158,8 @@ test.describe('Abschluss und Durchführungen', () => {
   })
 
   test('die Notiz geht nicht verloren, wenn „Fertig" getippt wird, während das Speichern der Durchführung noch unterwegs ist', async ({ page }) => {
-    // BUG-22 (QA 2026-10-11): die Notiz reist mit der wartenden Durchführung —
-    // die aber schon ohne sie abgeschickt ist. Erwarteter Fehlschlag, bis das
-    // behoben ist; dann gehört diese Zeile weg.
-    test.fail(true, 'BUG-22: Notiz geht verloren, wenn „Fertig" das laufende Speichern überholt')
+    // War BUG-22: die Notiz reiste mit der wartenden Durchführung — die aber
+    // schon ohne sie abgeschickt war.
     const unit = await running(page, [{ minutes: 5, items: [{ exerciseId: fx.ruhe, minutes: 5 }] }])
 
     // Eine langsame Verbindung: die Antwort auf das Speichern lässt auf sich warten.

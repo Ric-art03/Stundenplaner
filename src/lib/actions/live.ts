@@ -189,13 +189,16 @@ export async function getRunsForUnit(unitId: string): Promise<RunRecord[]> {
 
 export type LiveActionResult =
   | { ok: true }
-  /** `stale` = die Übung wurde inzwischen geändert; nichts wurde überschrieben. */
-  | { ok: false; error: string; stale?: boolean }
+  /**
+   * `stale` = die Übung wurde inzwischen geändert; nichts wurde überschrieben.
+   * `transient` = ein erneuter Versuch kann gelingen (nicht angemeldet, Datenbank nicht erreichbar).
+   */
+  | { ok: false; error: string; stale?: boolean; transient?: boolean }
 
 /** Ändert die Notiz „Wie lief's?" an einer gespeicherten Durchführung. */
 export async function updateRunNote(runId: string, note: string): Promise<LiveActionResult> {
   const { supabase, user } = await getAuthUser()
-  if (!user) return { ok: false, error: 'Nicht angemeldet.' }
+  if (!user) return { ok: false, error: 'Nicht angemeldet.', transient: true }
 
   const parsed = runNoteSchema.safeParse(note)
   if (!parsed.success) {
@@ -210,7 +213,9 @@ export async function updateRunNote(runId: string, note: string): Promise<LiveAc
     .eq('user_id', user.id)
     .select('id')
 
-  if (error) return { ok: false, error: 'Die Notiz konnte nicht gespeichert werden.' }
+  if (error) {
+    return { ok: false, error: 'Die Notiz konnte nicht gespeichert werden.', transient: true }
+  }
   // Ein Update, das keine Zeile trifft, ist kein Erfolg (vgl. BUG-16).
   if (!data || data.length === 0) {
     return { ok: false, error: 'Diese Durchführung gibt es nicht mehr.' }

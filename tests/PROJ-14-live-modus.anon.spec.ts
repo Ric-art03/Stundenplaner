@@ -136,10 +136,8 @@ test.describe('PROJ-14 — Live-Modus ohne Anmeldung', () => {
   })
 
   test('eine beendete Stunde eines früheren Nutzers ist ohne Anmeldung nicht mehr einsehbar', async ({ page }) => {
-    // BUG-24 (QA 2026-10-11): die Zusammenfassung einer beendeten Stunde bleibt
-    // nach dem Abmelden auf dem Gerät und ist unter /live für jeden zu sehen.
-    // Erwarteter Fehlschlag, bis das behoben ist; dann gehört diese Zeile weg.
-    test.fail(true, 'BUG-24: beendete Stunde bleibt ohne Anmeldung einsehbar')
+    // War BUG-24: die Zusammenfassung einer beendeten Stunde blieb auf dem
+    // Gerät und war unter /live für jeden zu sehen.
     await page.addInitScript(
       ({ key, value }) => localStorage.setItem(key, value),
       { key: AKTE, value: JSON.stringify(session('ended')) }
@@ -153,5 +151,55 @@ test.describe('PROJ-14 — Live-Modus ohne Anmeldung', () => {
     await expect(page.getByText('Es läuft gerade keine Stunde')).toBeVisible()
     await expect(page.getByText('Geheime Übung des Vorgängers')).toHaveCount(0)
     await expect(page.getByText('Einheit des Vorgängers')).toHaveCount(0)
+
+    // Nicht bloß verborgen: sie liegt auch nicht mehr im Speicher des Browsers.
+    await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), AKTE)).toBeNull()
+  })
+
+  test('ein offen gelassenes Bereitschaftsbild ist ohne Anmeldung nicht einsehbar', async ({ page }) => {
+    const ready = session('running')
+    const value = JSON.stringify({
+      ...ready,
+      run: { ...ready.run, phase: 'ready', startedAt: null, enteredAt: null },
+    })
+    await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: AKTE, value })
+    await page.goto('/live')
+
+    await expect(page.getByText('Es läuft gerade keine Stunde')).toBeVisible()
+    await expect(page.getByText('Einheit des Vorgängers')).toHaveCount(0)
+  })
+
+  test('eine beendete Stunde bleibt ohne Anmeldung stehen, solange ihre Durchführung noch auf dem Gerät wartet', async ({ page }) => {
+    // Der Fall, für den die Ausnahme da ist: Halle ohne Netz, die Sitzung ist
+    // während der Stunde abgelaufen, die Durchführung noch nicht nachgereicht.
+    const ended = session('ended')
+    const record = {
+      id: ended.runId,
+      unitId: ended.plan.unitId,
+      unitName: ended.plan.unitName,
+      startedAt: new Date(ended.run.startedAt as number).toISOString(),
+      endedAt: new Date(ended.run.endedAt as number).toISOString(),
+      plannedMinutes: 8,
+      actualSeconds: 540,
+      pausedSeconds: 0,
+      note: '',
+      steps: [],
+    }
+    await page.addInitScript(
+      ({ key, value, queue }) => {
+        localStorage.setItem(key, value)
+        localStorage.setItem('stundenplaner:live:warteliste', queue)
+      },
+      {
+        key: AKTE,
+        value: JSON.stringify(ended),
+        queue: JSON.stringify([{ userId: ended.userId, record, failure: null }]),
+      }
+    )
+    await page.goto('/live')
+
+    await expect(page.getByText('Stunde beendet')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Einheit des Vorgängers' })).toBeVisible()
+    await expect(page.getByText('liegt auf diesem Gerät')).toBeVisible()
   })
 })

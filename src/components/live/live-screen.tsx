@@ -26,7 +26,8 @@ import { useLiveSession, useNow, useOnline, usePendingRuns } from '@/hooks/use-l
 import { useStoredFlag } from '@/hooks/use-stored-flag'
 import { useToast } from '@/hooks/use-toast'
 import { useWakeLock } from '@/hooks/use-wake-lock'
-import { saveRun, updateRunNote } from '@/lib/actions/live'
+import { updateRunNote } from '@/lib/actions/live'
+import { sessionAccess } from '@/lib/live/access'
 import { isForgotten } from '@/lib/live/clock'
 import { storePlanImages } from '@/lib/live/images'
 import { serverReachable } from '@/lib/live/network'
@@ -44,7 +45,6 @@ import {
 } from '@/lib/live/run'
 import { unlockSignal } from '@/lib/live/signal'
 import {
-  flushPending,
   queueRun,
   readSession,
   setPendingNote,
@@ -52,6 +52,7 @@ import {
   updateSession,
   writeSession,
 } from '@/lib/live/store'
+import { syncPending } from '@/lib/live/sync'
 import { createClient } from '@/lib/supabase/client'
 import type { AdoptedNote, LivePlan, LiveRun, LiveSession } from '@/lib/live/types'
 
@@ -74,7 +75,7 @@ function act(change: (run: LiveRun, plan: LivePlan, now: number) => LiveRun) {
 
   if (before.run.phase !== 'ended' && run.phase === 'ended') {
     queueRun(after)
-    void flushPending(after.userId, saveRun)
+    void syncPending(after.userId)
   }
 }
 
@@ -130,7 +131,7 @@ function SummaryScreen({
 
   // Beim Zurückkehren und sobald wieder Verbindung da ist: nachreichen.
   React.useEffect(() => {
-    if (online && waiting && !waiting.failure) void flushPending(session.userId, saveRun)
+    if (online && waiting && !waiting.failure) void syncPending(session.userId)
   }, [online, waiting, session.userId])
 
   const disabledReason = !online
@@ -272,7 +273,7 @@ function ParkedScreen({
 
   // Sobald wieder Verbindung da ist: nachreichen, ohne dass der Nutzer etwas tun muss.
   React.useEffect(() => {
-    if (online && userId && waiting > 0) void flushPending(userId, saveRun)
+    if (online && userId && waiting > 0) void syncPending(userId)
   }, [online, userId, waiting])
 
   async function go() {
@@ -348,6 +349,18 @@ export function LiveScreen() {
   const wakeLock = useWakeLock(phase === 'ready' || phase === 'running')
   const now = useNow(phase === 'running')
 
+  // Darf dieses Gerät die Akte gerade zeigen? Ein anderes Konto sieht sie nie;
+  // ohne Anmeldung bleibt nur stehen, was der Nutzer in der Halle noch braucht.
+  const access =
+    session && knownUserId !== undefined
+      ? sessionAccess(session, knownUserId, pendingRuns, now)
+      : null
+  // Was hier nichts mehr zu suchen hat, wird vom Gerät genommen — nicht bloß
+  // verborgen: sonst läge es für den Nächsten weiter im Speicher des Browsers.
+  React.useEffect(() => {
+    if (access === 'clear') writeSession(null)
+  }, [access])
+
   // Die Titelbilder kommen auf dem Bereitschaftsbild aufs Gerät — dort ist
   // immer Netz da. Je Stunde einmal.
   const runId = session?.runId
@@ -379,11 +392,8 @@ export function LiveScreen() {
     )
   }
 
-  // Ein anderes Konto auf demselben Gerät sieht die Stunde nicht. Ist niemand
-  // angemeldet (Sitzung abgelaufen), bleibt sie bedienbar.
-  const foreign = session !== null && knownUserId !== null && knownUserId !== session.userId
-
-  if (session === null || foreign) {
+  // Wer die Akte sehen darf, entscheidet `sessionAccess` — siehe dort.
+  if (session === null || access !== 'show') {
     return (
       <Centered>
         <h1 className="text-xl font-semibold">Es läuft gerade keine Stunde</h1>

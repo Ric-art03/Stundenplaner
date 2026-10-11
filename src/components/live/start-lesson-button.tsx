@@ -14,15 +14,15 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button, type ButtonProps } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { loadLivePlan, saveRun } from '@/lib/actions/live'
+import { loadLivePlan } from '@/lib/actions/live'
 import { endRun } from '@/lib/live/run'
 import {
-  flushPending,
   openSession,
   queueRun,
   runningSession,
   writeSession,
 } from '@/lib/live/store'
+import { syncPending } from '@/lib/live/sync'
 import { cn } from '@/lib/utils'
 
 interface StartLessonButtonProps {
@@ -87,7 +87,7 @@ export function StartLessonButton({
     if (running) {
       const ended = { ...running, run: endRun(running.run, Date.now()) }
       queueRun(ended)
-      void flushPending(ended.userId, saveRun)
+      void syncPending(ended.userId)
     }
     setRunningName(null)
     void start()

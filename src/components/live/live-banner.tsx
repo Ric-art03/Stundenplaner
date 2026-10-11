@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { CloudOff, Play, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useLiveSession, useNow, useOnline, usePendingRuns } from '@/hooks/use-live-session'
-import { saveRun } from '@/lib/actions/live'
 import { isForgotten } from '@/lib/live/clock'
-import { dropPending, flushPending } from '@/lib/live/store'
+import { dropPending } from '@/lib/live/store'
+import { syncPending } from '@/lib/live/sync'
 
 interface LiveBannerProps {
   /** Das angemeldete Konto — die Akte eines anderen wird nicht gezeigt. */
@@ -35,7 +35,7 @@ export function LiveBanner({ userId }: LiveBannerProps) {
   const failed = mine.filter((entry) => entry.failure)
 
   React.useEffect(() => {
-    if (online && waiting.length > 0) void flushPending(userId, saveRun)
+    if (online && waiting.length > 0) void syncPending(userId)
   }, [online, waiting.length, userId])
 
   const running = session && session.userId === userId && session.run.phase === 'running' ? session : null

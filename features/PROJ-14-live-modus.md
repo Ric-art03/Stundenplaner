@@ -1399,6 +1399,7 @@ genau der Weg, auf dem sie in der Halle rechnet.
 - **Priority:** Fix before deployment
 
 #### BUG-22: Die Notiz „Wie lief's?" geht verloren, wenn „Fertig" das laufende Speichern überholt
+- **Status:** behoben am 2026-10-11, siehe „Nach der QA behoben"
 - **Severity:** Medium
 - **Steps to Reproduce:**
   1. Bei langsamer Verbindung „Stunde beenden" — die Durchführung ist unterwegs zum Server
@@ -1415,6 +1416,7 @@ genau der Weg, auf dem sie in der Halle rechnet.
 - **Priority:** Fix before deployment
 
 #### BUG-24: Eine beendete Stunde bleibt nach dem Abmelden auf dem Gerät einsehbar
+- **Status:** behoben am 2026-10-11, mit einer bewusst gelassenen Ausnahme — siehe „Nach der QA behoben"
 - **Severity:** Medium
 - **Steps to Reproduce:**
   1. Eine Stunde beenden und die Zusammenfassung **nicht** mit „Fertig" schließen
@@ -1504,6 +1506,59 @@ Typprüfung, Lint und Produktionsbuild sauber.
   Browser nur „ganz ohne Netz"
 - **Nach einer neuen Auslieferung** holt ein Gerät den neuen Stand erst, wenn das Bereitschaftsbild
   wieder mit Netz geöffnet wird — so ist es gebaut, geprüft ist es nicht
+
+#### Zweiter Durchgang am selben Tag: BUG-22 und BUG-24
+
+Auf Auftrag des Nutzers. Offen bleibt danach nur BUG-26 (niedrig).
+
+**BUG-22 — die Notiz geht nicht mehr verloren.** Nach dem Speichern der Durchführung vergleicht
+das Nachreichen (`flushPending` in `src/lib/live/store.ts`), welche Notiz hinausging und welche
+inzwischen an der wartenden Durchführung steht. Weicht sie ab, bleibt der Eintrag liegen — als
+„gespeichert, Notiz fehlt" — und die Notiz wird eigens nachgetragen; erst dann verschwindet er.
+Scheitert das Nachtragen am Netz, versucht es der nächste Anlass wieder, **ohne die Durchführung
+ein zweites Mal zu senden**. Lässt es sich endgültig nicht nachtragen (die Durchführung gibt es
+nicht mehr), nennt der Hinweis in der Kopfzeile den Grund und bietet „Verwerfen".
+
+Dafür gehen jetzt alle Stellen, die nachreichen, über **einen** Weg (`src/lib/live/sync.ts`): nach
+„Stunde beenden", aus dem Hinweis in der Kopfzeile, beim Start einer zweiten Stunde, vor dem
+Abmelden. Der Server sagt beim Ändern der Notiz dazu, ob ein Fehlschlag vorübergehend ist.
+
+**BUG-24 — eine beendete Stunde ist ohne Anmeldung nicht mehr einsehbar.** Zwei Änderungen:
+
+- **Abmelden nimmt die Stundenakte immer vom Gerät**, nicht mehr nur bei laufender Stunde. Die
+  Warteliste bleibt — was dort liegt, wird noch nachgereicht
+- **Wer die Akte sehen darf, steht jetzt an einer Stelle** (`src/lib/live/access.ts`), ohne
+  Oberfläche prüfbar: ein anderes angemeldetes Konto nie; ohne Anmeldung eine *laufende* Stunde
+  ja (Spec), ein offenes Bereitschaftsbild nein, eine beendete nur in einem Fall. Was nicht
+  gezeigt werden darf, wird **vom Gerät genommen**, nicht bloß verborgen
+
+**Die bewusst gelassene Ausnahme:** eine beendete Stunde bleibt ohne Anmeldung stehen, **solange
+ihre Durchführung noch auf dem Gerät wartet** und das Ende höchstens zwölf Stunden her ist. Das
+ist der Fall „Halle ohne Netz, die Sitzung ist während der Stunde abgelaufen" — ohne die Ausnahme
+stünde der Nutzer nach einer langen Stunde vor „Es läuft gerade keine Stunde", ohne seine
+Zusammenfassung und ohne „Wie lief's?". Wer das Gerät in dieser Zeit in die Hand nimmt, sieht sie
+also weiterhin. Dem Nutzer am 2026-10-11 so vorgelegt; strenger wäre möglich, kostet aber genau
+diesen Fall.
+
+**Nachgeprüft:** **339 von 339 Browser-Tests grün in einem Zug** (20,8 Minuten, zwei Arbeiter,
+ohne Entwicklungsserver), **529 Unit-Tests grün** (12 neue), Typprüfung, Lint und
+Produktionsbuild sauber. **Keine Markierung als erwarteter Fehlschlag mehr** — alle Tests, die
+einen Befund nachstellten, müssen jetzt echt bestehen und tun es.
+
+- BUG-22 im Browser: mit vier Sekunden verzögerter Antwort „Fertig" getippt — die Notiz steht
+  danach an der Durchführung. Dazu fünf Unit-Tests: nachgetragen; nach Netzausfall beim nächsten
+  Mal nachgetragen, ohne zweite Sendung; unveränderte Notiz wie bisher; endgültiger Fehlschlag
+  nennt den Grund; die Notiz bleibt auch liegen, wenn niemand sie nachtragen kann
+- BUG-24 im Browser, ohne Anmeldung: beendete und gespeicherte Stunde ist weg und liegt nicht
+  mehr im Speicher des Browsers; offenes Bereitschaftsbild ist weg; beendete Stunde mit wartender
+  Durchführung bleibt. Dazu acht Unit-Tests für die Zugangsregel
+
+**Was das nicht belegt:**
+
+- **Das Abmelden selbst.** Im Browser-Test nicht ausführbar — es beendete die Sitzung aller
+  übrigen Tests. Dass es die Akte wegräumt, ist am Code gelesen, nicht gesehen
+- **Die Zwölf-Stunden-Grenze** ist nur im Unit-Test geprüft
+- **Eine wirklich langsame Verbindung** ist mit einer künstlichen Verzögerung nachgestellt
 
 ### Was kein Fehler ist
 

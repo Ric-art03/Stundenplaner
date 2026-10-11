@@ -187,9 +187,13 @@ Weiter nicht belegbar auf diesem Rechner: Wachhalten, Stromsparmodus, Ton und Vi
 
 **BUG-23 und BUG-25 sind am 2026-10-11 behoben und nachgeprüft** — Abschnitt „Nach der QA behoben" in der Spec. **337 von 337 Browser-Tests grün in einem Zug**, 517 Unit-Tests grün. Der Offline-Baustein füllt sich jetzt auch beim Wechsel aus der App (er holt sich die Seite und ihre Bausteine selbst, statt auf ein Zeichen zu warten, das dabei nie kam), und das Bereitschaftsbild sagt es, wenn es nicht klappt. „Fertig" ohne Netz bleibt in der App und sagt, dass nichts verloren ist; vor dem Verlassen fragt die App beim Server nach, statt dem Gerät zu glauben. Mit behoben, weil derselbe Fehler: „Live-Modus verlassen" ohne Netz. **Nicht belegt:** dasselbe auf einem echten Handy, vor allem Safari auf dem iPhone.
 
-**Offen bleiben** BUG-22 (Notiz geht bei langsamer Verbindung verloren, mittel), BUG-24 (beendete Stunde nach dem Abmelden einsehbar, mittel) und BUG-26 (niedrig). Kein Fehler der Stufe „hoch" mehr — die Freigabe ist damit eine Entscheidung über die beiden mittleren.
+**BUG-22 und BUG-24 sind am 2026-10-11 ebenfalls behoben und nachgeprüft: 339 von 339 Browser-Tests grün in einem Zug, 529 Unit-Tests grün, keine Markierung als erwarteter Fehlschlag mehr.** Die Notiz „Wie lief's?" wird nach dem Speichern eigens nachgetragen, wenn sie unterwegs dazukam. Abmelden nimmt die Stundenakte immer vom Gerät, und `/live` zeigt ohne Anmeldung keine beendete Stunde und kein Bereitschaftsbild mehr — **mit einer bewusst gelassenen Ausnahme:** eine beendete Stunde bleibt stehen, solange ihre Durchführung noch auf dem Gerät wartet (höchstens zwölf Stunden). Das ist der Fall „Halle ohne Netz, Sitzung abgelaufen"; ohne die Ausnahme verlöre der Nutzer dort seine Zusammenfassung. Nicht belegt: das Abmelden selbst — im Browser-Test nicht ausführbar.
 
-**Nächster Schritt:** BUG-22 und BUG-24 beheben (`/frontend PROJ-14`) oder bewusst hinnehmen, danach `/qa` erneut für die Freigabe.
+**Offen bleibt nur BUG-26** (niedrig): „Stunde starten" an einer Einheit ohne Schritt ist bedienbar; der Fall kann laut Speicherregel nicht entstehen.
+
+**PROJ-14 ist noch „In Review".** Die vier Fehler sind außerhalb der QA behoben; die Freigabe spricht `/qa` aus. Weiter nur auf echten Geräten belegbar: Wachhalten, Stromsparmodus, Ton, und ob Safari auf dem iPhone den Offline-Baustein befüllt.
+
+**Nächster Schritt:** `/qa PROJ-14` für die Freigabe.
 
 ## Features
 

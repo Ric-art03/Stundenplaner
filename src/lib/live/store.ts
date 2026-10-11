@@ -190,34 +190,81 @@ export type SaveRunResult =
 
 let flushing: Promise<void> | null = null
 
+function patchPending(runId: string, patch: Partial<PendingRun>) {
+  writePending(
+    readPending().map((item) => (item.record.id === runId ? { ...item, ...patch } : item))
+  )
+}
+
 /**
  * Reicht wartende Durchführungen nach. Läuft schon ein Versuch, wird auf ihn
  * gewartet statt ein zweiter gestartet — doppelt gesendet wäre zwar harmlos,
  * aber unnötig.
+ *
+ * **Die Notiz kann unterwegs dazukommen.** Tippt der Nutzer „Fertig", während
+ * die Durchführung schon abgeschickt ist, steht seine Notiz an der wartenden
+ * Durchführung — abgeschickt wurde sie aber ohne. Deshalb wird nach dem
+ * Speichern verglichen, was hinausging und was jetzt dasteht: weicht die Notiz
+ * ab, bleibt der Eintrag liegen (als „gespeichert, Notiz fehlt") und wird mit
+ * `saveNote` nachgetragen. Erst dann verschwindet er (BUG-22).
  */
 export function flushPending(
   userId: string,
-  save: (record: RunRecord) => Promise<SaveRunResult>
+  save: (record: RunRecord) => Promise<SaveRunResult>,
+  saveNote?: (runId: string, note: string) => Promise<SaveRunResult>
 ): Promise<void> {
   if (flushing) return flushing
 
   flushing = (async () => {
     const waiting = readPending().filter((entry) => entry.userId === userId && !entry.failure)
     for (const entry of waiting) {
-      let result: SaveRunResult
-      try {
-        result = await save(entry.record)
-      } catch {
-        // Kein Netz: bleibt liegen, der nächste Anlass versucht es wieder.
+      const runId = entry.record.id
+      let sentNote = entry.record.note
+
+      if (!entry.saved) {
+        let result: SaveRunResult
+        try {
+          result = await save(entry.record)
+        } catch {
+          // Kein Netz: bleibt liegen, der nächste Anlass versucht es wieder.
+          continue
+        }
+        if (!result.ok) {
+          if (result.permanent) patchPending(runId, { failure: result.error })
+          continue
+        }
+      } else {
+        // Die Durchführung steht schon; welche Notiz mit ihr hinausging, ist
+        // nicht mehr bekannt — die jetzige wird in jedem Fall nachgetragen.
+        sentNote = null as unknown as string
+      }
+
+      // Was steht jetzt an der wartenden Durchführung?
+      const current = readPending().find((item) => item.record.id === runId)
+      if (!current) continue
+      if (current.record.note === sentNote) {
+        dropPending(runId)
         continue
       }
-      if (result.ok) dropPending(entry.record.id)
-      else if (result.permanent) {
-        writePending(
-          readPending().map((item) =>
-            item.record.id === entry.record.id ? { ...item, failure: result.error } : item
-          )
-        )
+
+      // Gespeichert, aber die Notiz fehlt: festhalten, damit ein Abbruch an
+      // dieser Stelle die Durchführung nicht ein zweites Mal als ungespeichert
+      // behandelt — und die Notiz nicht verloren geht.
+      patchPending(runId, { saved: true })
+      if (!saveNote) continue
+
+      let noted: SaveRunResult
+      try {
+        noted = await saveNote(runId, current.record.note)
+      } catch {
+        continue
+      }
+      if (noted.ok) {
+        // Nur wegräumen, wenn sich die Notiz seither nicht noch einmal geändert hat.
+        const latest = readPending().find((item) => item.record.id === runId)
+        if (latest && latest.record.note === current.record.note) dropPending(runId)
+      } else if (noted.permanent) {
+        patchPending(runId, { failure: noted.error })
       }
     }
   })().finally(() => {

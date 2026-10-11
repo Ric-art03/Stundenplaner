@@ -218,30 +218,103 @@ describe('Warteliste', () => {
     expect(save).toHaveBeenCalledTimes(1)
   })
 
-  // BUG-22 (QA 2026-10-11): die Notiz geht in diesem Fall verloren. `it.fails`
-  // hält die Suite grün, solange der Fehler besteht — und wird rot, sobald er
-  // behoben ist; dann gehört `.fails` hier weg.
-  it.fails('verliert eine Notiz nicht, die nachgetragen wird, während das Speichern unterwegs ist', async () => {
+  it('verliert eine Notiz nicht, die nachgetragen wird, während das Speichern unterwegs ist', async () => {
+    // War BUG-22: „Fertig", während die Antwort noch aussteht — die Notiz ging
+    // an die wartende Durchführung, die schon ohne sie abgeschickt war.
     const session = endedSession()
     queueRun(session)
     const sent: string[] = []
+    const noted: [string, string][] = []
     let release: (value: SaveRunResult) => void = () => {}
 
-    const flushing = flushPending(USER, (record) => {
-      sent.push(record.note)
-      return new Promise<SaveRunResult>((resolve) => (release = resolve))
-    })
+    const flushing = flushPending(
+      USER,
+      (record) => {
+        sent.push(record.note)
+        return new Promise<SaveRunResult>((resolve) => (release = resolve))
+      },
+      async (runId, note) => {
+        noted.push([runId, note])
+        return { ok: true }
+      }
+    )
 
-    // „Fertig", während die Antwort noch aussteht: die Notiz geht an die
-    // wartende Durchführung — die aber schon ohne sie abgeschickt ist.
     expect(setPendingNote(session.runId, 'Schnell getippt')).toBe(true)
     release({ ok: true })
     await flushing
 
-    // Entweder liegt die Durchführung mit der Notiz noch in der Warteliste,
-    // oder die Notiz ist auf anderem Weg hinausgegangen. Verloren sein darf
-    // sie nicht.
-    const stillWaiting = readPending().some((entry) => entry.record.note === 'Schnell getippt')
-    expect(stillWaiting || sent.includes('Schnell getippt')).toBe(true)
+    expect(sent).toEqual([''])
+    expect(noted).toEqual([[session.runId, 'Schnell getippt']])
+    expect(readPending()).toHaveLength(0)
+  })
+
+  it('hält eine gespeicherte Durchführung fest, deren Notiz noch fehlt, und trägt sie beim nächsten Mal nach — ohne die Durchführung ein zweites Mal zu senden', async () => {
+    const session = endedSession()
+    queueRun(session)
+    let release: (value: SaveRunResult) => void = () => {}
+    const save = vi.fn(() => new Promise<SaveRunResult>((resolve) => (release = resolve)))
+
+    // Das Nachtragen scheitert beim ersten Mal am Netz.
+    const offline = vi.fn(async (): Promise<SaveRunResult> => {
+      throw new Error('kein Netz')
+    })
+    const first = flushPending(USER, save, offline)
+    setPendingNote(session.runId, 'Später nachgetragen')
+    release({ ok: true })
+    await first
+
+    expect(readPending()).toHaveLength(1)
+    expect(readPending()[0].saved).toBe(true)
+    expect(readPending()[0].record.note).toBe('Später nachgetragen')
+
+    const online = vi.fn(async (): Promise<SaveRunResult> => ({ ok: true }))
+    await flushPending(USER, save, online)
+
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(online).toHaveBeenCalledWith(session.runId, 'Später nachgetragen')
+    expect(readPending()).toHaveLength(0)
+  })
+
+  it('räumt eine Durchführung ohne geänderte Notiz wie bisher sofort weg', async () => {
+    const session = endedSession()
+    queueRun(session)
+    setPendingNote(session.runId, 'Vor dem Senden eingetragen')
+    const saveNote = vi.fn(async (): Promise<SaveRunResult> => ({ ok: true }))
+
+    await flushPending(USER, async () => ({ ok: true }), saveNote)
+
+    expect(saveNote).not.toHaveBeenCalled()
+    expect(readPending()).toHaveLength(0)
+  })
+
+  it('nennt den Grund, wenn sich die Notiz endgültig nicht nachtragen lässt', async () => {
+    const session = endedSession()
+    queueRun(session)
+    let release: (value: SaveRunResult) => void = () => {}
+
+    const flushing = flushPending(
+      USER,
+      () => new Promise<SaveRunResult>((resolve) => (release = resolve)),
+      async () => ({ ok: false, permanent: true, error: 'Diese Durchführung gibt es nicht mehr.' })
+    )
+    setPendingNote(session.runId, 'Notiz')
+    release({ ok: true })
+    await flushing
+
+    expect(readPending()[0].failure).toBe('Diese Durchführung gibt es nicht mehr.')
+  })
+
+  it('behält die Notiz, auch wenn niemand sie nachtragen kann', async () => {
+    const session = endedSession()
+    queueRun(session)
+    let release: (value: SaveRunResult) => void = () => {}
+
+    const flushing = flushPending(USER, () => new Promise<SaveRunResult>((resolve) => (release = resolve)))
+    setPendingNote(session.runId, 'Bleibt liegen')
+    release({ ok: true })
+    await flushing
+
+    expect(readPending()[0].record.note).toBe('Bleibt liegen')
+    expect(readPending()[0].saved).toBe(true)
   })
 })

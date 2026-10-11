@@ -12,9 +12,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { saveRun } from '@/lib/actions/live'
 import { endRun } from '@/lib/live/run'
-import { flushPending, queueRun, runningSession, writeSession } from '@/lib/live/store'
+import { queueRun, runningSession, writeSession } from '@/lib/live/store'
+import { syncPending } from '@/lib/live/sync'
 
 export function LogoutButton() {
   const [isLoading, setIsLoading] = useState(false)
@@ -33,8 +33,16 @@ export function LogoutButton() {
 
   function requestLogout() {
     const running = runningSession(null)
-    if (running) setRunningName(running.plan.unitName)
-    else void handleLogout()
+    if (running) {
+      setRunningName(running.plan.unitName)
+      return
+    }
+    // Auch was nicht mehr läuft, bleibt nicht auf dem Gerät zurück: eine
+    // beendete Stunde, deren Zusammenfassung noch offen stand, oder ein
+    // Bereitschaftsbild. Die Durchführung selbst ist längst gespeichert oder
+    // wartet in der Warteliste — die bleibt, sie wird noch nachgereicht.
+    writeSession(null)
+    void handleLogout()
   }
 
   async function endThenLogout() {
@@ -45,7 +53,7 @@ export function LogoutButton() {
       queueRun({ ...running, run: endRun(running.run, Date.now()) })
       // Solange die Anmeldung noch gilt. Klappt es nicht, wartet die
       // Durchführung auf dem Gerät, bis dasselbe Konto wieder angemeldet ist.
-      await flushPending(running.userId, saveRun).catch(() => {})
+      await syncPending(running.userId).catch(() => {})
     }
     // Danach liegt keine Akte mehr auf dem Gerät — ein anderes Konto sieht nichts.
     writeSession(null)

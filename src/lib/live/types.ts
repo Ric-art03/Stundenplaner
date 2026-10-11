@@ -156,4 +156,9 @@ export interface PendingRun {
   record: RunRecord
   /** Gesetzt = endgültig gescheitert; der Text nennt den Grund. */
   failure: string | null
+  /**
+   * Die Durchführung steht schon in der Datenbank — es fehlt nur noch die
+   * Notiz, die nachgetragen wurde, während das Speichern unterwegs war.
+   */
+  saved?: boolean
 }
