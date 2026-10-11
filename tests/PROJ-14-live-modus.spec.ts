@@ -351,6 +351,21 @@ test.describe('Bildschirm an', () => {
     await expect(page.getByText('Der Bildschirm kann ausgehen')).toBeVisible()
   })
 
+  test('lässt sich der Offline-Baustein nicht einrichten, sagt es das Bereitschaftsbild — und die Stunde startet trotzdem', async ({ page }) => {
+    // Zweiter Teil von BUG-23: der Hinweis blieb aus, weil der Zustand auf
+    // „wird eingerichtet" stehen blieb.
+    // Ein Gerät, auf dem sich der Baustein nicht anmelden lässt.
+    await page.addInitScript(() => {
+      navigator.serviceWorker.register = () =>
+        Promise.reject(new DOMException('nicht erlaubt', 'SecurityError'))
+    })
+    await ready(page)
+
+    await expect(page.getByText(/Ohne Netz lässt sich dieser Bildschirm auf deinem Gerät nicht neu laden/)).toBeVisible()
+    await goButton(page).click()
+    await expect(timer(page)).toBeVisible()
+  })
+
   test('AC: ohne Speicher des Browsers warnt das Bereitschaftsbild, dass die Stunde kein Neuladen übersteht', async ({ page }) => {
     await page.addInitScript(() => {
       Storage.prototype.setItem = () => {
@@ -857,11 +872,8 @@ test.describe('Robustheit', () => {
   })
 
   test('der Live-Bildschirm lädt auch ohne Verbindung neu (Offline-Baustein)', async ({ page, context }) => {
-    // BUG-23 (QA 2026-10-11): auf dem Weg aus der App — „Stunde starten" wechselt
-    // ohne neues Laden nach /live — wird der Baustein zwar angemeldet, aber nie
-    // befüllt; die Seite liegt nicht auf dem Gerät. Erwarteter Fehlschlag, bis
-    // das behoben ist; dann gehört diese Zeile weg.
-    test.fail(true, 'BUG-23: Offline-Baustein wird beim Wechsel aus der App nicht befüllt')
+    // War BUG-23: auf dem Weg aus der App — „Stunde starten" wechselt ohne neues
+    // Laden nach /live — blieb die Ablage des Bausteins leer.
     await running(page)
     await tap(page, 'Weiter', 2 * MIN)
 
@@ -888,7 +900,7 @@ test.describe('Robustheit', () => {
     await running(page)
     await tap(page, 'Weiter', 2 * MIN)
 
-    // Erst das vollständige Laden von /live richtet den Baustein ein (siehe BUG-23).
+    // Auch nach einem vollständigen Laden von /live liegt alles auf dem Gerät.
     await page.reload()
     await expect(timer(page)).toBeVisible()
     await expect
@@ -1220,32 +1232,44 @@ test.describe('Abschluss und Durchführungen', () => {
     expect(await runsOf(unit)).toHaveLength(1)
   })
 
-  test('AC: ohne Netz geht „Fertig" trotzdem — die Notiz bleibt mit der Durchführung auf dem Gerät, und der Nutzer landet nicht auf der Fehlerseite des Browsers', async ({ page, context }) => {
-    // BUG-25 (QA 2026-10-11): „Fertig" wechselt zur Detailseite der Einheit —
-    // ohne Netz ist das die Fehlerseite des Browsers („Keine Verbindung"). Es
-    // geht nichts verloren, aber so sieht es aus. Erwarteter Fehlschlag, bis
-    // das behoben ist; dann gehört diese Zeile weg.
-    test.fail(true, 'BUG-25: „Fertig" ohne Netz führt auf die Fehlerseite des Browsers')
-
-    await running(page, [{ minutes: 5, items: [{ exerciseId: fx.ruhe, minutes: 5 }] }])
+  test('AC: ohne Netz geht „Fertig" trotzdem — die App bleibt stehen und sagt, dass nichts verloren ist; mit Netz wird nachgereicht', async ({ page, context }) => {
+    // War BUG-25: „Fertig" wechselte ohne Netz auf die Fehlerseite des Browsers.
+    const unit = await running(page, [{ minutes: 5, items: [{ exerciseId: fx.ruhe, minutes: 5 }] }])
     await context.setOffline(true)
     await finishAll(page)
     await page.getByLabel(/Wie lief's\?/).fill('Ohne Netz geschrieben')
     await page.getByRole('button', { name: 'Fertig' }).click()
-    await page.waitForTimeout(4000)
-    const landedOn = page.url()
 
-    // Zurück im Netz: die Durchführung wartet samt Notiz auf dem Gerät. `/live`
-    // reicht von sich aus nichts nach — der Stand bleibt also, wie er war.
+    await expect(page.getByRole('heading', { name: 'Fertig — die Stunde ist festgehalten' })).toBeVisible()
+    await expect(page.getByText(/liegt samt deiner Notiz auf diesem Gerät/)).toBeVisible()
+    await expect(page).toHaveURL(/\/live$/)
+    expect((await warteliste(page))[0].record.note).toBe('Ohne Netz geschrieben')
+
+    // Noch immer kein Netz: der Knopf führt nirgendwohin, und sagt es.
+    await page.getByRole('button', { name: 'Zur Einheit' }).click()
+    await expect(page.getByText('Noch keine Verbindung.')).toBeVisible()
+    await expect(page).toHaveURL(/\/live$/)
+
+    // Wieder im Netz: nachgereicht wird von selbst, samt Notiz.
     await context.setOffline(false)
-    await page.goto('/live')
-    await expect(page.getByText('Es läuft gerade keine Stunde')).toBeVisible()
-    const waiting = await warteliste(page)
-    expect(waiting).toHaveLength(1)
-    expect(waiting[0].record.note).toBe('Ohne Netz geschrieben')
+    await expect.poll(async () => (await runsOf(unit))[0]?.note, { timeout: 30_000 }).toBe('Ohne Netz geschrieben')
+    await expect.poll(async () => (await warteliste(page)).length).toBe(0)
 
-    // Der eigentliche Befund, zuletzt geprüft: wo der Nutzer gelandet ist.
-    expect(landedOn).not.toMatch(/^chrome-error:/)
+    await page.getByRole('button', { name: 'Zur Einheit' }).click()
+    await expect(page).toHaveURL(new RegExp(`/units/${unit.id}$`))
+    await expect(page.getByRole('region', { name: 'Durchführungen' })).toContainText('Ohne Netz geschrieben')
+  })
+
+  test('ohne Netz bleibt „Live-Modus verlassen" im Live-Modus und sagt, warum — die Stunde läuft weiter', async ({ page, context }) => {
+    await running(page)
+    await context.setOffline(true)
+    await menu(page, /Live-Modus verlassen/)
+
+    await expect(page.getByText('Gerade keine Verbindung').first()).toBeVisible()
+    await expect(page).toHaveURL(/\/live$/)
+    await expect(timer(page)).toBeVisible()
+    expect((await akte(page)).run.phase).toBe('running')
+    await context.setOffline(false)
   })
 
   test('Edge: wird die Einheit während der Stunde gelöscht, sagt die App es und bietet „Verwerfen" an', async ({ page }) => {

@@ -185,7 +185,11 @@ Zwischendurch sah es nach einem Absturz der ganzen App aus („Application error
 
 Weiter nicht belegbar auf diesem Rechner: Wachhalten, Stromsparmodus, Ton und Vibration (zwei echte Geräte), Firefox und Safari, die Bilder der Übungen (die Testübungen haben keine).
 
-**Nächster Schritt:** entscheiden, welche Fehler zuerst behoben werden — empfohlen BUG-23 und BUG-25 zusammen (`/frontend`), dann BUG-22 und BUG-24 —, danach `/qa` erneut.
+**BUG-23 und BUG-25 sind am 2026-10-11 behoben und nachgeprüft** — Abschnitt „Nach der QA behoben" in der Spec. **337 von 337 Browser-Tests grün in einem Zug**, 517 Unit-Tests grün. Der Offline-Baustein füllt sich jetzt auch beim Wechsel aus der App (er holt sich die Seite und ihre Bausteine selbst, statt auf ein Zeichen zu warten, das dabei nie kam), und das Bereitschaftsbild sagt es, wenn es nicht klappt. „Fertig" ohne Netz bleibt in der App und sagt, dass nichts verloren ist; vor dem Verlassen fragt die App beim Server nach, statt dem Gerät zu glauben. Mit behoben, weil derselbe Fehler: „Live-Modus verlassen" ohne Netz. **Nicht belegt:** dasselbe auf einem echten Handy, vor allem Safari auf dem iPhone.
+
+**Offen bleiben** BUG-22 (Notiz geht bei langsamer Verbindung verloren, mittel), BUG-24 (beendete Stunde nach dem Abmelden einsehbar, mittel) und BUG-26 (niedrig). Kein Fehler der Stufe „hoch" mehr — die Freigabe ist damit eine Entscheidung über die beiden mittleren.
+
+**Nächster Schritt:** BUG-22 und BUG-24 beheben (`/frontend PROJ-14`) oder bewusst hinnehmen, danach `/qa` erneut für die Freigabe.
 
 ## Features
 

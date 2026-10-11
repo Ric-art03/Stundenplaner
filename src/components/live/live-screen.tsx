@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CloudOff, Info, Loader2 } from 'lucide-react'
+import { CheckCircle2, CloudOff, Info, Loader2, WifiOff } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +29,7 @@ import { useWakeLock } from '@/hooks/use-wake-lock'
 import { saveRun, updateRunNote } from '@/lib/actions/live'
 import { isForgotten } from '@/lib/live/clock'
 import { storePlanImages } from '@/lib/live/images'
+import { serverReachable } from '@/lib/live/network'
 import { addAdoptedNote } from '@/lib/live/records'
 import {
   buildRunRecord,
@@ -116,7 +117,7 @@ function SummaryScreen({
   onLeave,
 }: {
   session: LiveSession
-  onLeave: (href: string) => void
+  onLeave: (href: string, kind: LeaveKind) => Promise<void>
 }) {
   const { toast } = useToast()
   const online = useOnline()
@@ -171,7 +172,7 @@ function SummaryScreen({
           return
         }
       }
-      onLeave(unitHref)
+      await onLeave(unitHref, 'finished')
     } catch {
       toast({
         variant: 'destructive',
@@ -242,9 +243,82 @@ function SummaryScreen({
   )
 }
 
+/** Wie der Live-Modus verlassen wurde — bestimmt nur den Text, falls gerade kein Netz da ist. */
+type LeaveKind = 'finished' | 'left'
+
+/**
+ * Steht da, wenn der Live-Modus verlassen wird und der Server nicht erreichbar
+ * ist. Die Seite der Einheit ließe sich dann nicht laden — der Wechsel dorthin
+ * endete auf der Fehlerseite des Browsers, und nach einer Stunde in der Halle
+ * sähe es aus, als sei alles verloren (BUG-25). Stattdessen sagt die App, was
+ * Sache ist, und wartet.
+ */
+function ParkedScreen({
+  kind,
+  href,
+  userId,
+  onGo,
+}: {
+  kind: LeaveKind
+  href: string
+  userId: string | null
+  onGo: (href: string) => void
+}) {
+  const online = useOnline()
+  const pending = usePendingRuns()
+  const [checking, setChecking] = React.useState(false)
+  const [stillOffline, setStillOffline] = React.useState(false)
+  const waiting = pending.filter((entry) => !entry.failure).length
+
+  // Sobald wieder Verbindung da ist: nachreichen, ohne dass der Nutzer etwas tun muss.
+  React.useEffect(() => {
+    if (online && userId && waiting > 0) void flushPending(userId, saveRun)
+  }, [online, userId, waiting])
+
+  async function go() {
+    setChecking(true)
+    setStillOffline(false)
+    if (await serverReachable()) onGo(href)
+    else {
+      setStillOffline(true)
+      setChecking(false)
+    }
+  }
+
+  return (
+    <Centered>
+      {kind === 'finished' ? (
+        <CheckCircle2 className="h-10 w-10 text-primary" aria-hidden />
+      ) : (
+        <WifiOff className="h-10 w-10 text-muted-foreground" aria-hidden />
+      )}
+      <h1 className="text-xl font-semibold">
+        {kind === 'finished' ? 'Fertig — die Stunde ist festgehalten' : 'Gerade keine Verbindung'}
+      </h1>
+      <p className="text-sm text-muted-foreground" role="status">
+        {waiting > 0
+          ? 'Du hast gerade kein Netz. Die Durchführung liegt samt deiner Notiz auf diesem Gerät und wird nachgereicht, sobald die App wieder Verbindung hat. Es geht nichts verloren — du kannst das Handy jetzt weglegen.'
+          : kind === 'finished'
+            ? 'Die Durchführung ist gespeichert. Die Seite der Einheit lässt sich ohne Netz gerade nicht öffnen.'
+            : 'Die Seite der Einheit lässt sich ohne Netz gerade nicht öffnen.'}
+      </p>
+      <Button className="min-h-11 w-full" onClick={go} disabled={checking}>
+        {checking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Zur Einheit
+      </Button>
+      {stillOffline && (
+        <p className="text-sm text-muted-foreground" role="status">
+          Noch keine Verbindung. Versuch es später noch einmal.
+        </p>
+      )}
+    </Centered>
+  )
+}
+
 /** Der Live-Bildschirm: Bereitschaftsbild, laufende Stunde, Zusammenfassung. */
 export function LiveScreen() {
   const router = useRouter()
+  const { toast } = useToast()
   const session = useLiveSession()
   const knownUserId = useKnownUserId()
   const offline = useLiveOffline()
@@ -254,11 +328,18 @@ export function LiveScreen() {
   // die neue Seite aber noch nicht da — ohne das stünde für einen Augenblick
   // „Es läuft gerade keine Stunde“ auf dem Bildschirm.
   const [leaving, setLeaving] = React.useState(false)
+  // Gesetzt, wenn beim Verlassen kein Netz da war: dann bleibt die App stehen
+  // und sagt es, statt auf die Fehlerseite des Browsers zu wechseln.
+  const [parked, setParked] = React.useState<{ href: string; kind: LeaveKind } | null>(null)
+  const pendingRuns = usePendingRuns()
 
-  function leave(href: string) {
+  async function leave(href: string, kind: LeaveKind = 'left') {
     setLeaving(true)
     writeSession(null)
-    router.push(href)
+    // Erst nachfragen, dann wechseln: ohne erreichbaren Server ließe sich die
+    // Zielseite nicht laden.
+    if (await serverReachable()) router.push(href)
+    else setParked({ href, kind })
   }
 
   const phase = session?.run.phase
@@ -275,6 +356,20 @@ export function LiveScreen() {
     const current = readSession()
     if (current) void storePlanImages(current.plan)
   }, [phase, runId])
+
+  if (parked) {
+    return (
+      <ParkedScreen
+        kind={parked.kind}
+        href={parked.href}
+        userId={knownUserId ?? null}
+        onGo={(href) => {
+          setParked(null)
+          router.push(href)
+        }}
+      />
+    )
+  }
 
   if (leaving || session === undefined || knownUserId === undefined) {
     return (
@@ -295,6 +390,13 @@ export function LiveScreen() {
         <p className="text-sm text-muted-foreground">
           Starte eine Stunde an einer gespeicherten Einheit über „Stunde starten“.
         </p>
+        {pendingRuns.some((entry) => !entry.failure) && (
+          <p className="flex items-start gap-2 text-left text-sm text-muted-foreground" role="status">
+            <CloudOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            Eine Durchführung liegt noch auf diesem Gerät und wird nachgereicht, sobald die App
+            wieder Verbindung hat.
+          </p>
+        )}
         <Button asChild>
           <Link href="/units">Zu den Einheiten</Link>
         </Button>
@@ -343,7 +445,7 @@ export function LiveScreen() {
         <Button
           variant="outline"
           className="min-h-11 w-full"
-          onClick={() => leave(unitHref)}
+          onClick={() => void leave(unitHref)}
         >
           Verwerfen
         </Button>
@@ -370,7 +472,18 @@ export function LiveScreen() {
         }}
         onEnd={() => setConfirming('end')}
         onCancel={() => setConfirming('cancel')}
-        onLeave={() => router.push(unitHref)}
+        onLeave={async () => {
+          // Die Stunde läuft weiter, die Akte bleibt. Ohne erreichbaren Server
+          // ließe sich die Seite der Einheit aber nicht laden.
+          if (await serverReachable()) router.push(unitHref)
+          else {
+            toast({
+              title: 'Gerade keine Verbindung',
+              description:
+                'Die Seite der Einheit lässt sich ohne Netz nicht öffnen. Die Stunde läuft hier weiter.',
+            })
+          }
+        }}
       />
 
       <AlertDialog open={confirming === 'end'} onOpenChange={(open) => !open && setConfirming(null)}>

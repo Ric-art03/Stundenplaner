@@ -1375,6 +1375,7 @@ genau der Weg, auf dem sie in der Halle rechnet.
 ### Gefundene Fehler
 
 #### BUG-23: Der Offline-Baustein wird auf dem Weg aus der App nicht eingerichtet
+- **Status:** behoben am 2026-10-11, siehe „Nach der QA behoben"
 - **Severity:** High
 - **Was der Nutzer erlebt:** Wer über „Stunde starten" in den Live-Modus kommt — also jeder —, hat
   den Bildschirm **nicht** auf dem Gerät. Lädt das Handy die Seite in einer Halle ohne Empfang neu,
@@ -1432,6 +1433,7 @@ genau der Weg, auf dem sie in der Halle rechnet.
 - **Priority:** Fix before deployment
 
 #### BUG-25: „Fertig" ohne Netz führt auf die Fehlerseite des Browsers
+- **Status:** behoben am 2026-10-11, siehe „Nach der QA behoben"
 - **Severity:** Low
 - **Steps to Reproduce:**
   1. Ohne Netz eine Stunde beenden, bei „Wie lief's?" etwas eintragen, „Fertig"
@@ -1449,6 +1451,59 @@ genau der Weg, auf dem sie in der Halle rechnet.
   sich tippen, danach erscheint die Begründung als Meldung
 - **Einordnung:** der Fall kann laut Speicherregel nicht entstehen; am Code gelesen
 - **Priority:** Nice to have
+
+### Nach der QA behoben (2026-10-11)
+
+Auf Auftrag des Nutzers: **BUG-23 und BUG-25.** Offen bleiben BUG-22, BUG-24 und BUG-26.
+
+**BUG-23 — der Offline-Baustein füllt sich jetzt auch auf dem Weg aus der App.** Drei Änderungen:
+
+- **Die Seite wartet am Baustein selbst, bis er aktiv ist** (). Vorher
+  wartete sie auf ein Zeichen des Browsers, das nur für Seiten kommt, die *innerhalb* von 
+  geladen wurden — aus der App heraus wird die Seite aber nicht neu geladen
+- **Der Baustein holt alles selbst** (): er lädt  frisch und liest aus
+  der Seite heraus, welche Bausteine sie braucht. Was die Seite zusätzlich als geladen meldet,
+  ist nur noch die zweite Quelle — die Liste des Browsers ist begrenzt und kann nach langer
+  Benutzung unvollständig sein. Die Seite wird zuletzt abgelegt: sie liegt erst da, wenn ihre
+  Bausteine da sind
+- **Das Bereitschaftsbild sagt es, wenn es nicht klappt.** Meldet der Baustein nicht binnen 20
+  Sekunden, dass alles abgelegt ist, gilt das als „nicht möglich", und der Hinweis erscheint
+
+**BUG-25 — „Fertig" ohne Netz bleibt in der App.** Vor jedem Verlassen des Live-Modus fragt die
+App beim Server nach, ob er erreichbar ist (, höchstens vier Sekunden).
+Dem Gerät allein wird dabei nicht geglaubt: ein Hallen-WLAN ohne Internet gilt dem Browser als
+„online". Ist der Server nicht erreichbar, steht „Fertig — die Stunde ist festgehalten" da, mit
+dem Satz, dass Durchführung und Notiz auf dem Gerät liegen und nachgereicht werden. Kommt das
+Netz zurück, wird von selbst nachgereicht; „Zur Einheit" führt dann weiter.
+
+**Über den Auftrag hinaus, weil es derselbe Fehler war:** „Live-Modus verlassen (läuft weiter)"
+im Menü führte ohne Netz ebenfalls auf die Fehlerseite des Browsers. Jetzt bleibt man im
+Live-Modus und bekommt eine Meldung; die Stunde läuft weiter. Und ohne laufende Stunde sagt
+, wenn noch eine Durchführung auf dem Gerät wartet.
+
+**Nachgeprüft:** **337 von 337 Browser-Tests grün in einem Zug** (21,4 Minuten, zwei Arbeiter,
+ohne Entwicklungsserver), **517 Unit-Tests grün** (5 neue für die Nachfrage beim Server),
+Typprüfung, Lint und Produktionsbuild sauber.
+
+- Der Test für BUG-23 geht genau den Weg des Nutzers — „Stunde starten" aus der App, dann Netz
+  trennen und neu laden — und besteht an Rechner und in Handybreite; die Markierung als
+  erwarteter Fehlschlag ist entfernt
+- Der Test für BUG-25 prüft den ganzen Ablauf: ohne Netz „Fertig", die App bleibt stehen,
+  „Zur Einheit" führt ohne Netz nirgendwohin und sagt es, mit Netz wird samt Notiz nachgereicht
+- Zwei neue Tests: der Hinweis auf dem Bereitschaftsbild, wenn sich der Baustein nicht anmelden
+  lässt; und „Live-Modus verlassen" ohne Netz
+- Als erwartete Fehlschläge markiert bleiben drei Browser-Tests und ein Unit-Test (BUG-22, BUG-24)
+
+**Was das nicht belegt:**
+
+- **Ein echtes Handy.** Geprüft ist in Edge am Rechner, auch in der Handy-Emulation. Ob Safari auf
+  dem iPhone den Baustein genauso anmeldet und befüllt, ist offen
+- **Das Zeitlimit von 20 Sekunden** ist nicht eigens ausgelöst worden, nur der Fall „lässt sich
+  nicht anmelden"
+- **Ein WLAN ohne Internet** ist nur im Unit-Test nachgestellt (die Anfrage scheitert), im
+  Browser nur „ganz ohne Netz"
+- **Nach einer neuen Auslieferung** holt ein Gerät den neuen Stand erst, wenn das Bereitschaftsbild
+  wieder mit Netz geöffnet wird — so ist es gebaut, geprüft ist es nicht
 
 ### Was kein Fehler ist
 
