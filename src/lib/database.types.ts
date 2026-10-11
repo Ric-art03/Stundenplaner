@@ -495,6 +495,96 @@ export type Database = {
         }
         Relationships: []
       }
+      unit_runs: {
+        Row: {
+          id: string
+          user_id: string
+          unit_id: string
+          started_at: string
+          ended_at: string
+          planned_minutes: number
+          actual_seconds: number
+          paused_seconds: number
+          note: string | null
+          created_at: string
+        }
+        Insert: {
+          id: string
+          user_id: string
+          unit_id: string
+          started_at: string
+          ended_at: string
+          planned_minutes: number
+          actual_seconds: number
+          paused_seconds?: number
+          note?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          unit_id?: string
+          started_at?: string
+          ended_at?: string
+          planned_minutes?: number
+          actual_seconds?: number
+          paused_seconds?: number
+          note?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      unit_run_steps: {
+        Row: {
+          id: string
+          run_id: string
+          position: number
+          kind: string
+          phase: string
+          name: string
+          variant_title: string | null
+          planned_minutes: number
+          actual_seconds: number
+          status: string
+          exercise_id: string | null
+          variant_id: string | null
+          adopted_note: string | null
+          adopted_duration: number | null
+        }
+        Insert: {
+          id?: string
+          run_id: string
+          position: number
+          kind: string
+          phase: string
+          name: string
+          variant_title?: string | null
+          planned_minutes: number
+          actual_seconds: number
+          status: string
+          exercise_id?: string | null
+          variant_id?: string | null
+          adopted_note?: string | null
+          adopted_duration?: number | null
+        }
+        Update: {
+          id?: string
+          run_id?: string
+          position?: number
+          kind?: string
+          phase?: string
+          name?: string
+          variant_title?: string | null
+          planned_minutes?: number
+          actual_seconds?: number
+          status?: string
+          exercise_id?: string | null
+          variant_id?: string | null
+          adopted_note?: string | null
+          adopted_duration?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -505,6 +595,31 @@ export type Database = {
           p_expected_updated_at: string
           p_force?: boolean
           p_name?: string
+        }
+        Returns: string
+      }
+      save_unit_run: {
+        Args: {
+          p_run: Json
+        }
+        Returns: string
+      }
+      append_exercise_note: {
+        Args: {
+          p_run_id: string
+          p_position: number
+          p_field: string
+          p_text: string
+          p_expected_updated_at: string
+        }
+        Returns: string
+      }
+      adopt_exercise_duration: {
+        Args: {
+          p_run_id: string
+          p_position: number
+          p_minutes: number
+          p_expected_updated_at: string
         }
         Returns: string
       }

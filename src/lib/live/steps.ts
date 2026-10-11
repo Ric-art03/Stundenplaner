@@ -129,3 +129,39 @@ export function buildLivePlan(unit: Unit, group: LiveGroupFacts): LivePlan {
     steps,
   }
 }
+
+/** Was `getUnit` nicht mitbringt und der Live-Modus eigens nachlädt. */
+export interface LivePlanExtras {
+  /** Die Beschreibung je Variante — sonst stünde bei einer Variante die der Grundübung. */
+  variantDescriptions: Map<string, string>
+  /** Der Speicherpfad des Titelbilds je Übung. */
+  coverImages: Map<string, string>
+}
+
+/** Trägt Variantenbeschreibung und Titelbild in die Schritte ein. */
+export function enrichLivePlan(plan: LivePlan, extras: LivePlanExtras): LivePlan {
+  return {
+    ...plan,
+    steps: plan.steps.map((step) => {
+      if (step.kind !== 'exercise' || !step.exerciseId) return step
+      const variantDescription = step.variantId
+        ? extras.variantDescriptions.get(step.variantId)?.trim()
+        : undefined
+      return {
+        ...step,
+        description: variantDescription || step.description,
+        imagePath: extras.coverImages.get(step.exerciseId) ?? null,
+      }
+    }),
+  }
+}
+
+/** Das Titelbild aus der Bilderliste einer Übung; ohne Markierung das erste. */
+export function coverImagePath(images: unknown): string | null {
+  if (!Array.isArray(images)) return null
+  const valid = images.filter(
+    (image): image is { path: string; isCover?: boolean } =>
+      typeof image === 'object' && image !== null && typeof (image as { path?: unknown }).path === 'string'
+  )
+  return (valid.find((image) => image.isCover) ?? valid[0])?.path ?? null
+}

@@ -120,8 +120,12 @@ export function subscribe(listener: () => void): () => void {
 
 function newRunId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
-  // Ältere Browser: genügt, um zwei Durchführungen auseinanderzuhalten.
-  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`
+  // Ältere Browser: dieselbe Gestalt von Hand. Die Datenbank nimmt als
+  // Kennung nur eine UUID an.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16)
+    return (char === 'x' ? random : (random & 0x3) | 0x8).toString(16)
+  })
 }
 
 /** Legt die Akte für eine neue Stunde an — im Zustand „bereit", die Uhr läuft noch nicht. */

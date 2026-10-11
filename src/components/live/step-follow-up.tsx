@@ -64,6 +64,10 @@ function useCurrentExercise(target: FollowUpTarget, open: boolean) {
     { status: 'loading' } | { status: 'error' } | { status: 'ready'; exercise: FollowUpExercise }
   >({ status: 'loading' })
   const { runId, position, exerciseId, variantId } = target
+  // Jeder neue Wert lädt den Stand der Übung neu — nach dem Hinweis, dass sie
+  // inzwischen geändert wurde.
+  const [attempt, setAttempt] = React.useState(0)
+  const reload = React.useCallback(() => setAttempt((value) => value + 1), [])
 
   React.useEffect(() => {
     if (!open) return
@@ -80,9 +84,9 @@ function useCurrentExercise(target: FollowUpTarget, open: boolean) {
     return () => {
       cancelled = true
     }
-  }, [open, runId, position, exerciseId, variantId])
+  }, [open, runId, position, exerciseId, variantId, attempt])
 
-  return state
+  return { state, reload }
 }
 
 function LoadState({ status }: { status: 'loading' | 'error' }) {
@@ -120,7 +124,7 @@ function NoteDialog({
   onDone: (field: AdoptedNoteTarget) => void
 }) {
   const { toast } = useToast()
-  const current = useCurrentExercise(target, open)
+  const { state: current, reload } = useCurrentExercise(target, open)
   const [field, setField] = React.useState<AdoptedNoteTarget>('work')
   const [sentence, setSentence] = React.useState('')
   // Hat der Nutzer die Vorschau von Hand geändert, gilt sein Text — sie wird
@@ -154,6 +158,12 @@ function NoteDialog({
       if (!result.ok) {
         // Die Eingabe bleibt stehen, die Übung ist unverändert.
         toast({ variant: 'destructive', title: 'Nicht übernommen', description: result.error })
+        // Inzwischen geändert: die Vorschau wird aus dem neuen Stand und dem
+        // Satz neu zusammengesetzt, statt den alten Text zu überschreiben.
+        if (result.stale) {
+          setEdited(null)
+          reload()
+        }
         return
       }
       toast({ title: 'Notiz übernommen' })
@@ -278,7 +288,7 @@ function DurationDialog({
   onDone: (minutes: number) => void
 }) {
   const { toast } = useToast()
-  const current = useCurrentExercise(target, open)
+  const { state: current, reload } = useCurrentExercise(target, open)
   const suggestion = roundToMinutes(step.actualSeconds)
   const [value, setValue] = React.useState(String(suggestion))
   const [saving, setSaving] = React.useState(false)
@@ -297,6 +307,7 @@ function DurationDialog({
       const result = await adoptExerciseDuration(target, minutes, current.exercise.updatedAt)
       if (!result.ok) {
         toast({ variant: 'destructive', title: 'Nicht übernommen', description: result.error })
+        if (result.stale) reload()
         return
       }
       toast({ title: `Dauer übernommen: ${minutes} Min` })

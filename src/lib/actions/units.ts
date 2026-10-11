@@ -1179,6 +1179,21 @@ async function toSummaries(
   const segmentRows = (segmentRes.data ?? []) as { id: string; unit_id: string }[]
   const unitIdBySegment = new Map(segmentRows.map((row) => [row.id, row.unit_id]))
 
+  // „Zuletzt durchgeführt am …" wird aus den Durchführungen gelesen, nicht
+  // eigens gespeichert — ein zweites Feld müsste beim Löschen einer
+  // Durchführung nachgezogen werden. Neueste zuerst: der erste Treffer je
+  // Einheit ist der jüngste.
+  const lastRuns = new Map<string, string>()
+  const { data: runRows } = await supabase
+    .from('unit_runs')
+    .select('unit_id, started_at')
+    .in('unit_id', unitIds)
+    .order('started_at', { ascending: false })
+    .limit(1000)
+  for (const row of (runRows ?? []) as { unit_id: string; started_at: string }[]) {
+    if (!lastRuns.has(row.unit_id)) lastRuns.set(row.unit_id, row.started_at)
+  }
+
   const counts = new Map<string, number>()
   if (segmentRows.length > 0) {
     const { data } = await supabase
@@ -1201,6 +1216,7 @@ async function toSummaries(
     totalMinutes: row.total_minutes,
     exerciseCount: counts.get(row.id) ?? 0,
     createdAt: row.created_at,
+    lastRunAt: lastRuns.get(row.id) ?? null,
   }))
 }
 

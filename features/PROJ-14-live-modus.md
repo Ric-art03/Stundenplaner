@@ -1130,6 +1130,115 @@ andere meldet „noch nicht angeschlossen":
   einer Variante steht die **Beschreibung der Grundübung** statt der der Variante, und das
   **Titelbild** fehlt ganz. Damit ist auch die Ablage der Bilder auf dem Gerät noch nicht gebaut
 
+## Implementation Notes (Backend)
+
+**Gebaut:** 2026-10-11 · **492 Unit-Tests grün** (476 plus 16 neue), Typprüfung, Lint und
+Produktionsbuild sauber. Migration `20261011100000_unit_runs.sql` vom Nutzer über den SQL-Editor
+des Dashboards angewendet, **Register 16 zu 16**.
+
+Damit ist alles geschlossen, was der Abschnitt „Was noch fehlt" der Oberfläche offen ließ. **Im
+Browser durchgespielt ist davon noch nichts** — nachgewiesen ist die Datenbank, nicht der Weg vom
+Knopf bis zur Zeile.
+
+### Datenbank
+
+- **`unit_runs`** — eine Zeile je gelaufener Stunde. Die Kennung hat keinen Standardwert: das
+  Gerät vergibt sie beim Start
+- **`unit_run_steps`** — eine Zeile je Schritt: Name als Abschrift, Verweis auf Übung und Variante
+  (fällt beim Löschen von selbst weg), geplante und tatsächliche Dauer, die zwei Vermerke der
+  Nachbereitung
+- **Acht Richtlinien**, vier je Tabelle, nur für den Eigentümer. Ein Schritt darf nur auf eine
+  eigene Übung verweisen und auf eine Variante nur, wenn sie zu genau dieser Übung gehört. Der
+  angemeldete Nutzer wird je Abfrage einmal ausgewertet, nicht je Zeile — die neuen Richtlinien
+  fallen damit nicht unter den Leistungshinweis, den Supabase zu den 52 älteren meldet
+- **Drei Funktionen**, alle mit den Rechten des Aufrufers, für `anon` gesperrt:
+  - `save_unit_run` — die Durchführung ganz oder gar nicht; dieselbe Kennung ein zweites Mal
+    ergibt wieder „ok" und nichts Doppeltes
+  - `append_exercise_note` — Notizfeld der Übung und Vermerk am Schritt im selben Zug
+  - `adopt_exercise_duration` — Dauer der Variante oder der Übung und Vermerk im selben Zug
+- **Löschweitergabe:** Einheit weg → Durchführungen weg; Übung oder Variante weg → Verweis leer,
+  Name bleibt
+
+### Serverseite — `src/lib/actions/live.ts`
+
+Der Vertrag aus `/frontend` ist unverändert angeschlossen: `saveRun`, `getRunsForUnit`,
+`updateRunNote`, `deleteRun`, `getFollowUpExercise`, `appendExerciseNote`,
+`adoptExerciseDuration`. Alle prüfen die Anmeldung und die Eingabe (`src/lib/validations/live.ts`).
+Dazu:
+
+- **`loadLivePlan` lädt nach, was die Leseansicht nicht mitbringt:** die Beschreibung der
+  **Variante** (vorher stand die der Grundübung da) und den Pfad des Titelbilds
+- **„Zuletzt durchgeführt am …"** in der Übersicht, aus den Durchführungen gelesen
+- **Die Liste an der Einheit** zeigt höchstens die 50 jüngsten Durchführungen
+
+### Auf dem Gerät nachgezogen
+
+- **Titelbilder** werden auf dem Bereitschaftsbild geholt und in der Ablage des Browsers gehalten
+  (`src/lib/live/images.ts`); an der aktuellen Übung steht ein einklappbares Feld „Bild"
+  (`step-image.tsx`). Geladen wird erst beim Aufklappen, aus der Ablage
+- **Die Kennung der Durchführung ist auch auf alten Browsern eine UUID** — die Datenbank nimmt
+  nichts anderes an
+- **Wurde die Übung inzwischen geändert**, lädt der Dialog der Nachbereitung den neuen Stand und
+  setzt die Vorschau neu zusammen, statt zu überschreiben
+
+### Entscheidungen, die beim Bauen fielen
+
+- **Welche Übung gemeint ist, sagt der Schritt, nicht der Aufrufer.** Die Nachbereitung nennt nur
+  Durchführung und Position; die Übung liest der Server am Schritt. Ein manipulierter Aufruf kann
+  so keine fremde oder andere Übung treffen
+- **„Notiz anhängen" schickt den ganzen neuen Text des Felds**, nicht nur den Satz — der Nutzer
+  hat genau diesen Text in der Vorschau gesehen und konnte ihn ändern
+- **Lief der Schritt als Variante und gibt es sie nicht mehr, wird keine Dauer übernommen.** Sonst
+  träfe die Dauer der Variante stillschweigend die Grundübung
+- **Bei einer Variante wird der Änderungsstempel der Übung nachgezogen** — die Variante hat keinen
+  eigenen, und eine zweite, gleichzeitig offene Übernahme soll die Änderung bemerken
+- **Eine nachgereichte Durchführung wird vor der Einheit geprüft:** kam sie beim ersten Mal doch
+  an, scheitert die Wiederholung nicht an einer inzwischen geänderten Einheit
+- **Endgültig gescheitert** (die App bietet „Verwerfen" an) sind: Einheit gibt es nicht mehr,
+  Durchführung unvollständig. **Wird erneut versucht:** nicht angemeldet, alles Unbekannte
+
+### Nachweis am lebenden System (2026-10-11)
+
+In einer zurückgerollten Transaktion unter der Rolle `authenticated`, danach nachgesehen: keine
+Zeile zurückgeblieben, die Testübung hat ihre alte Dauer.
+
+| Fall | Ergebnis |
+|---|---|
+| Speichern | ok, 4 Schritte, Notiz ohne Leerraum |
+| Verweise | eigene Übung und Variante bleiben; eine unbekannte Übung wird ohne Verweis abgelegt, mit Namen |
+| Dieselbe Durchführung noch einmal | ok, weiter 1 Durchführung und 4 Schritte |
+| Einheit gibt es nicht | `unit_not_found` |
+| Ohne Schritte | `invalid_run` |
+| Fehler mitten in den Schritten | abgewiesen, **nichts halb geschrieben** |
+| Notiz mit veraltetem Stempel | `stale`, kein Vermerk, Übung unverändert |
+| Notiz | ok, Text steht im Feld, Vermerk gesetzt |
+| Dauer an einer Variante | Variante geändert, **Grundübung unverändert**, Vermerk gesetzt |
+| Dauer an der Grundübung | Übung geändert, **Plandauer in der Einheit unverändert** |
+| Dauer an ausgelassenem Schritt | `step_skipped` |
+| Notiz an Schritt ohne Übung | `exercise_gone` |
+| Dauer 0, Notiz über 2.000 Zeichen | `invalid_duration`, `invalid_note` |
+| Fremdes Konto | sieht 0 Durchführungen und 0 Schritte; Speichern, Notiz, Dauer und direktes Einfügen eines Schritts abgewiesen |
+| Ohne Anmeldung | `not_authenticated` |
+| Rolle `anon` | Ausführung verweigert |
+
+Lesend am Katalog bestätigt: Zeilenschutz an beiden Tabellen, acht Richtlinien, sieben Indizes,
+die drei Funktionen ohne erhöhte Rechte, Löschweitergabe wie oben. `get_advisors` meldet weiter
+nur den bekannten Hinweis zum Passwortschutz.
+
+### Was dieser Nachweis nicht abdeckt
+
+- **Die Löschfälle sind nicht ausgeführt**, nur am Katalog abgelesen: ein Block mit `DELETE` auf
+  Übung und Einheit wurde vom Werkzeug abgelehnt, auch in der zurückgerollten Transaktion. Dass
+  der Name nach dem Löschen der Übung stehen bleibt und die Durchführungen mit der Einheit
+  verschwinden, folgt aus den Fremdschlüssel-Regeln — in `/qa` einmal wirklich durchspielen
+- **Zwei gleichzeitige Sendungen** derselben Durchführung: der Weg ist gebaut, in einer einzelnen
+  Transaktion aber nicht nachstellbar. Nachgewiesen ist die Wiederholung nacheinander
+- **Der veraltete Stempel nach einer echten Änderung:** innerhalb einer Transaktion steht die Uhr
+  der Datenbank; geprüft ist der Fall mit einem bewusst falschen Stempel
+- **Die Server-Stellen selbst** sind nicht gegen die Datenbank gelaufen, nur ihre Prüfungen und
+  Umformungen als Unit-Tests. Der Weg Knopf → Server → Datenbank gehört in `/qa`
+- **Die Ablage der Bilder** ist ungesehen: sie braucht eine Übung mit Bild und eine Anmeldung
+
 ## QA Test Results
 _To be added by /qa_
 

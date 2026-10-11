@@ -156,7 +156,20 @@ Bis `/backend` bleibt jede beendete Stunde in der Warteliste auf dem Gerät, und
 
 **Vom Nutzer am 2026-10-11 im Browser angesehen und für gut befunden**, mit drei letzten Punkten, am selben Tag eingebaut und danach committet: die **Arbeitsnotiz der Phase bleibt an jedem Schritt der Phase stehen** (nicht nur am ersten — weicht von der Spec ab, dort vermerkt) und steht vor der der Übung, beide mit vollem Namen; im Menü steht „Live-Modus verlassen“ vor „Stunde beenden“; die Zusammenfassung sagt, dass sich die Stunde auch später an der Einheit nachbereiten lässt.
 
-**Nächster Schritt:** `/backend` für PROJ-14 — zwei Tabellen, Speichern der Durchführung, Nachbereitung.
+**Am 2026-10-11 nachgezogen:** die Arbeitsnotiz der Phase steht **oben bei der aktuellen Übung, als Erstes**, und in „Danach" nur, wenn die Phase als Nächstes beginnt.
+
+**Die Serverseite von PROJ-14 steht seit dem 2026-10-11** — Abschnitt „Implementation Notes (Backend)" in der Spec. Migration `20261011100000_unit_runs.sql` angewendet, **Register 16 zu 16**; **492 Unit-Tests grün** (476 plus 16 neue), Typprüfung, Lint und Produktionsbuild sauber. Zwei neue Tabellen (`unit_runs`, `unit_run_steps`) mit acht Richtlinien nur für den Eigentümer und drei Datenbank-Funktionen: Durchführung in einem Zug ablegen (dieselbe Kennung nie zweimal), Notiz anhängen, Dauer übernehmen — die beiden letzten ändern Übung und Vermerk gemeinsam oder gar nicht. Alles, was die Oberfläche offen ließ, ist angeschlossen: Speichern und Nachreichen, die Liste an der Einheit, „Zuletzt durchgeführt am …", die Nachbereitung, die Beschreibung der Variante und das Titelbild auf dem Gerät.
+
+Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, sechzehn Fälle: Speichern, Wiederholung ohne Doppel, nichts halb geschrieben, veralteter Stempel überschreibt nicht, Dauer einer Variante lässt die Grundübung in Ruhe, Plandauer der Einheit bleibt, fremdes Konto sieht und ändert nichts, `anon` ausgesperrt. Nichts zurückgeblieben; `get_advisors` meldet weiter nur den bekannten Hinweis zum Passwortschutz.
+
+Was das **nicht** belegt und in `/qa` gehört:
+
+- **Der Weg vom Knopf bis zur Zeile** ist im Browser nie gelaufen — weder das Speichern einer Durchführung noch die Nachbereitung
+- **Die Löschfälle** (Übung weg → Name bleibt; Einheit weg → Durchführungen weg) sind nur am Katalog abgelesen; der Block mit `DELETE` wurde vom Werkzeug abgelehnt, auch zurückgerollt
+- **Zwei gleichzeitige Sendungen** und die **Ablage der Bilder** sind ungeprüft; der Offline-Baustein weiter nicht ohne Netz erprobt
+- Wachhalten, Stromsparmodus und Ton brauchen zwei echte Geräte
+
+**Nächster Schritt:** einmal von Hand durchspielen (`npm run dev`: Stunde starten, beenden, an der Einheit unter „Durchführungen" nachsehen, eine Notiz anhängen), dann `/qa` für PROJ-14.
 
 ## Features
 

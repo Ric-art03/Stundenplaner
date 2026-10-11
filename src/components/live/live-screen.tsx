@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useWakeLock } from '@/hooks/use-wake-lock'
 import { saveRun, updateRunNote } from '@/lib/actions/live'
 import { isForgotten } from '@/lib/live/clock'
+import { storePlanImages } from '@/lib/live/images'
 import {
   buildRunRecord,
   endForgottenRun,
@@ -237,6 +238,15 @@ export function LiveScreen() {
   // Ende hält die App den Bildschirm nicht mehr wach.
   const wakeLock = useWakeLock(phase === 'ready' || phase === 'running')
   const now = useNow(phase === 'running')
+
+  // Die Titelbilder kommen auf dem Bereitschaftsbild aufs Gerät — dort ist
+  // immer Netz da. Je Stunde einmal.
+  const runId = session?.runId
+  React.useEffect(() => {
+    if (phase !== 'ready') return
+    const current = readSession()
+    if (current) void storePlanImages(current.plan)
+  }, [phase, runId])
 
   if (session === undefined || knownUserId === undefined) {
     return (
