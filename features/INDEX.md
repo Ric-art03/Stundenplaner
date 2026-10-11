@@ -191,9 +191,20 @@ Weiter nicht belegbar auf diesem Rechner: Wachhalten, Stromsparmodus, Ton und Vi
 
 **Offen bleibt nur BUG-26** (niedrig): „Stunde starten" an einer Einheit ohne Schritt ist bedienbar; der Fall kann laut Speicherregel nicht entstehen.
 
-**PROJ-14 ist noch „In Review".** Die vier Fehler sind außerhalb der QA behoben; die Freigabe spricht `/qa` aus. Weiter nur auf echten Geräten belegbar: Wachhalten, Stromsparmodus, Ton, und ob Safari auf dem iPhone den Offline-Baustein befüllt.
+**PROJ-14 ist seit dem 2026-10-11 freigegeben** — Abschnitt „QA — Nachtest und Freigabe" in der Spec, Stand Commit `db2dc8d`. Kein Fehler der Stufe „kritisch" oder „hoch", kein Akzeptanzkriterium durchgefallen, keine Regression: **339 von 339 Browser-Tests grün in einem Zug, 529 Unit-Tests grün**, kein erwarteter Fehlschlag mehr. Im Nachtest zusätzlich im Browser ausgeführt, was vorher nur am Code gelesen war: **das Abmelden selbst** (räumt die Stundenakte weg, die Warteliste bleibt) und **WLAN ohne Internet** („Fertig" bleibt in der App) — elf Prüfungen, alle bestanden.
 
-**Nächster Schritt:** `/qa PROJ-14` für die Freigabe.
+Offen bleibt **BUG-26** (niedrig, kein Hindernis). Bewusst hingenommen: eine beendete Stunde bleibt ohne Anmeldung stehen, solange ihre Durchführung noch auf dem Gerät wartet.
+
+### Was vor und bei der Auslieferung von PROJ-14 zu tun ist
+
+1. **Hochladen:** die Commits seit der Auslieferung von PROJ-7 liegen nur lokal. Das Hochladen von `main` **ist** die Auslieferung und gehört zu `/deploy`
+2. **Beide Migrationen sind schon in der Datenbank** (Register 17 zu 17), der Code kann jederzeit folgen. Die ausgelieferte Fassung (PROJ-7) benutzt weder die neuen Tabellen noch die neuen Funktionen und läuft damit unverändert weiter
+3. **Neu in der Auslieferung:** die Datei `public/live-sw.js` (Offline-Baustein, nur für `/live`) und die Seite `/live`, die als einzige keine Anmeldung vom Server verlangt. Keine neue Umgebungsvariable, keine neuen Pakete
+4. **Nach der Auslieferung am echten Handy durchspielen** — das ist die Prüfung, die hier nicht möglich war: Bildschirm bleibt an, Ton kommt, ein Neuladen ohne Netz zeigt den Live-Bildschirm (vor allem in Safari auf dem iPhone), und die Texte der Anleitung zum Stromsparmodus stimmen
+5. **Nicht prüfbar auf diesem Rechner:** Firefox und echtes Safari; die Bilder der Übungen im Live-Modus (die Testübungen haben keine)
+6. **Für Browser-Tests auf diesem Rechner:** `--workers=2`, kein Entwicklungsserver nebenher, und vorher den Port 3100 prüfen — ein alter Testserver liefert sonst einen veralteten Build
+
+**Nächster Schritt:** `/deploy` für PROJ-14.
 
 ## Features
 
@@ -211,7 +222,7 @@ Weiter nicht belegbar auf diesem Rechner: Wachhalten, Stromsparmodus, Ton und Vi
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |
 | PROJ-12 | Community-Features (Übungen teilen) | P2 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
-| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | In Review | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
+| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Approved | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Eigene Kategorien verwalten | P0 | PROJ-3 | Roadmap | — | 2026-10-04 |
 | PROJ-17 | Stundenmuster (wiederverwendbare Einheiten-Konfigurationen) | P1 | PROJ-6 | Roadmap | — | 2026-10-04 |

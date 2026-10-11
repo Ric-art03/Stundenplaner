@@ -1,6 +1,6 @@
 # PROJ-14: Live-Modus (Stundenbegleitung)
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-10-10
 **Last Updated:** 2026-10-10
 
@@ -1612,6 +1612,102 @@ einen Befund nachstellten, müssen jetzt echt bestehen und tun es.
 - **Production Ready:** **NEIN**
 - **Empfehlung:** BUG-23 beheben, BUG-25 im selben Zug; BUG-22 und BUG-24 vor der Auslieferung.
   Danach `/qa` erneut
+
+## QA — Nachtest und Freigabe (2026-10-11)
+
+**Tester:** QA Engineer (AI) · **Stand:** Commit `db2dc8d` · **App URL:** http://localhost:3100
+(Produktionsbuild)
+
+### Ergebnis in einem Satz
+
+**Freigegeben.** Die vier Fehler aus dem ersten Durchgang sind behoben und nachgeprüft, kein
+Fehler der Stufe „kritisch" oder „hoch" ist offen, kein Akzeptanzkriterium durchgefallen, keine
+Regression. Offen bleibt ein Fehler der Stufe „niedrig" (BUG-26) — und alles, was sich nur auf
+echten Geräten zeigen lässt.
+
+### Was gelaufen ist
+
+| | Ergebnis |
+|---|---|
+| Browser-Tests, alle Features | **339 von 339 grün in einem Zug** (20,8 Minuten, zwei Arbeiter): 158 aus PROJ-3, -5, -6, -7, 181 aus PROJ-14 |
+| Unit-Tests | **529 grün** |
+| Erwartete Fehlschläge | **keine mehr** — jeder Test, der einen Befund nachstellte, besteht jetzt echt |
+| Typprüfung, Lint, Produktionsbuild | sauber |
+| Datenbank | Register 17 zu 17; `get_advisors` meldet weiter nur den bekannten Hinweis zum Passwortschutz; das Testkonto ist aufgeräumt (keine Einheiten, keine Testübungen) |
+
+### Die vier Fehler, nachgetestet
+
+| Fehler | Stufe | Nachtest |
+|---|---|---|
+| BUG-23 Offline-Baustein greift auf dem Weg aus der App nicht | hoch | **behoben** — der Test geht den Weg des Nutzers („Stunde starten", Netz trennen, neu laden) und besteht an Rechner und in Handybreite |
+| BUG-22 Notiz geht verloren, wenn „Fertig" das Speichern überholt | mittel | **behoben** — mit vier Sekunden verzögerter Antwort im Browser, dazu fünf Unit-Tests |
+| BUG-24 beendete Stunde nach dem Abmelden einsehbar | mittel | **behoben, mit einer bewusst gelassenen Ausnahme** (siehe unten) |
+| BUG-25 „Fertig" ohne Netz führt auf die Fehlerseite des Browsers | niedrig | **behoben** — die App bleibt stehen, sagt, dass nichts verloren ist, und reicht mit Netz von selbst nach |
+
+### Was im Nachtest zusätzlich geprüft wurde
+
+Zwei Dinge waren beim Beheben nur am Code gelesen. Beide jetzt im Browser ausgeführt, elf
+Prüfungen, alle bestanden:
+
+- **Das Abmelden selbst.** Mit einer beendeten Stunde auf dem Gerät: angemeldet steht die
+  Zusammenfassung da; „Abmelden" fragt nicht nach (das tut es nur bei *laufender* Stunde) und
+  meldet ab; danach liegt die Stundenakte **nicht mehr auf dem Gerät**, die Warteliste ist
+  geblieben, `/live` zeigt nichts von der Stunde, geschützte Seiten leiten zum Login
+- **WLAN ohne Internet.** Das Gerät meldet weiter „online", der Server antwortet nicht: „Fertig"
+  bleibt in der App („Fertig — die Stunde ist festgehalten"), Durchführung und Notiz warten auf
+  dem Gerät. Vorher war das nur im Unit-Test nachgestellt
+
+### Sicherheit im Nachtest
+
+- [x] **BUG-24 geschlossen:** ohne Anmeldung zeigt `/live` keine beendete, gespeicherte Stunde und
+  kein Bereitschaftsbild — und nimmt beides vom Gerät, statt es nur zu verbergen
+- [x] **Abmelden räumt die Stundenakte in jedem Zustand weg** (ausgeführt, nicht nur gelesen)
+- [x] Ein anderes angemeldetes Konto sieht die Akte nie; die Regel steht an einer Stelle und ist
+  mit acht Unit-Tests abgedeckt
+- [x] Zugriffsschutz der Datenbank, Eingaben, Rücksprungadresse, Musik-Link: unverändert aus dem
+  ersten Durchgang, alle Tests weiter grün
+- **Bewusst hingenommen:** eine beendete Stunde bleibt ohne Anmeldung stehen, **solange ihre
+  Durchführung noch auf dem Gerät wartet**, höchstens zwölf Stunden. Wer das Gerät in dieser Zeit
+  in die Hand nimmt, sieht Name der Einheit, Übungen und Zeiten. Der Grund: in einer Halle ohne
+  Netz mit abgelaufener Sitzung verlöre der Nutzer sonst seine Zusammenfassung. Dem Nutzer am
+  2026-10-11 so vorgelegt. Kein Zugang, keine Änderung ohne Anmeldung möglich
+- **Unverändert offen, kein neuer Befund:** die neuen Server-Stellen begrenzen die Zahl der
+  Anfragen nicht — wie der Rest der App
+
+### Offen
+
+#### BUG-26: „Stunde starten" an einer Einheit ohne Schritt ist bedienbar
+- **Severity:** Low
+- **Befund:** die Spec verlangt „nicht bedienbar, mit Begründung". Gebaut ist: der Knopf lässt sich
+  tippen, danach erscheint die Begründung als Meldung
+- **Einordnung:** der Fall kann laut Speicherregel nicht entstehen; am Code gelesen, nicht
+  nachgestellt
+- **Priority:** Nice to have — kein Hindernis für die Auslieferung
+
+### Was auch dieser Nachtest nicht belegt
+
+Nichts davon ist ein gefundener Fehler. Es ist das, was sich an diesem Rechner nicht zeigen lässt
+— und nach der Auslieferung einmal von Hand geprüft werden sollte:
+
+- **Echte Geräte:** ob der Bildschirm an bleibt, wie sich der Stromsparmodus verhält, ob der Ton
+  kommt und das Handy vibriert; dabei die Texte der Anleitung gegenlesen
+- **Safari auf dem iPhone:** ob der Offline-Baustein dort ebenso angemeldet und befüllt wird.
+  Geprüft ist in Edge am Rechner, auch in der Handy-Emulation. Firefox ist ebenfalls ungeprüft
+- **Die Bilder der Übungen:** Ablage auf dem Gerät und Blättern — die Testübungen haben keine
+- **Zwei gleichzeitige Sendungen** derselben Durchführung
+- **Das Zeitlimit von 20 Sekunden** beim Einrichten des Offline-Bausteins und die
+  **Zwölf-Stunden-Grenze** sind nur im Unit-Test bzw. gar nicht eigens ausgelöst
+
+### Zusammenfassung
+
+- **Akzeptanzkriterien:** 105 von 114 bestanden, **0 durchgefallen** — unverändert: 5 nicht prüfbar
+  ohne echtes Gerät, 1 halb, 1 nicht eigens geprüft, 2 entfallen
+- **Fehler:** 5 gefunden, **4 behoben**, 1 offen (niedrig)
+- **Sicherheit:** der eine Befund ist geschlossen, mit einer bewusst hingenommenen Ausnahme
+- **Regression:** keine — 339 von 339
+- **Production Ready:** **JA**
+- **Empfehlung:** ausliefern. Danach am echten Handy einmal eine Stunde durchspielen — vor allem
+  Bildschirm an, Ton und ein Neuladen ohne Netz
 
 ## Deployment
 _To be added by /deploy_
