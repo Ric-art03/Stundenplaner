@@ -579,6 +579,9 @@ Dazu gilt:
 | Feste Reihenfolge: kann weg → neu holen → andere Menge; Beschreibung vor Arbeitsnotiz | Vom Nutzer so festgelegt. Erst wird weggeräumt, dann geholt; und überall dieselbe Reihenfolge, damit sie einmal gelernt wird | 2026-10-11 |
 | Musik-Links je Übung auf dem Bereitschaftsbild, als kurzer Verweis | Vom Nutzer gefordert. Vor der Stunde ist der Moment, die Musik bereitzulegen; die ganze Adresse wäre nur Lärm | 2026-10-11 |
 | Die Arbeitsnotiz der Phase steht an jedem Schritt der Phase, vor der Arbeitsnotiz der Übung, beide mit vollem Namen | Vom Nutzer so festgelegt: sie gilt für die ganze Phase. Weicht vom ursprünglichen „nur beim ersten Schritt" ab | 2026-10-11 |
+| „Übung löschen" gehört nicht in die Nachbereitung | Vom Nutzer nach dem Durchspielen entschieden; dreht die Entscheidung vom 2026-10-10 um, vier Wege anzubieten. Gelöscht wird im Übungsordner | 2026-10-11 |
+| Der Vermerk „Notiz übernommen" nennt beide Ziele, wenn an beide angehängt wurde | Vom Nutzer gefordert. Ein Vermerk, der nur das letzte Ziel kennt, verschweigt die erste Übernahme — und der Vermerk ist dazu da, doppeltes Anhängen zu verhindern | 2026-10-11 |
+| Im Live-Modus lässt sich durch alle Bilder der Übung blättern | Vom Nutzer gefordert; eine Übung hat bis zu drei Bilder, und oft erklärt erst das zweite den Aufbau | 2026-10-11 |
 | Der Hinweis „Stunde läuft" klebt oben | Vom Nutzer gefordert: wer den Live-Modus verlässt, soll den Rückweg nicht suchen müssen | 2026-10-11 |
 | Die Zeit zählt herunter, schaltet aber nie selbst weiter | Die Halle bestimmt das Tempo. Eine App, die mitten in einer laufenden Übung weiterspringt, zeigt etwas Falsches | 2026-10-10 |
 | Gesamtstand als eine Zeile, ohne Vorschläge zum Aufholen | „Wie liege ich im Plan" ist das, was im Kopf am schwersten mitläuft. Vorschläge brauchen Regeln, die erst mit Erfahrung aus echten Stunden gut werden | 2026-10-10 |
@@ -1224,6 +1227,53 @@ Zeile zurückgeblieben, die Testübung hat ihre alte Dauer.
 Lesend am Katalog bestätigt: Zeilenschutz an beiden Tabellen, acht Richtlinien, sieben Indizes,
 die drei Funktionen ohne erhöhte Rechte, Löschweitergabe wie oben. `get_advisors` meldet weiter
 nur den bekannten Hinweis zum Passwortschutz.
+
+### Nach dem Durchspielen durch den Nutzer geändert (2026-10-11)
+
+Der Nutzer hat den Weg von Hand durchgespielt — Stunde starten, beenden, Durchführung an der
+Einheit, Notiz und Dauer übernehmen — und gemeldet: **es klappt alles.** Dazu drei Änderungen:
+
+- **Der Dialog „Notiz anhängen" zeigt das Notizfeld der Übung selbst.** Statt „Dein Satz" und
+  einer Vorschau steht dort **ein** Feld mit dem heutigen Text, direkt änderbar. Oben wird
+  zwischen Arbeitsnotiz und Anmerkungen umgeschaltet; das Feld wechselt mit, und was im anderen
+  getippt wurde, bleibt. Beide lassen sich so in einem Arbeitsschritt ändern, eine Bestätigung
+  speichert, was sich geändert hat. Wer den Text löscht, leert das Feld. **Das ersetzt die
+  Beschreibung „Notiz anhängen" im Funktionsumfang und fünf Akzeptanzkriterien** (Satz ans Ende,
+  Umstellen auf Anmerkungen, Vorschau, Bestätigen ohne Eingabe, überlanger Text in der Vorschau)
+- **Der Vermerk „Notiz übernommen" zählt mit.** Er nennt immer, was geändert wurde, und beides,
+  wenn beide Felder geändert wurden — in einem Zug oder nacheinander: „Notiz übernommen
+  (Arbeitsnotiz)", „(Anmerkungen)" oder „(Arbeitsnotiz, Anmerkungen)"
+- **Dafür eine zweite Migration** (`20261011140000_exercise_notes_follow_up.sql`): ein dritter
+  erlaubter Wert „beides" am Schritt, und die Funktion `update_exercise_notes` ersetzt
+  `append_exercise_note`. Sie setzt **beide Felder in einem Zug** — zwei Aufrufe nacheinander
+  gingen nicht, der erste zieht den Änderungsstempel der Übung nach und der zweite stieße sich
+  daran — und vermerkt nur, was sich wirklich geändert hat
+- **Die Bilder der Übung sind auch in „Danach" und „Zuerst" aufklappbar**, nicht nur am laufenden
+  Schritt
+- **Nach „Fertig" blitzt nicht mehr „Es läuft gerade keine Stunde" auf.** Die Akte war in dem
+  Augenblick schon weggeräumt, die Detailseite aber noch nicht da; jetzt steht bis zum
+  Seitenwechsel die Ladeanzeige. Dasselbe gilt für „Zurück zur Einheit", Abbrechen und Verwerfen
+- **„Übung löschen" ist aus der Nachbereitung entfernt** — in der Zusammenfassung nach der Stunde
+  und an der gespeicherten Durchführung. Es bleiben drei Wege: Notiz anhängen, Dauer übernehmen,
+  Übung bearbeiten. Gelöscht wird im Übungsordner. **Das weicht vom Abschnitt „Nachbereitung" und
+  von vier Akzeptanzkriterien ab**, die den vierten Weg nennen; sie gelten als überholt
+- **Durch alle Bilder der Übung blättern.** Das einklappbare Feld heißt bei mehreren Bildern
+  „Bilder (n)", zeigt zuerst das Titelbild und hat links und rechts einen Pfeil; nach dem letzten
+  kommt wieder das erste. Alle Bilder liegen auf dem Gerät, geladen wird das gerade gezeigte
+
+**Die zweite Migration ist angewendet, Register 17 zu 17**, und am lebenden System in einer
+zurückgerollten Transaktion nachgewiesen (2026-10-11), fünfzehn Fälle, nichts zurückgeblieben:
+veralteter Stempel überschreibt nicht; gleicher Text schreibt nichts und vermerkt nichts; nur
+Arbeitsnotiz → Vermerk „work", Anmerkungen unberührt; danach Anmerkungen am selben Schritt →
+„both"; beide in einem Zug → „both"; nur Anmerkungen → „personal"; geleertes Feld ist danach
+leer; ist eine von beiden zu lang, wird **keine** geschrieben; Schritt ohne Übung, fehlender
+Schritt, fremdes Konto, fehlende Anmeldung und `anon` abgewiesen. Die alte Funktion
+`append_exercise_note` gibt es nicht mehr. `get_advisors` meldet weiter nur den bekannten Hinweis.
+
+**Im Browser sind diese Änderungen noch nicht gesehen** — weder der neue Dialog noch die Bilder
+in „Danach" und „Zuerst".
+
+**496 Unit-Tests grün** (492 plus 4 neue), Typprüfung, Lint und Produktionsbuild sauber.
 
 ### Was dieser Nachweis nicht abdeckt
 

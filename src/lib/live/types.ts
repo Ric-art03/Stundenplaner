@@ -46,8 +46,8 @@ export interface LiveStep {
   musicLink: string | null
   exerciseId: string | null
   variantId: string | null
-  /** Speicherpfad des Titelbilds; liefert erst `/backend`. */
-  imagePath: string | null
+  /** Speicherpfade der Bilder der Übung, das Titelbild zuerst. */
+  imagePaths: string[]
 }
 
 export interface LivePlan {
@@ -93,6 +93,12 @@ export interface LiveRun {
 /** Wohin eine Notiz aus der Nachbereitung ging. */
 export type AdoptedNoteTarget = 'work' | 'personal'
 
+/**
+ * Der Vermerk am Schritt zählt mit: wurde erst an die Arbeitsnotiz und dann an
+ * die Anmerkungen angehängt, steht beides da.
+ */
+export type AdoptedNote = AdoptedNoteTarget | 'both'
+
 export interface RunStepRecord {
   position: number
   kind: LiveStepKind
@@ -106,7 +112,7 @@ export interface RunStepRecord {
   /** Fällt weg, wenn die Übung gelöscht wird — und mit ihm die Nachbereitung. */
   exerciseId: string | null
   variantId: string | null
-  adoptedNote: AdoptedNoteTarget | null
+  adoptedNote: AdoptedNote | null
   adoptedDuration: number | null
 }
 
@@ -141,7 +147,7 @@ export interface LiveSession {
   /** Der angefangene Text bei „Wie lief's?". */
   noteDraft: string
   /** Die Vermerke der Nachbereitung, je Position — bis „Fertig". */
-  adopted: Record<number, { note?: AdoptedNoteTarget; duration?: number; deleted?: boolean }>
+  adopted: Record<number, { note?: AdoptedNote; duration?: number }>
 }
 
 /** Eine beendete Durchführung, die noch nicht in der Datenbank ist. */

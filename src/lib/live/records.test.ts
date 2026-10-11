@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { followUpError, runPayload, runRecord, saveRunFailure } from './records'
-import { coverImagePath, enrichLivePlan } from './steps'
+import {
+  addAdoptedNote,
+  adoptedNoteLabel,
+  followUpError,
+  runPayload,
+  runRecord,
+  saveRunFailure,
+} from './records'
+import { enrichLivePlan, imagePathsOf } from './steps'
 import { planWith, step } from './test-helpers'
-import { adoptDurationSchema, appendNoteSchema, runRecordSchema } from '@/lib/validations/live'
+import { adoptDurationSchema, exerciseNotesSchema, runRecordSchema } from '@/lib/validations/live'
 import type { RunRecord } from './types'
 
 const RUN_ID = '0b6f5c1e-3a8d-4c57-9a3e-2f1f1b7d9c10'
@@ -167,12 +174,29 @@ describe('Meldungen', () => {
 })
 
 describe('Nachbereitung prüfen', () => {
-  it('nimmt keine leere Notiz und keine über 2.000 Zeichen', () => {
-    expect(appendNoteSchema.safeParse({ field: 'work', text: '   ', updatedAt: 'x' }).success).toBe(false)
+  it('nimmt eine Notiz, beide Notizen und auch eine geleerte', () => {
+    expect(exerciseNotesSchema.safeParse({ work: 'Gut', updatedAt: 'x' }).success).toBe(true)
+    expect(exerciseNotesSchema.safeParse({ personal: 'Gut', updatedAt: 'x' }).success).toBe(true)
     expect(
-      appendNoteSchema.safeParse({ field: 'work', text: 'x'.repeat(2001), updatedAt: 'x' }).success
+      exerciseNotesSchema.safeParse({ work: 'Gut', personal: 'Auch', updatedAt: 'x' }).success
+    ).toBe(true)
+    // Wer den Text löscht, leert das Feld.
+    expect(exerciseNotesSchema.safeParse({ work: '', updatedAt: 'x' }).success).toBe(true)
+  })
+
+  it('nimmt keine Notiz über 2.000 Zeichen und keinen Aufruf ohne Notiz', () => {
+    expect(
+      exerciseNotesSchema.safeParse({ work: 'x'.repeat(2001), updatedAt: 'x' }).success
     ).toBe(false)
-    expect(appendNoteSchema.safeParse({ field: 'personal', text: 'Gut', updatedAt: 'x' }).success).toBe(true)
+    expect(
+      exerciseNotesSchema.safeParse({ work: 'Gut', personal: 'x'.repeat(2001), updatedAt: 'x' }).success
+    ).toBe(false)
+    expect(exerciseNotesSchema.safeParse({ updatedAt: 'x' }).success).toBe(false)
+  })
+
+  it('schneidet Leerraum am Rand ab, bevor gezählt wird', () => {
+    const parsed = exerciseNotesSchema.safeParse({ work: `  ${'x'.repeat(2000)}  `, updatedAt: 'x' })
+    expect(parsed.success && parsed.data.work?.length).toBe(2000)
   })
 
   it('nimmt als Dauer nur ganze Minuten zwischen 1 und 300', () => {
@@ -191,32 +215,49 @@ describe('Was der Start eigens nachlädt', () => {
     ])
     const result = enrichLivePlan(plan, {
       variantDescriptions: new Map([['v1', 'Mit zwei Fängern']]),
-      coverImages: new Map([['e2', 'nutzer/bild.jpg']]),
+      images: new Map([['e2', ['nutzer/titel.jpg', 'nutzer/zwei.jpg']]]),
     })
 
     expect(result.steps[0].description).toBe('Mit zwei Fängern')
-    expect(result.steps[0].imagePath).toBeNull()
+    expect(result.steps[0].imagePaths).toEqual([])
     expect(result.steps[1].description).toBe('Ohne Variante')
-    expect(result.steps[1].imagePath).toBe('nutzer/bild.jpg')
+    expect(result.steps[1].imagePaths).toEqual(['nutzer/titel.jpg', 'nutzer/zwei.jpg'])
   })
 
   it('lässt freie Zeit und Platzhalter unberührt', () => {
     const plan = planWith([step({ kind: 'free', name: 'Freie Zeit', exerciseId: null })])
-    const result = enrichLivePlan(plan, { variantDescriptions: new Map(), coverImages: new Map() })
+    const result = enrichLivePlan(plan, { variantDescriptions: new Map(), images: new Map() })
 
     expect(result.steps[0]).toEqual(plan.steps[0])
   })
 
-  it('nimmt das als Titelbild markierte Bild, sonst das erste', () => {
+  it('nimmt alle Bilder, das Titelbild zuerst und den Rest in seiner Reihenfolge', () => {
     expect(
-      coverImagePath([
+      imagePathsOf([
         { path: 'a.jpg', isCover: false },
         { path: 'b.jpg', isCover: true },
+        { path: 'c.jpg' },
       ])
-    ).toBe('b.jpg')
-    expect(coverImagePath([{ path: 'a.jpg' }, { path: 'b.jpg' }])).toBe('a.jpg')
-    expect(coverImagePath([])).toBeNull()
-    expect(coverImagePath(null)).toBeNull()
-    expect(coverImagePath([{ kein: 'pfad' }])).toBeNull()
+    ).toEqual(['b.jpg', 'a.jpg', 'c.jpg'])
+    expect(imagePathsOf([{ path: 'a.jpg' }, { path: 'b.jpg' }])).toEqual(['a.jpg', 'b.jpg'])
+    expect(imagePathsOf([])).toEqual([])
+    expect(imagePathsOf(null)).toEqual([])
+    expect(imagePathsOf([{ kein: 'pfad' }])).toEqual([])
+  })
+})
+
+describe('Vermerk „Notiz übernommen"', () => {
+  it('zählt mit, statt zu ersetzen', () => {
+    expect(addAdoptedNote(null, 'work')).toBe('work')
+    expect(addAdoptedNote('work', 'work')).toBe('work')
+    expect(addAdoptedNote('work', 'personal')).toBe('both')
+    expect(addAdoptedNote('personal', 'work')).toBe('both')
+    expect(addAdoptedNote('both', 'personal')).toBe('both')
+  })
+
+  it('nennt, wohin die Notiz ging', () => {
+    expect(adoptedNoteLabel('work')).toBe('Arbeitsnotiz')
+    expect(adoptedNoteLabel('personal')).toBe('Anmerkungen')
+    expect(adoptedNoteLabel('both')).toBe('Arbeitsnotiz, Anmerkungen')
   })
 })

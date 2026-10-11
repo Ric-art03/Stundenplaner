@@ -43,7 +43,8 @@ export async function storePlanImages(plan: LivePlan): Promise<void> {
   if (!available()) return
 
   const paths = Array.from(
-    new Set(plan.steps.map((step) => step.imagePath).filter((path): path is string => !!path))
+    // Eine Akte aus einer älteren Fassung der App kennt die Liste noch nicht.
+    new Set(plan.steps.flatMap((step) => step.imagePaths ?? []))
   )
 
   try {

@@ -3,6 +3,7 @@
 import { Check, SkipForward } from 'lucide-react'
 import { StepFollowUp, type FollowUpChange } from './step-follow-up'
 import { formatClock } from '@/lib/live/clock'
+import { adoptedNoteLabel } from '@/lib/live/records'
 import { cn } from '@/lib/utils'
 import type { RunRecord, RunStepRecord } from '@/lib/live/types'
 
@@ -11,7 +12,7 @@ interface RunSummaryProps {
   /** Fehlt = ohne Nachbereitung (etwa solange nichts gespeichert ist). */
   followUp?: {
     returnTo: string
-    /** Gesetzt = die vier Wege sind gerade nicht bedienbar; der Text sagt, warum. */
+    /** Gesetzt = die Wege sind gerade nicht bedienbar; der Text sagt, warum. */
     disabledReason: string | null
     onChanged: (position: number, change: FollowUpChange) => void
   }
@@ -22,9 +23,7 @@ function Markers({ step }: { step: RunStepRecord }) {
   return (
     <p className="mt-1 flex flex-wrap gap-x-3 text-xs font-medium text-primary">
       {step.adoptedNote && (
-        <span>
-          Notiz übernommen{step.adoptedNote === 'personal' ? ' (Anmerkungen)' : ''}
-        </span>
+        <span>Notiz übernommen ({adoptedNoteLabel(step.adoptedNote)})</span>
       )}
       {step.adoptedDuration !== null && <span>Dauer übernommen: {step.adoptedDuration} Min</span>}
     </p>

@@ -11,12 +11,12 @@ import {
   runRecord,
   saveRunFailure,
 } from '@/lib/live/records'
-import { buildLivePlan, coverImagePath, enrichLivePlan } from '@/lib/live/steps'
+import { buildLivePlan, enrichLivePlan, imagePathsOf } from '@/lib/live/steps'
 import type { SaveRunResult } from '@/lib/live/store'
 import type { AdoptedNoteTarget, LivePlan, RunRecord } from '@/lib/live/types'
 import {
   adoptDurationSchema,
-  appendNoteSchema,
+  exerciseNotesSchema,
   followUpTargetSchema,
   runNoteSchema,
   runRecordSchema,
@@ -31,7 +31,7 @@ import {
  *
  * Alles prüft die Anmeldung. Die Eigentumsprüfung liegt zusätzlich in der
  * Datenbank — in den Richtlinien der beiden Tabellen und in den drei
- * Funktionen `save_unit_run`, `append_exercise_note`, `adopt_exercise_duration`.
+ * Funktionen `save_unit_run`, `update_exercise_notes`, `adopt_exercise_duration`.
  */
 
 type StepRow = Database['public']['Tables']['unit_run_steps']['Row']
@@ -78,7 +78,7 @@ export async function loadLivePlan(unitId: string): Promise<LoadLivePlanResult> 
   )
 
   // `getUnit` dient der Leseansicht und bringt zweierlei nicht mit, was die
-  // Halle braucht: die Beschreibung der **Variante** und das Titelbild.
+  // Halle braucht: die Beschreibung der **Variante** und die Bilder.
   const [group, variantRes, imageRes] = await Promise.all([
     getGroup(unit.groupId),
     variantIds.length > 0
@@ -99,10 +99,10 @@ export async function loadLivePlan(unitId: string): Promise<LoadLivePlanResult> 
       row.description,
     ])
   )
-  const coverImages = new Map<string, string>()
+  const images = new Map<string, string[]>()
   for (const row of (imageRes.data ?? []) as { id: string; images: Json | null }[]) {
-    const path = coverImagePath(row.images)
-    if (path) coverImages.set(row.id, path)
+    const paths = imagePathsOf(row.images)
+    if (paths.length > 0) images.set(row.id, paths)
   }
 
   const plan = enrichLivePlan(
@@ -110,7 +110,7 @@ export async function loadLivePlan(unitId: string): Promise<LoadLivePlanResult> 
       venueName: group?.venue?.name ?? null,
       participants: group?.participants ?? null,
     }),
-    { variantDescriptions, coverImages }
+    { variantDescriptions, images }
   )
 
   if (plan.steps.length === 0) {
@@ -343,32 +343,32 @@ export async function getFollowUpExercise(
 }
 
 /**
- * Setzt den Text eines der beiden Notizfelder der Übung — und im selben Zug
- * den Vermerk am Schritt. Wurde die Übung seit `updatedAt` geändert, wird
- * nicht überschrieben.
+ * Setzt die Notizen der Übung — Arbeitsnotiz, Anmerkungen oder beide — und im
+ * selben Zug den Vermerk am Schritt. Jeder Text ist der ganze neue Inhalt
+ * seines Felds; ein fehlendes Feld bleibt unberührt. Wurde die Übung seit
+ * `updatedAt` geändert, wird nichts überschrieben.
  */
-export async function appendExerciseNote(
+export async function saveExerciseNotes(
   target: FollowUpTarget,
-  field: AdoptedNoteTarget,
-  text: string,
+  notes: Partial<Record<AdoptedNoteTarget, string>>,
   updatedAt: string
 ): Promise<LiveActionResult> {
   const { supabase, user } = await getAuthUser()
   if (!user) return { ok: false, error: 'Nicht angemeldet.' }
 
   const parsedTarget = followUpTargetSchema.safeParse(target)
-  const parsed = appendNoteSchema.safeParse({ field, text, updatedAt })
+  const parsed = exerciseNotesSchema.safeParse({ ...notes, updatedAt })
   if (!parsedTarget.success) return { ok: false, error: 'Ungültige Anfrage.' }
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Ungültige Notiz.' }
   }
 
-  const { data, error } = await supabase.rpc('append_exercise_note', {
+  const { data, error } = await supabase.rpc('update_exercise_notes', {
     p_run_id: parsedTarget.data.runId,
     p_position: parsedTarget.data.position,
-    p_field: parsed.data.field,
-    p_text: parsed.data.text,
     p_expected_updated_at: parsed.data.updatedAt,
+    ...(parsed.data.work !== undefined ? { p_work_notes: parsed.data.work } : {}),
+    ...(parsed.data.personal !== undefined ? { p_notes: parsed.data.personal } : {}),
   })
 
   if (error) return { ok: false, error: followUpError(error.message) }

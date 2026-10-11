@@ -2,17 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { Clock, Loader2, NotebookPen, Pencil, Trash2 } from 'lucide-react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { Clock, Loader2, NotebookPen, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,13 +16,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
-import { ExerciseUsageWarning } from '@/components/exercises/exercise-usage-warning'
 import { useToast } from '@/hooks/use-toast'
-import { deleteExercise } from '@/lib/actions/exercises'
 import {
   adoptExerciseDuration,
-  appendExerciseNote,
   getFollowUpExercise,
+  saveExerciseNotes,
   type FollowUpExercise,
   type FollowUpTarget,
 } from '@/lib/actions/live'
@@ -43,9 +31,9 @@ const NOTE_MAX = 2000
 const DURATION_MAX = 300
 
 export interface FollowUpChange {
-  note?: AdoptedNoteTarget
+  /** Die Notizfelder, die geändert wurden. */
+  notes?: AdoptedNoteTarget[]
   duration?: number
-  deleted?: boolean
 }
 
 interface StepFollowUpProps {
@@ -103,13 +91,17 @@ function LoadState({ status }: { status: 'loading' | 'error' }) {
   )
 }
 
-function joinNote(existing: string, sentence: string): string {
-  const base = existing.trimEnd()
-  const added = sentence.trim()
-  if (!added) return base
-  return base ? `${base}\n${added}` : added
+const FIELD_LABEL: Record<AdoptedNoteTarget, string> = {
+  work: 'Arbeitsnotiz',
+  personal: 'Anmerkungen',
 }
 
+/**
+ * Die beiden Notizen der Übung, direkt änderbar: oben wird gewählt, welche zu
+ * sehen ist, darunter steht ihr heutiger Text. Beide lassen sich in einem
+ * Arbeitsschritt ändern — umschalten verwirft nichts —, und eine Bestätigung
+ * speichert, was sich geändert hat.
+ */
 function NoteDialog({
   target,
   stepName,
@@ -121,53 +113,66 @@ function NoteDialog({
   stepName: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  onDone: (field: AdoptedNoteTarget) => void
+  onDone: (fields: AdoptedNoteTarget[]) => void
 }) {
   const { toast } = useToast()
   const { state: current, reload } = useCurrentExercise(target, open)
   const [field, setField] = React.useState<AdoptedNoteTarget>('work')
-  const [sentence, setSentence] = React.useState('')
-  // Hat der Nutzer die Vorschau von Hand geändert, gilt sein Text — sie wird
-  // dann nicht mehr aus Feld und Satz zusammengesetzt.
-  const [edited, setEdited] = React.useState<string | null>(null)
+  // Der Text je Feld, sobald der Nutzer ihn angefasst hat. `null` = unberührt,
+  // dann gilt der heutige Stand der Übung.
+  const [drafts, setDrafts] = React.useState<Record<AdoptedNoteTarget, string | null>>({
+    work: null,
+    personal: null,
+  })
   const [saving, setSaving] = React.useState(false)
 
   React.useEffect(() => {
     if (open) {
       setField('work')
-      setSentence('')
-      setEdited(null)
+      setDrafts({ work: null, personal: null })
     }
   }, [open])
 
-  const existing =
+  const existing: Record<AdoptedNoteTarget, string> =
     current.status === 'ready'
-      ? field === 'work'
-        ? current.exercise.workNotes
-        : current.exercise.notes
-      : ''
-  const preview = edited ?? joinNote(existing, sentence)
-  const tooLong = preview.length > NOTE_MAX
-  const unchanged = preview.trim() === existing.trim()
+      ? { work: current.exercise.workNotes, personal: current.exercise.notes }
+      : { work: '', personal: '' }
+
+  const text = drafts[field] ?? existing[field]
+  const changed = (['work', 'personal'] as const).filter(
+    (key) => drafts[key] !== null && drafts[key]!.trim() !== existing[key].trim()
+  )
+  const tooLong = (['work', 'personal'] as const).filter(
+    (key) => (drafts[key] ?? existing[key]).trim().length > NOTE_MAX
+  )
 
   async function confirm() {
-    if (current.status !== 'ready') return
+    if (current.status !== 'ready' || changed.length === 0) return
     setSaving(true)
     try {
-      const result = await appendExerciseNote(target, field, preview.trim(), current.exercise.updatedAt)
+      const result = await saveExerciseNotes(
+        target,
+        {
+          ...(changed.includes('work') ? { work: drafts.work!.trim() } : {}),
+          ...(changed.includes('personal') ? { personal: drafts.personal!.trim() } : {}),
+        },
+        current.exercise.updatedAt
+      )
       if (!result.ok) {
         // Die Eingabe bleibt stehen, die Übung ist unverändert.
         toast({ variant: 'destructive', title: 'Nicht übernommen', description: result.error })
-        // Inzwischen geändert: die Vorschau wird aus dem neuen Stand und dem
-        // Satz neu zusammengesetzt, statt den alten Text zu überschreiben.
-        if (result.stale) {
-          setEdited(null)
-          reload()
-        }
+        // Inzwischen anderswo geändert: den neuen Stand holen, damit die
+        // nächste Bestätigung gilt. Was hier getippt wurde, bleibt.
+        if (result.stale) reload()
         return
       }
-      toast({ title: 'Notiz übernommen' })
-      onDone(field)
+      toast({
+        title:
+          changed.length === 2
+            ? 'Arbeitsnotiz und Anmerkungen übernommen'
+            : `${FIELD_LABEL[changed[0]]} übernommen`,
+      })
+      onDone(changed)
       onOpenChange(false)
     } catch {
       toast({
@@ -184,9 +189,10 @@ function NoteDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Notiz anhängen</DialogTitle>
+          <DialogTitle>Notizen der Übung</DialogTitle>
           <DialogDescription>
-            Ein Satz zu „{stepName}“. Er wird ans Ende gesetzt, der bisherige Text bleibt stehen.
+            „{stepName}“ — ergänze oder ändere, was du aus der Stunde mitnimmst. Du kannst beide
+            Notizen nacheinander bearbeiten und dann gemeinsam übernehmen.
           </DialogDescription>
         </DialogHeader>
 
@@ -196,10 +202,7 @@ function NoteDialog({
           <div className="space-y-4">
             <RadioGroup
               value={field}
-              onValueChange={(value) => {
-                setField(value as AdoptedNoteTarget)
-                setEdited(null)
-              }}
+              onValueChange={(value) => setField(value as AdoptedNoteTarget)}
               className="gap-2"
             >
               <div className="flex items-start gap-2">
@@ -207,6 +210,9 @@ function NoteDialog({
                 <Label htmlFor="notiz-ziel-arbeit" className="font-normal leading-snug">
                   <span className="font-medium">Arbeitsnotiz</span> — steht im Stundenverlauf und im
                   Live-Modus
+                  {changed.includes('work') && (
+                    <span className="font-medium text-primary"> · geändert</span>
+                  )}
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -214,44 +220,58 @@ function NoteDialog({
                 <Label htmlFor="notiz-ziel-anmerkung" className="font-normal leading-snug">
                   <span className="font-medium">Anmerkungen</span> — persönliche Tipps, erscheinen
                   nie im Plan
+                  {changed.includes('personal') && (
+                    <span className="font-medium text-primary"> · geändert</span>
+                  )}
                 </Label>
               </div>
             </RadioGroup>
 
             <div className="space-y-1.5">
-              <Label htmlFor="notiz-satz">Dein Satz</Label>
-              <Input
-                id="notiz-satz"
-                value={sentence}
-                onChange={(event) => {
-                  setSentence(event.target.value)
-                  setEdited(null)
+              <Label htmlFor="notiz-text">{FIELD_LABEL[field]}</Label>
+              <Textarea
+                // Der `key` setzt beim Umschalten die Schreibmarke neu ans Ende.
+                key={field}
+                id="notiz-text"
+                value={text}
+                onChange={(event) =>
+                  setDrafts((known) => ({ ...known, [field]: event.target.value }))
+                }
+                onFocus={(event) => {
+                  const end = event.target.value.length
+                  event.target.setSelectionRange(end, end)
                 }}
-                placeholder="z. B. Mit 2 Bällen besser"
+                rows={6}
+                aria-invalid={tooLong.includes(field)}
+                placeholder={
+                  field === 'work' ? 'z. B. Mit 2 Bällen besser' : 'z. B. Kam bei den Kleinen gut an'
+                }
+                className="text-sm"
                 autoFocus
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="notiz-vorschau">So steht es danach da</Label>
-              <Textarea
-                id="notiz-vorschau"
-                value={preview}
-                onChange={(event) => setEdited(event.target.value)}
-                rows={5}
-                aria-invalid={tooLong}
-                className="text-sm"
-              />
-              <p className={tooLong ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
-                {tooLong
-                  ? `Zu lang: ${preview.length.toLocaleString('de-DE')} von ${NOTE_MAX.toLocaleString('de-DE')} Zeichen. Kürze den Text, dann lässt er sich übernehmen.`
-                  : 'Du kannst den Text hier noch ändern.'}
+              <p
+                className={
+                  tooLong.includes(field)
+                    ? 'text-xs text-destructive'
+                    : 'text-xs text-muted-foreground'
+                }
+              >
+                {tooLong.includes(field)
+                  ? `Zu lang: ${text.trim().length.toLocaleString('de-DE')} von ${NOTE_MAX.toLocaleString('de-DE')} Zeichen. Kürze den Text, dann lässt er sich übernehmen.`
+                  : `${text.length.toLocaleString('de-DE')}/${NOTE_MAX.toLocaleString('de-DE')}`}
               </p>
             </div>
 
             {field === 'work' && (
               <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
                 Erscheint ab sofort in allen Einheiten mit dieser Übung.
+              </p>
+            )}
+            {/* Der Fehler im gerade verdeckten Feld soll nicht unsichtbar sperren. */}
+            {tooLong.some((key) => key !== field) && (
+              <p className="text-sm text-destructive">
+                {FIELD_LABEL[tooLong.find((key) => key !== field)!]} ist zu lang — schalte um und
+                kürze den Text.
               </p>
             )}
           </div>
@@ -263,7 +283,9 @@ function NoteDialog({
           </Button>
           <Button
             onClick={confirm}
-            disabled={current.status !== 'ready' || unchanged || tooLong || saving}
+            disabled={
+              current.status !== 'ready' || changed.length === 0 || tooLong.length > 0 || saving
+            }
           >
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Übernehmen
@@ -396,14 +418,16 @@ function DurationDialog({
 }
 
 /**
- * Die vier Wege der Nachbereitung an einem Schritt: Notiz anhängen, Dauer
- * übernehmen, Übung bearbeiten, Übung löschen. Alle freiwillig, und keiner
- * ändert etwas ohne ausdrückliche Bestätigung.
+ * Die Wege der Nachbereitung an einem Schritt: Notiz anhängen, Dauer
+ * übernehmen, Übung bearbeiten. Alle freiwillig, und keiner ändert etwas ohne
+ * ausdrückliche Bestätigung.
+ *
+ * „Übung löschen" stand hier zuerst mit dabei und ist auf Wunsch des Nutzers
+ * wieder entfernt: gelöscht wird im Übungsordner, nicht aus einer
+ * Durchführung heraus.
  */
 export function StepFollowUp({ runId, step, returnTo, disabledReason, onChanged }: StepFollowUpProps) {
-  const { toast } = useToast()
-  const [dialog, setDialog] = React.useState<'note' | 'duration' | 'delete' | null>(null)
-  const [deleting, setDeleting] = React.useState(false)
+  const [dialog, setDialog] = React.useState<'note' | 'duration' | null>(null)
 
   if (step.kind !== 'exercise' || !step.exerciseId) return null
 
@@ -416,24 +440,6 @@ export function StepFollowUp({ runId, step, returnTo, disabledReason, onChanged 
   }
   const disabled = disabledReason !== null
   const editHref = `/exercises/${exerciseId}/edit?zurueck=${encodeURIComponent(returnTo)}`
-
-  async function confirmDelete() {
-    setDeleting(true)
-    try {
-      const result = await deleteExercise(exerciseId)
-      if (result.error) {
-        toast({ variant: 'destructive', title: 'Fehler', description: result.error })
-        return
-      }
-      toast({ title: 'Übung gelöscht' })
-      onChanged(step.position, { deleted: true })
-      setDialog(null)
-    } catch {
-      toast({ variant: 'destructive', title: 'Fehler', description: 'Löschen fehlgeschlagen.' })
-    } finally {
-      setDeleting(false)
-    }
-  }
 
   const buttonClass = 'min-h-11 justify-start px-2 text-xs sm:min-h-9'
 
@@ -476,16 +482,6 @@ export function StepFollowUp({ runId, step, returnTo, disabledReason, onChanged 
             </Link>
           </Button>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`${buttonClass} text-destructive hover:text-destructive`}
-          disabled={disabled}
-          onClick={() => setDialog('delete')}
-        >
-          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-          Übung löschen
-        </Button>
       </div>
 
       <NoteDialog
@@ -493,7 +489,7 @@ export function StepFollowUp({ runId, step, returnTo, disabledReason, onChanged 
         stepName={step.name}
         open={dialog === 'note'}
         onOpenChange={(open) => setDialog(open ? 'note' : null)}
-        onDone={(field) => onChanged(step.position, { note: field })}
+        onDone={(fields) => onChanged(step.position, { notes: fields })}
       />
       <DurationDialog
         target={target}
@@ -502,31 +498,6 @@ export function StepFollowUp({ runId, step, returnTo, disabledReason, onChanged 
         onOpenChange={(open) => setDialog(open ? 'duration' : null)}
         onDone={(minutes) => onChanged(step.position, { duration: minutes })}
       />
-      <AlertDialog open={dialog === 'delete'} onOpenChange={(open) => setDialog(open ? 'delete' : null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Übung löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchtest du „{step.name}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht
-              werden. Diese Durchführung nennt die Übung weiter beim Namen.
-              <ExerciseUsageWarning exerciseId={exerciseId} active={dialog === 'delete'} />
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(event) => {
-                event.preventDefault()
-                void confirmDelete()
-              }}
-              disabled={deleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Endgültig löschen
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

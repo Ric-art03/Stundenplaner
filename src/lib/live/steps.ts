@@ -52,7 +52,7 @@ function emptyStep(segment: UnitSegment, key: string): StepDraft {
     musicLink: null,
     exerciseId: null,
     variantId: null,
-    imagePath: null,
+    imagePaths: [],
   }
 }
 
@@ -134,11 +134,11 @@ export function buildLivePlan(unit: Unit, group: LiveGroupFacts): LivePlan {
 export interface LivePlanExtras {
   /** Die Beschreibung je Variante — sonst stünde bei einer Variante die der Grundübung. */
   variantDescriptions: Map<string, string>
-  /** Der Speicherpfad des Titelbilds je Übung. */
-  coverImages: Map<string, string>
+  /** Die Speicherpfade der Bilder je Übung, das Titelbild zuerst. */
+  images: Map<string, string[]>
 }
 
-/** Trägt Variantenbeschreibung und Titelbild in die Schritte ein. */
+/** Trägt Variantenbeschreibung und Bilder in die Schritte ein. */
 export function enrichLivePlan(plan: LivePlan, extras: LivePlanExtras): LivePlan {
   return {
     ...plan,
@@ -150,18 +150,20 @@ export function enrichLivePlan(plan: LivePlan, extras: LivePlanExtras): LivePlan
       return {
         ...step,
         description: variantDescription || step.description,
-        imagePath: extras.coverImages.get(step.exerciseId) ?? null,
+        imagePaths: extras.images.get(step.exerciseId) ?? [],
       }
     }),
   }
 }
 
-/** Das Titelbild aus der Bilderliste einer Übung; ohne Markierung das erste. */
-export function coverImagePath(images: unknown): string | null {
-  if (!Array.isArray(images)) return null
+/** Die Bilder einer Übung aus ihrer Bilderliste — das Titelbild zuerst, der Rest in seiner Reihenfolge. */
+export function imagePathsOf(images: unknown): string[] {
+  if (!Array.isArray(images)) return []
   const valid = images.filter(
     (image): image is { path: string; isCover?: boolean } =>
       typeof image === 'object' && image !== null && typeof (image as { path?: unknown }).path === 'string'
   )
-  return (valid.find((image) => image.isCover) ?? valid[0])?.path ?? null
+  const cover = valid.find((image) => image.isCover)
+  const ordered = cover ? [cover, ...valid.filter((image) => image !== cover)] : valid
+  return ordered.map((image) => image.path)
 }

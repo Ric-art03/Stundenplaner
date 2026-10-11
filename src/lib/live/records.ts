@@ -1,5 +1,11 @@
 import type { Database } from '@/lib/database.types'
-import type { AdoptedNoteTarget, LiveStepKind, RunRecord, RunStepRecord } from './types'
+import type {
+  AdoptedNote,
+  AdoptedNoteTarget,
+  LiveStepKind,
+  RunRecord,
+  RunStepRecord,
+} from './types'
 
 type RunRow = Database['public']['Tables']['unit_runs']['Row']
 type StepRow = Database['public']['Tables']['unit_run_steps']['Row']
@@ -53,6 +59,24 @@ export function runPayload(record: {
   }
 }
 
+/**
+ * Der Vermerk zählt mit: dasselbe Feld ein zweites Mal ändert ihn nicht, das
+ * andere Feld macht aus ihm „beides". Dieselbe Regel führt die Datenbank in
+ * `update_exercise_notes`.
+ */
+export function addAdoptedNote(
+  known: AdoptedNote | null | undefined,
+  field: AdoptedNoteTarget
+): AdoptedNote {
+  return !known || known === field ? field : 'both'
+}
+
+/** „Arbeitsnotiz", „Anmerkungen" oder „Arbeitsnotiz, Anmerkungen". */
+export function adoptedNoteLabel(note: AdoptedNote): string {
+  if (note === 'both') return 'Arbeitsnotiz, Anmerkungen'
+  return note === 'work' ? 'Arbeitsnotiz' : 'Anmerkungen'
+}
+
 function stepRecord(row: StepRow): RunStepRecord {
   return {
     position: row.position,
@@ -65,7 +89,7 @@ function stepRecord(row: StepRow): RunStepRecord {
     status: row.status === 'done' ? 'done' : 'skipped',
     exerciseId: row.exercise_id,
     variantId: row.variant_id,
-    adoptedNote: row.adopted_note as AdoptedNoteTarget | null,
+    adoptedNote: row.adopted_note as AdoptedNote | null,
     adoptedDuration: row.adopted_duration,
   }
 }
@@ -119,11 +143,11 @@ export function followUpError(message: string): string {
   if (message.includes('step_skipped')) {
     return 'Der Schritt wurde ausgelassen — es gibt keine tatsächliche Dauer.'
   }
-  if (message.includes('invalid_note')) return 'Die Notiz ist leer oder länger als 2.000 Zeichen.'
+  if (message.includes('invalid_note')) return 'Eine Notiz ist länger als 2.000 Zeichen.'
   if (message.includes('invalid_duration')) return 'Die Dauer muss zwischen 1 und 300 Minuten liegen.'
   if (message.includes('not_authenticated')) return 'Nicht angemeldet.'
   return 'Übernehmen fehlgeschlagen, bitte erneut versuchen. Deine Eingabe steht noch da.'
 }
 
 export const FOLLOW_UP_STALE =
-  'Die Übung wurde inzwischen geändert. Der aktuelle Stand ist neu geladen — bitte sieh ihn dir an und bestätige noch einmal.'
+  'Die Übung wurde inzwischen anderswo geändert, deshalb wurde nichts überschrieben. Dein Text steht noch da — sieh ihn dir an und bestätige noch einmal, wenn er so gelten soll.'

@@ -169,7 +169,9 @@ Was das **nicht** belegt und in `/qa` gehört:
 - **Zwei gleichzeitige Sendungen** und die **Ablage der Bilder** sind ungeprüft; der Offline-Baustein weiter nicht ohne Netz erprobt
 - Wachhalten, Stromsparmodus und Ton brauchen zwei echte Geräte
 
-**Nächster Schritt:** einmal von Hand durchspielen (`npm run dev`: Stunde starten, beenden, an der Einheit unter „Durchführungen" nachsehen, eine Notiz anhängen), dann `/qa` für PROJ-14.
+**Vom Nutzer am 2026-10-11 von Hand durchgespielt — es klappt alles** (Stunde starten, beenden, Durchführung an der Einheit, Notiz und Dauer übernehmen). Der Weg vom Knopf bis zur Zeile ist damit einmal gelaufen. Dazu drei Änderungen, in der Spec unter „Nach dem Durchspielen durch den Nutzer geändert": der Dialog **„Notiz anhängen" zeigt das Notizfeld der Übung selbst** — umschaltbar zwischen Arbeitsnotiz und Anmerkungen, beide direkt änderbar und gemeinsam gespeichert, statt „Dein Satz" und Vorschau (ersetzt fünf Akzeptanzkriterien der Spec); der Vermerk **„Notiz übernommen" nennt beides**, wenn beide geändert wurden (zweite Migration `20261011140000_exercise_notes_follow_up.sql`, Funktion `update_exercise_notes` statt `append_exercise_note`); die **Bilder sind auch in „Danach" und „Zuerst" aufklappbar**; nach „Fertig" blitzt nicht mehr „Es läuft gerade keine Stunde" auf; **„Übung löschen" ist aus der Nachbereitung entfernt** — es bleiben drei Wege, und vier Akzeptanzkriterien der Spec sind damit überholt; im Live-Modus lässt sich **durch alle Bilder der Übung blättern**. **496 Unit-Tests grün**, Typprüfung, Lint und Build sauber. Die zweite Migration ist angewendet (**Register 17 zu 17**) und am lebenden System in einer zurückgerollten Transaktion nachgewiesen, fünfzehn Fälle. **Im Browser sind der neue Notiz-Dialog und die Bilder in „Danach" noch ungesehen.**
+
+**Nächster Schritt:** `/qa` für PROJ-14.
 
 ## Features
 

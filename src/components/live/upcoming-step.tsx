@@ -3,6 +3,7 @@
 import { ArrowRight, LayoutGrid } from 'lucide-react'
 import { WorkNote } from '@/components/exercises/work-note'
 import { ClampedText } from './clamped-text'
+import { StepImages } from './step-image'
 import { compareSteps, formatMaterial, stepTitle } from '@/lib/live/material'
 import { cn } from '@/lib/utils'
 import type { LiveStep } from '@/lib/live/types'
@@ -190,6 +191,11 @@ export function UpcomingStep({ label, current, next, className }: UpcomingStepPr
 
         {/* Erst die Beschreibung, darunter die Arbeitsnotiz — überall gleich. */}
         {next.description && <ClampedText text={next.description} lines={4} />}
+        {/* Die Bilder der Übung, aufklappbar wie am laufenden Schritt. Eine Akte
+            aus einer älteren Fassung der App kennt die Liste noch nicht. */}
+        {(next.imagePaths?.length ?? 0) > 0 && (
+          <StepImages paths={next.imagePaths} alt={next.name} triggerClassName="bg-background" />
+        )}
         {/* Weiß statt Hellgrün: auf dem blauen Grund würde das Grün der
             Arbeitsnotiz verschwimmen. Ihr grüner Name bleibt.
 

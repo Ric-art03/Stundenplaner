@@ -46,15 +46,24 @@ export const followUpTargetSchema = z.object({
   position: z.number().int().min(0).max(299),
 })
 
-export const appendNoteSchema = z.object({
-  field: z.enum(['work', 'personal']),
-  text: z
-    .string()
-    .trim()
-    .min(1, 'Die Notiz ist leer.')
-    .max(NOTE_MAX, 'Maximal 2.000 Zeichen'),
-  updatedAt: z.string().min(1),
-})
+/**
+ * Die Notizen der Übung aus der Nachbereitung. Jeder Text ist der ganze neue
+ * Inhalt seines Felds; ein leerer Text leert es. Mindestens eines muss dabei
+ * sein.
+ */
+export const exerciseNotesSchema = z
+  .object({
+    work: z.string().trim().max(NOTE_MAX, 'Die Arbeitsnotiz hat mehr als 2.000 Zeichen.').optional(),
+    personal: z
+      .string()
+      .trim()
+      .max(NOTE_MAX, 'Die Anmerkungen haben mehr als 2.000 Zeichen.')
+      .optional(),
+    updatedAt: z.string().min(1),
+  })
+  .refine((notes) => notes.work !== undefined || notes.personal !== undefined, {
+    message: 'Es wurde nichts geändert.',
+  })
 
 export const adoptDurationSchema = z.object({
   minutes: z.number().int().min(1, 'Mindestens 1 Minute').max(300, 'Maximal 300 Minuten'),

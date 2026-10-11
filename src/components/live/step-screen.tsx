@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ExerciseFactsRow } from '@/components/exercises/exercise-facts-row'
 import { WorkNote } from '@/components/exercises/work-note'
-import { StepImage } from './step-image'
+import { StepImages } from './step-image'
 import { EXERCISE_NOTE_LABEL, PHASE_NOTE_LABEL, UpcomingStep } from './upcoming-step'
 import {
   formatClock,
@@ -117,7 +117,10 @@ function CurrentDetails({ step }: { step: LiveStep }) {
           </CollapsibleContent>
         </Collapsible>
       )}
-      {step.imagePath && <StepImage path={step.imagePath} alt={step.name} />}
+      {/* Eine Akte aus einer älteren Fassung der App kennt die Liste noch nicht. */}
+      {(step.imagePaths?.length ?? 0) > 0 && (
+        <StepImages paths={step.imagePaths} alt={step.name} />
+      )}
       {/* Erst die Beschreibung, darunter die Arbeitsnotiz der Übung — überall gleich. */}
       {step.workNote && <WorkNote text={step.workNote} label={EXERCISE_NOTE_LABEL} clamp={3} />}
     </div>

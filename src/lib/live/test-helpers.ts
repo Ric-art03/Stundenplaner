@@ -29,7 +29,7 @@ export function step(overrides: Partial<LiveStep> = {}): LiveStep {
     musicLink: null,
     exerciseId: 'uebung-1',
     variantId: null,
-    imagePath: null,
+    imagePaths: [],
     ...overrides,
   }
 }

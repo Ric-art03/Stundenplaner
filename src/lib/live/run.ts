@@ -192,8 +192,8 @@ export function buildRunRecord(session: LiveSession): RunRecord {
       plannedMinutes: step.plannedMinutes,
       actualSeconds: Math.round((progress?.elapsedMs ?? 0) / 1000),
       status: progress?.status === 'done' ? 'done' : 'skipped',
-      exerciseId: adopted?.deleted ? null : step.exerciseId,
-      variantId: adopted?.deleted ? null : step.variantId,
+      exerciseId: step.exerciseId,
+      variantId: step.variantId,
       adoptedNote: adopted?.note ?? null,
       adoptedDuration: adopted?.duration ?? null,
     }

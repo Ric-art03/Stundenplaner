@@ -29,6 +29,7 @@ import { useWakeLock } from '@/hooks/use-wake-lock'
 import { saveRun, updateRunNote } from '@/lib/actions/live'
 import { isForgotten } from '@/lib/live/clock'
 import { storePlanImages } from '@/lib/live/images'
+import { addAdoptedNote } from '@/lib/live/records'
 import {
   buildRunRecord,
   endForgottenRun,
@@ -51,7 +52,7 @@ import {
   writeSession,
 } from '@/lib/live/store'
 import { createClient } from '@/lib/supabase/client'
-import type { LivePlan, LiveRun, LiveSession } from '@/lib/live/types'
+import type { AdoptedNote, LivePlan, LiveRun, LiveSession } from '@/lib/live/types'
 
 const NOTE_MAX = 2000
 
@@ -110,8 +111,13 @@ function Centered({ children }: { children: React.ReactNode }) {
   )
 }
 
-function SummaryScreen({ session }: { session: LiveSession }) {
-  const router = useRouter()
+function SummaryScreen({
+  session,
+  onLeave,
+}: {
+  session: LiveSession
+  onLeave: (href: string) => void
+}) {
   const { toast } = useToast()
   const online = useOnline()
   const pending = usePendingRuns()
@@ -133,10 +139,23 @@ function SummaryScreen({ session }: { session: LiveSession }) {
       : null
 
   function onChanged(position: number, change: FollowUpChange) {
-    updateSession((current) => ({
-      ...current,
-      adopted: { ...current.adopted, [position]: { ...current.adopted[position], ...change } },
-    }))
+    updateSession((current) => {
+      const known = current.adopted[position] ?? {}
+      return {
+        ...current,
+        adopted: {
+          ...current.adopted,
+          [position]: {
+            // Der Vermerk zur Notiz zählt mit, statt ersetzt zu werden.
+            note: (change.notes ?? []).reduce<AdoptedNote | undefined>(
+              (note, field) => addAdoptedNote(note, field),
+              known.note
+            ),
+            duration: change.duration ?? known.duration,
+          },
+        },
+      }
+    })
   }
 
   async function finish() {
@@ -152,8 +171,7 @@ function SummaryScreen({ session }: { session: LiveSession }) {
           return
         }
       }
-      writeSession(null)
-      router.push(unitHref)
+      onLeave(unitHref)
     } catch {
       toast({
         variant: 'destructive',
@@ -232,6 +250,16 @@ export function LiveScreen() {
   const offline = useLiveOffline()
   const [muted, setMuted] = useStoredFlag('stundenplaner:live:stumm', false)
   const [confirming, setConfirming] = React.useState<'end' | 'cancel' | null>(null)
+  // Gesetzt, sobald die Stunde verlassen wird. Die Akte ist dann schon weg,
+  // die neue Seite aber noch nicht da — ohne das stünde für einen Augenblick
+  // „Es läuft gerade keine Stunde“ auf dem Bildschirm.
+  const [leaving, setLeaving] = React.useState(false)
+
+  function leave(href: string) {
+    setLeaving(true)
+    writeSession(null)
+    router.push(href)
+  }
 
   const phase = session?.run.phase
   // Auch in der Pause — eine Trinkpause soll das Handy nicht sperren. Nach dem
@@ -248,7 +276,7 @@ export function LiveScreen() {
     if (current) void storePlanImages(current.plan)
   }, [phase, runId])
 
-  if (session === undefined || knownUserId === undefined) {
+  if (leaving || session === undefined || knownUserId === undefined) {
     return (
       <Centered>
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label="Lädt" />
@@ -292,14 +320,13 @@ export function LiveScreen() {
         }}
         onLeave={() => {
           // Ohne „Los geht's“ läuft keine Stunde und nichts ist festgehalten.
-          writeSession(null)
-          router.push(unitHref)
+          leave(unitHref)
         }}
       />
     )
   }
 
-  if (run.phase === 'ended') return <SummaryScreen session={session} />
+  if (run.phase === 'ended') return <SummaryScreen session={session} onLeave={leave} />
 
   if (isForgotten(run, plan, now)) {
     return (
@@ -316,10 +343,7 @@ export function LiveScreen() {
         <Button
           variant="outline"
           className="min-h-11 w-full"
-          onClick={() => {
-            writeSession(null)
-            router.push(unitHref)
-          }}
+          onClick={() => leave(unitHref)}
         >
           Verwerfen
         </Button>
@@ -381,10 +405,7 @@ export function LiveScreen() {
             <AlertDialogCancel>Weiterlaufen lassen</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
-              onClick={() => {
-                writeSession(null)
-                router.push(unitHref)
-              }}
+              onClick={() => leave(unitHref)}
             >
               Verwerfen
             </AlertDialogAction>

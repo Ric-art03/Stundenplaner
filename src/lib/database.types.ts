@@ -604,13 +604,13 @@ export type Database = {
         }
         Returns: string
       }
-      append_exercise_note: {
+      update_exercise_notes: {
         Args: {
           p_run_id: string
           p_position: number
-          p_field: string
-          p_text: string
           p_expected_updated_at: string
+          p_work_notes?: string
+          p_notes?: string
         }
         Returns: string
       }
