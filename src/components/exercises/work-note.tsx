@@ -2,6 +2,7 @@
 
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { ClampedText, type ClampLines } from '@/components/live/clamped-text'
 import { cn } from '@/lib/utils'
 
 /**
@@ -84,15 +85,26 @@ export function WorkNoteField({
 
 interface WorkNoteProps {
   text: string
+  /** Etwa „Arbeitsnotiz der Phase" — wo beide Notizen untereinander stehen (Live-Modus). */
+  label?: string
+  /** Ab so vielen Zeilen gekürzt, mit „mehr" zum Aufklappen (Live-Modus). */
+  clamp?: ClampLines
   className?: string
 }
 
-/** Die Arbeitsnotiz zum Lesen — auf der Detailseite der Übung und im Stundenverlauf. */
-export function WorkNote({ text, className }: WorkNoteProps) {
+/**
+ * Die Arbeitsnotiz zum Lesen — auf der Detailseite der Übung, im Stundenverlauf
+ * und im Live-Modus.
+ */
+export function WorkNote({ text, label = WORK_NOTE_LABEL, clamp, className }: WorkNoteProps) {
   return (
     <div className={cn('rounded-md border px-3 py-2', TINT, className)}>
-      <p className="mb-0.5 text-xs font-medium text-primary">{WORK_NOTE_LABEL}</p>
-      <p className="whitespace-pre-wrap text-sm">{text}</p>
+      <p className="mb-0.5 text-xs font-medium text-primary">{label}</p>
+      {clamp ? (
+        <ClampedText text={text} lines={clamp} className="text-sm" />
+      ) : (
+        <p className="whitespace-pre-wrap text-sm">{text}</p>
+      )}
     </div>
   )
 }

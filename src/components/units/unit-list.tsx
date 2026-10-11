@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { Clock, Dumbbell } from 'lucide-react'
+import { Clock, Dumbbell, History } from 'lucide-react'
+import { StartLessonButton } from '@/components/live/start-lesson-button'
 import { UnitActionsMenu } from './unit-actions-menu'
 import type { UnitSummary } from '@/lib/types/unit'
 
@@ -20,7 +21,7 @@ export function UnitList({ units, showGroupName = false }: UnitListProps) {
           key={unit.id}
           className="relative rounded-lg border transition-colors hover:bg-muted/40"
         >
-          <Link href={`/units/${unit.id}`} className="block p-3 pr-12">
+          <Link href={`/units/${unit.id}`} className="block p-3 pr-24">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{unit.name}</p>
@@ -42,10 +43,18 @@ export function UnitList({ units, showGroupName = false }: UnitListProps) {
                 {unit.exerciseCount}{' '}
                 {unit.exerciseCount === 1 ? 'Übung' : 'Übungen'}
               </span>
+              {unit.lastRunAt && (
+                <span className="flex items-center gap-1">
+                  <History className="h-3 w-3" />
+                  Zuletzt durchgeführt am{' '}
+                  {format(new Date(unit.lastRunAt), 'd. MMM yyyy', { locale: de })}
+                </span>
+              )}
             </div>
           </Link>
 
-          <div className="absolute right-2 top-2">
+          <div className="absolute right-2 top-2 flex items-center gap-1">
+            <StartLessonButton unitId={unit.id} unitName={unit.name} variant="outline" compact />
             <UnitActionsMenu unitId={unit.id} unitName={unit.name} />
           </div>
         </div>

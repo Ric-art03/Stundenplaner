@@ -6,6 +6,8 @@ import {
   saveUnitPlan,
 } from '@/lib/actions/units'
 import { getGroup } from '@/lib/actions/groups'
+import { getRunsForUnit } from '@/lib/actions/live'
+import { UnitRuns } from '@/components/live/unit-runs'
 import { UnitPlanView } from '@/components/units/unit-plan-view'
 
 interface UnitPageProps {
@@ -20,7 +22,11 @@ export default async function UnitPage({ params }: UnitPageProps) {
     notFound()
   }
 
-  const group = await getGroup(unit.groupId)
+  const [group, runs] = await Promise.all([
+    getGroup(unit.groupId),
+    // Ein Entwurf lässt sich nicht starten und hat deshalb keine Durchführungen.
+    unit.saved ? getRunsForUnit(unit.id) : Promise.resolve([]),
+  ])
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -36,6 +42,7 @@ export default async function UnitPage({ params }: UnitPageProps) {
           quickCreate: quickCreateExercise,
         }}
       />
+      {unit.saved && <UnitRuns unitId={unit.id} runs={runs} />}
     </div>
   )
 }

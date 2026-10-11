@@ -34,6 +34,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { useStoredFlag } from '@/hooks/use-stored-flag'
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
+import { StartLessonButton } from '@/components/live/start-lesson-button'
 import { WorkNote } from '@/components/exercises/work-note'
 import { UnitItemCard } from './unit-item-card'
 import { GapNotice } from './gap-notice'
@@ -608,6 +609,12 @@ export function UnitPlanView({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
+          {/* Gestartet wird nur, was gespeichert ist — und nicht aus dem
+              Bearbeiten-Modus heraus, wo noch Änderungen offen sein können. */}
+          {unit.saved && !editing && (
+            <StartLessonButton unitId={unit.id} disabled={busy !== null || saving} />
+          )}
+
           {/* Bearbeiten steht für Entwürfe genauso zur Verfügung wie für
               gespeicherte Einheiten. */}
           {/* Im Bearbeiten-Modus führt der Hauptknopf der Leiste wieder hinaus. */}

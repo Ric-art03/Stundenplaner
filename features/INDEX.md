@@ -140,7 +140,23 @@ Am selben Tag erledigt: `NEXT_PUBLIC_SITE_URL` fehlte seit PROJ-2 in `.env.local
 
 Auf diesem Rechner nicht nachweisbar und für `/qa` vorgemerkt: Wachhalten, Stromsparmodus und Ton brauchen ein echtes iPhone und ein echtes Android-Gerät.
 
-**Nächster Schritt:** `/frontend` für PROJ-14 — oder `/write-spec PROJ-4` (Starter-Datenbank), P0 und noch ohne Spec. Vorher laut Spec nachzuholen: den Editor von PROJ-7 einmal in der Produktion von Hand durchspielen.
+**Der Editor von PROJ-7 ist in der Produktion von Hand durchgespielt** — vom Nutzer am 2026-10-10 gemeldet, erfolgreich. Der Punkt aus der Auslieferung ist damit erledigt.
+
+**Die Oberfläche von PROJ-14 steht seit dem 2026-10-10** — Abschnitt „Implementation Notes (Frontend)" in der Spec. **474 Unit-Tests grün** (426 plus 48 neue), Typprüfung, Lint und Produktionsbuild sauber. Vier Logikbausteine tragen den Live-Modus, alle ohne Oberfläche prüfbar (`src/lib/live/`: Schritte, Material, Verlauf, Uhr), dazu die Stundenakte auf dem Gerät. Der Live-Bildschirm selbst ist bei 375 px gegen den Produktionsbuild durchgespielt, mit vorgestellter Uhr — die Zeiten stimmen, nichts scrollt waagerecht.
+
+Drei Dinge sind damit **nicht** belegt:
+
+- **Alles hinter der Anmeldung** ist ungesehen: „Stunde starten" an einer echten Einheit, der Hinweis in der Kopfzeile, die Nachfrage beim Abmelden, der Hinweis in der Bearbeiten-Maske
+- **Der Offline-Baustein** ist gebaut, aber nicht ohne Netz erprobt
+- **Die Nachbereitung** (vier Wege je Übung) ist gebaut, aber erst mit einer gespeicherten Durchführung bedienbar — also erst nach `/backend`
+
+Bis `/backend` bleibt jede beendete Stunde in der Warteliste auf dem Gerät, und die Kopfzeile sagt dauerhaft „wartet auf Verbindung". Das ist der Stand der Oberfläche, kein Fehler. Offen zur Ansicht am echten Handy: bei 375 × 667 schaut „Danach" nur knapp hervor, wenn die aktuelle Übung zwei Arbeitsnotizen und eine Beschreibung hat.
+
+**Am 2026-10-11 nach der Durchsicht durch den Nutzer nachgeschärft** — sieben Punkte, alle Oberfläche, in der Spec unter „Nach der Durchsicht durch den Nutzer nachgeschärft": „Danach" ist ein **eigenes blaues Segment** über die ganze Breite statt eines umrandeten Felds, mit der neuen Phase in der Kopfleiste; dasselbe Muster zeigt als **„Zuerst"** die erste Übung unten auf dem Bereitschaftsbild; **erst „Kann weg", dann „Neu holen"**; überall **erst die Beschreibung, dann die Arbeitsnotiz**; **Musik-Links** je Übung auf dem Bereitschaftsbild; der Hinweis **„Stunde läuft" klebt** unter der Kopfzeile. **476 Unit-Tests grün**, Typprüfung, Lint und Build sauber; Der angeklebte Hinweis ist ungesehen — er liegt hinter der Anmeldung.
+
+**Vom Nutzer am 2026-10-11 im Browser angesehen und für gut befunden**, mit drei letzten Punkten, am selben Tag eingebaut und danach committet: die **Arbeitsnotiz der Phase bleibt an jedem Schritt der Phase stehen** (nicht nur am ersten — weicht von der Spec ab, dort vermerkt) und steht vor der der Übung, beide mit vollem Namen; im Menü steht „Live-Modus verlassen“ vor „Stunde beenden“; die Zusammenfassung sagt, dass sich die Stunde auch später an der Einheit nachbereiten lässt.
+
+**Nächster Schritt:** `/backend` für PROJ-14 — zwei Tabellen, Speichern der Durchführung, Nachbereitung.
 
 ## Features
 
@@ -158,7 +174,7 @@ Auf diesem Rechner nicht nachweisbar und für `/qa` vorgemerkt: Wachhalten, Stro
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |
 | PROJ-12 | Community-Features (Übungen teilen) | P2 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
-| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Architected | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
+| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | In Progress | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Eigene Kategorien verwalten | P0 | PROJ-3 | Roadmap | — | 2026-10-04 |
 | PROJ-17 | Stundenmuster (wiederverwendbare Einheiten-Konfigurationen) | P1 | PROJ-6 | Roadmap | — | 2026-10-04 |

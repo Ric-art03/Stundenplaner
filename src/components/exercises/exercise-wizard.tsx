@@ -35,9 +35,17 @@ interface ExerciseWizardProps {
   exerciseId?: string
   onSave: (data: ExerciseFormData) => Promise<{ success?: boolean; error?: string; id?: string }>
   customCategories?: Record<string, string[]>
+  /**
+   * Wohin Speichern und Abbrechen führen, wenn die Maske nicht aus dem
+   * Übungsordner geöffnet wurde — etwa aus der Nachbereitung einer Stunde
+   * (PROJ-14). Fehlt = wie bisher zur Übung bzw. zur Übersicht.
+   */
+  returnTo?: string
+  /** Steht zwischen „Abbrechen" und den Schritten — etwa der Hinweis auf betroffene Einheiten. */
+  notice?: React.ReactNode
 }
 
-export function ExerciseWizard({ initialData, exerciseId, onSave, customCategories = {} }: ExerciseWizardProps) {
+export function ExerciseWizard({ initialData, exerciseId, onSave, customCategories = {}, returnTo, notice }: ExerciseWizardProps) {
   const sportsOptions = React.useMemo(() => mergeOptions(SPORTS, customCategories.sport), [customCategories.sport])
   const ageGroupOptions = React.useMemo(() => mergeOptions(AGE_GROUPS, customCategories.age_group), [customCategories.age_group])
   const phaseOptions = React.useMemo(() => mergeOptions(PHASES, customCategories.phase), [customCategories.phase])
@@ -162,7 +170,7 @@ export function ExerciseWizard({ initialData, exerciseId, onSave, customCategori
         return
       }
       toast({ title: exerciseId ? 'Übung aktualisiert' : 'Übung erstellt' })
-      router.push(result.id ? `/exercises/${result.id}` : '/exercises')
+      router.push(returnTo ?? (result.id ? `/exercises/${result.id}` : '/exercises'))
     } catch (err) {
       console.error('Save failed:', err)
       toast({ variant: 'destructive', title: 'Fehler', description: 'Speichern fehlgeschlagen. Bitte erneut versuchen.' })
@@ -183,12 +191,13 @@ export function ExerciseWizard({ initialData, exerciseId, onSave, customCategori
     <div className="max-w-2xl mx-auto">
       <div className="flex justify-end mb-4">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/exercises">
+          <Link href={returnTo ?? '/exercises'}>
             <X className="mr-2 h-4 w-4" />
             Abbrechen
           </Link>
         </Button>
       </div>
+      {notice}
       <StepIndicator currentStep={step} maxVisited={maxVisited} onStepClick={goToStep} />
 
       {step > 0 && data.name && (

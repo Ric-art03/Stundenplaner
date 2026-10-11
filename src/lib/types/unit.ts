@@ -150,4 +150,6 @@ export interface UnitSummary {
   totalMinutes: number
   exerciseCount: number
   createdAt: string
+  /** Beginn der jüngsten Durchführung (PROJ-14); fehlt, solange es keine gibt. */
+  lastRunAt?: string | null
 }

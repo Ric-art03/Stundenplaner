@@ -1,6 +1,6 @@
 # PROJ-14: Live-Modus (Stundenbegleitung)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-10
 **Last Updated:** 2026-10-10
 
@@ -532,8 +532,12 @@ Dazu gilt:
       eine Einheit das anzeigen? Über `/refine PROJ-7` zu entscheiden
 - [ ] „Bewährt"-Pool: eigenes Gespräch, siehe Out of Scope. Wird daraus ein Feature, bekommt es
       eine eigene ID
-- [ ] Der Editor von PROJ-7 ist in der Produktion noch nicht von Hand durchgespielt (siehe
-      INDEX.md) — vor dem Bau des Live-Modus nachholen, weil er auf denselben Einheiten aufsetzt
+- [x] Der Editor von PROJ-7 ist in der Produktion von Hand durchgespielt — vom Nutzer am
+      2026-10-10 gemeldet, erfolgreich
+- [ ] **Aus `/frontend` (2026-10-10):** Auf einem kleinen Handy (375 × 667) schaut „Danach" beim
+      ersten Blick nur knapp unter dem aktuellen Schritt hervor, sobald dieser Arbeitsnotiz,
+      Arbeitsnotiz der Phase und Beschreibung hat — man muss scrollen. Am echten Gerät ansehen und
+      entscheiden, ob der obere Teil knapper werden soll (etwa die Arbeitsnotiz auf zwei Zeilen)
 - [x] **Aus `/architecture` (2026-10-10), vom Nutzer am selben Tag entschieden:** Wird eine
       vergessene Stunde mit „Beenden und festhalten" abgeschlossen, bekommt der Schritt, der die
       ganze Zeit offen stand, **höchstens seine Plandauer** — damit im Protokoll keine Übung mit
@@ -571,6 +575,11 @@ Dazu gilt:
 | Keine eigene Regel dafür, andere Änderungen in bestehende Einheiten zu tragen | Sie ist nicht nötig: alles außer der Dauer liest die Einheit ohnehin von der Übung. Der Hinweis bei „Notiz anhängen" macht das sichtbar | 2026-10-10 |
 | Dieselben vier Wege stehen an der gespeicherten Durchführung | Direkt nach der Stunde ist oft keine Zeit und in der Halle oft kein Netz | 2026-10-10 |
 | „Bewährt"-Pool nicht in diesem Feature | Vom Nutzer ausdrücklich als unausgereift zurückgestellt; greift in Generator und Rotation ein | 2026-10-10 |
+| „Danach" als eigenes, plakatives Segment in Blau statt als umrandetes Feld; dasselbe Muster als „Zuerst" auf dem Bereitschaftsbild | Vom Nutzer nach der Durchsicht gefordert: klar und von weitem erkennbar geht vor Einheitlichkeit mit dem übrigen Erscheinungsbild. Die erste Übung braucht ihre Angaben schon vor dem Start | 2026-10-11 |
+| Feste Reihenfolge: kann weg → neu holen → andere Menge; Beschreibung vor Arbeitsnotiz | Vom Nutzer so festgelegt. Erst wird weggeräumt, dann geholt; und überall dieselbe Reihenfolge, damit sie einmal gelernt wird | 2026-10-11 |
+| Musik-Links je Übung auf dem Bereitschaftsbild, als kurzer Verweis | Vom Nutzer gefordert. Vor der Stunde ist der Moment, die Musik bereitzulegen; die ganze Adresse wäre nur Lärm | 2026-10-11 |
+| Die Arbeitsnotiz der Phase steht an jedem Schritt der Phase, vor der Arbeitsnotiz der Übung, beide mit vollem Namen | Vom Nutzer so festgelegt: sie gilt für die ganze Phase. Weicht vom ursprünglichen „nur beim ersten Schritt" ab | 2026-10-11 |
+| Der Hinweis „Stunde läuft" klebt oben | Vom Nutzer gefordert: wer den Live-Modus verlässt, soll den Rückweg nicht suchen müssen | 2026-10-11 |
 | Die Zeit zählt herunter, schaltet aber nie selbst weiter | Die Halle bestimmt das Tempo. Eine App, die mitten in einer laufenden Übung weiterspringt, zeigt etwas Falsches | 2026-10-10 |
 | Gesamtstand als eine Zeile, ohne Vorschläge zum Aufholen | „Wie liege ich im Plan" ist das, was im Kopf am schwersten mitläuft. Vorschläge brauchen Regeln, die erst mit Erfahrung aus echten Stunden gut werden | 2026-10-10 |
 | Eingriffe: Auslassen und Pause, kein Tauschen | Tauschen holt den halben Editor in einen Bildschirm, der ruhig sein soll. Ohne Pause verfälscht jede Trinkpause den Gesamtstand | 2026-10-10 |
@@ -992,6 +1001,130 @@ die Zeit vorstellen und das Netz abschalten.
 **Vom Nutzer am 2026-10-10 abgenommen**, einschließlich der beiden eigens vorgelegten Punkte:
 `/live` ohne Anmeldeprüfung durch den Server, und die Anleitung nennt den Bereich der
 Einstellungen statt jeden Menüpunkt.
+
+## Implementation Notes (Frontend)
+
+**Gebaut:** 2026-10-10 · **474 Unit-Tests grün** (426 plus 48 neue), Typprüfung, Lint und
+Produktionsbuild sauber. `/live` wird als statische Seite gebaut, wie der Entwurf es verlangt.
+
+Im Browser nachgesehen wurde der Live-Bildschirm selbst, bei 375 × 667 gegen den Produktionsbuild
+und mit vorgestellter Uhr: Bereitschaftsbild, Restzeit, „über", Gesamtstand, Neuladen, Pause,
+Weiter, Auslassen, freie Zeit, Platzhalter, Zusammenfassung — kein waagerechtes Scrollen, die
+Zeiten stimmen. **Nicht** im Browser nachgesehen: „Stunde starten" an einer echten Einheit, der
+Hinweis in der Kopfzeile, die Nachfrage beim Abmelden und der Hinweis in der Bearbeiten-Maske —
+die brauchen eine Anmeldung. Der Offline-Baustein ist gebaut, aber nicht ohne Netz erprobt.
+
+### Neu: die Logik (ohne Oberfläche, ohne Datenbank) — `src/lib/live/`
+
+| Datei | Aufgabe |
+|---|---|
+| `types.ts` | Plan vom Start, Verlauf, Stundenakte, Durchführung |
+| `steps.ts` | macht aus einer Einheit die Schrittliste; rechnet „pro Teilnehmer" aus |
+| `material.ts` | größter gleichzeitiger Bedarf; Vergleich zweier Schritte für „Danach" |
+| `run.ts` | Los, Weiter, Zurück, Auslassen, Pause, Beenden, vergessene Stunde; baut die Durchführung |
+| `clock.ts` | Restzeit, „über", Gesamtstand, vergessene Stunde — aus Verlauf und „jetzt" |
+| `store.ts` | Stundenakte und Warteliste im Speicher des Browsers, Bescheid an andere Tabs, Nachreichen |
+| `signal.ts` | Ton (im Gerät erzeugt) und Vibration |
+| `return-path.ts` | lässt als Rücksprungadresse nur Wege innerhalb der App zu |
+
+### Neu: die Oberfläche
+
+- `src/app/live/page.tsx` — der Bildschirm, außerhalb des angemeldeten Bereichs und ohne Kopfzeile
+- `src/components/live/` — `live-screen` (Ablauf), `ready-screen`, `step-screen`, `run-summary`,
+  `step-follow-up` (die vier Wege mit ihren Dialogen), `unit-runs` (Liste an der Einheit),
+  `live-banner` (Hinweis in der Kopfzeile), `start-lesson-button`, `clamped-text`
+- `src/components/exercises/exercise-units-notice.tsx` — der Hinweis in der Bearbeiten-Maske
+- `src/hooks/` — `use-live-session` (Akte, Warteliste, „jetzt", Verbindung), `use-wake-lock`,
+  `use-live-offline`
+- `public/live-sw.js` — der Offline-Baustein, auf `/live` begrenzt
+- `src/lib/actions/live.ts` — die Server-Stellen als Vertrag (siehe unten)
+
+### Geändert an Vorhandenem
+
+- **Detailseite der Einheit:** „Stunde starten" (nur gespeichert, nur Leseansicht), darunter die
+  Liste der Durchführungen
+- **Einheiten-Übersicht:** „Stunde starten" als Symbol-Knopf je Einheit; „Zuletzt durchgeführt am
+  …" ist vorbereitet und erscheint, sobald `/backend` den Wert liefert
+- **Kopfzeile:** Stunden-Hinweis; **Abmelden** fragt bei laufender Stunde
+- **Bearbeiten-Maske der Übung:** Einheiten-Hinweis und Rücksprungadresse (`?zurueck=`)
+- **Arbeitsnotiz** (`work-note.tsx`): kann eine andere Überschrift tragen und gekürzt werden
+
+### Entscheidungen, die beim Bauen fielen
+
+- **Der Gesamtstand rechnet „wo endet die Stunde".** Verstrichenes plus das, was laut Plan noch
+  aussteht, gegen die geplante Gesamtdauer. Nur so gewinnt ein ausgelassener Schritt seine
+  Planzeit, wie die Spec es verlangt; solange der laufende Schritt in seiner Zeit bleibt, ändert
+  sich nichts
+- **„Stunde beenden" bei einem über „Zurück" verlassenen Schritt:** hatte der spätere Schritt
+  schon Zeit gesammelt, gilt er als gemacht, nicht als ausgelassen
+- **Das Signal ertönt nur, wenn die Restzeit vor den Augen des Nutzers null erreicht.** Wer einen
+  längst abgelaufenen Schritt wieder öffnet oder neu lädt, hört nichts
+- **Das Bereitschaftsbild ist schon Teil der Akte** (Zustand „bereit"). Als laufende Stunde zählt
+  es nirgends; „Zurück zur Einheit" räumt es weg
+- **Typografische Anführungszeichen** („…") in den neuen Texten, weil der Lint das gerade
+  Schlusszeichen in der Oberfläche ablehnt
+- **Der Offline-Baustein läuft nur im Produktionsbuild** — in der Entwicklung wäre ein abgelegter
+  Stand nach jedem Speichern veraltet
+- **Der Hinweis „Bildschirm kann ausgehen"** steht auch auf Geräten, die das Wachhalten gar nicht
+  kennen, nicht nur wenn es verloren geht
+
+### Nach der Durchsicht durch den Nutzer nachgeschärft (2026-10-11)
+
+Sieben Punkte, alle Oberfläche. Wo sie vom Abschnitt „Funktionsumfang" abweichen, gilt das hier:
+
+- **Musik-Links auf dem Bereitschaftsbild** — je Übung mit Musik steht ein kurzer Verweis „Musik
+  öffnen" (neuer Tab), nicht die ganze Adresse. Zum Verweis wird nur eine gewöhnliche
+  Web-Adresse; anderes bleibt Text ohne Link
+- **Die erste Übung steht unten auf dem Bereitschaftsbild**, als Segment „Zuerst" — nach demselben
+  Muster wie später „Danach", nur ohne Vergleich, weil noch kein Schritt läuft
+- **„Danach" ist ein eigenes Segment statt eines umrandeten Felds:** über die ganze Breite, mit
+  einer kräftig blauen Kopfleiste als Trennstrich und hellblauem Grund, der den Rest des
+  Bildschirms füllt. Bewusst abseits des Grüns der App — es soll von weitem zu erkennen sein
+- **Die Arbeitsnotiz steht in diesem Segment auf Weiß** statt auf Hellgrün; auf Blau wäre das Grün
+  verschwommen. Ihr grüner Name bleibt, außerhalb des Segments bleibt sie hellgrün
+- **Erst „Kann weg", dann „Neu holen", dann „Andere Menge"** — in der Reihenfolge, in der umgebaut
+  wird. Die Marken sind kräftig und in drei klar verschiedenen Farben (Grau, Grün, Gelb)
+- **Eine neue Phase steht in der Kopfleiste**, in einer Reihe mit „Danach" und vor dem Namen der
+  Übung („DANACH · Neue Phase: Hauptteil")
+- **Überall erst die Beschreibung, darunter die Arbeitsnotiz** — auch bei der aktuellen Übung, wo
+  die Beschreibung eingeklappt bleibt
+- **Der Hinweis „Stunde läuft — fortsetzen" klebt unter der Kopfzeile** und ist jetzt ein voller
+  grüner Balken über die ganze Breite, der beim Scrollen stehen bleibt
+
+„Danach" ist dafür aus dem Schritt-Bildschirm in einen eigenen Baustein gewandert
+(`upcoming-step.tsx`), den beide Orte benutzen. **476 Unit-Tests grün** (474 plus 2 neue),
+Typprüfung, Lint und Produktionsbuild sauber; Bereitschaftsbild und laufende Stunde bei 375 px
+erneut im Browser nachgesehen. Der angeklebte Hinweis ist **nicht** gesehen — er liegt hinter der
+Anmeldung.
+
+**Vom Nutzer am 2026-10-11 im Browser angesehen und für gut befunden**, mit drei weiteren
+Punkten, die am selben Tag eingebaut sind:
+
+- **Die Arbeitsnotiz der Phase bleibt während der ganzen Phase stehen** — an jedem ihrer Schritte,
+  nicht nur am ersten. Das ändert den Abschnitt „Der Schritt" im Funktionsumfang und das
+  zugehörige Akzeptanzkriterium, die nur den ersten Schritt nennen
+- **Erst die Arbeitsnotiz der Phase, dann die der Übung**, und beide tragen im Live-Modus ihren
+  vollen Namen: „Arbeitsnotiz der Phase" und „Arbeitsnotiz der Übung". In „Danach" steht die der
+  Phase weiterhin nur, wenn eine neue Phase beginnt — innerhalb der Phase steht sie schon oben
+- **Im Dreipunkt-Menü steht „Live-Modus verlassen" vor „Stunde beenden"**
+- **Die Zusammenfassung sagt, dass sich die Stunde auch später nachbereiten lässt** — an der
+  Einheit unter „Durchführungen"
+
+### Was noch fehlt — alles davon ist `/backend`
+
+`src/lib/actions/live.ts` legt den Vertrag fest. Angeschlossen ist nur `loadLivePlan`; alles
+andere meldet „noch nicht angeschlossen":
+
+- **`saveRun`** — bis dahin bleibt jede beendete Stunde in der Warteliste, und die Kopfzeile sagt
+  dauerhaft „wartet auf Verbindung". Das ist der Stand der Oberfläche, kein Fehler
+- **`getRunsForUnit`, `updateRunNote`, `deleteRun`** — die Liste an der Einheit ist leer
+- **`getFollowUpExercise`, `appendExerciseNote`, `adoptExerciseDuration`** — die vier Wege der
+  Nachbereitung sind gebaut, aber erst mit einer gespeicherten Durchführung bedienbar und deshalb
+  **noch nie durchgespielt**
+- **`lastRunAt`** an der Einheit in der Übersicht
+- **`loadLivePlan` liest über die vorhandenen Wege** und bekommt deshalb zweierlei nicht: bei
+  einer Variante steht die **Beschreibung der Grundübung** statt der der Variante, und das
+  **Titelbild** fehlt ganz. Damit ist auch die Ablage der Bilder auf dem Gerät noch nicht gebaut
 
 ## QA Test Results
 _To be added by /qa_

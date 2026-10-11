@@ -3,6 +3,7 @@ import { Home } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { LogoutButton } from '@/components/logout-button'
+import { LiveBanner } from '@/components/live/live-banner'
 
 export default async function ProtectedLayout({
   children,
@@ -58,6 +59,7 @@ export default async function ProtectedLayout({
           </div>
         </div>
       </header>
+      <LiveBanner userId={user.id} />
       {children}
     </div>
   )

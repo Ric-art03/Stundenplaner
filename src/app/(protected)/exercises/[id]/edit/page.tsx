@@ -1,17 +1,23 @@
 import { notFound } from 'next/navigation'
 import { ExerciseWizard } from '@/components/exercises/exercise-wizard'
+import { ExerciseUnitsNotice } from '@/components/exercises/exercise-units-notice'
 import { getExercise, updateExercise, getCustomCategories } from '@/lib/actions/exercises'
+import { getUnitNamesUsingExercise } from '@/lib/actions/units'
+import { safeReturnPath } from '@/lib/live/return-path'
 import type { ExerciseFormData } from '@/lib/types/exercise'
 
 interface EditExercisePageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ zurueck?: string | string[] }>
 }
 
-export default async function EditExercisePage({ params }: EditExercisePageProps) {
-  const { id } = await params
-  const [exercise, customCategories] = await Promise.all([
+export default async function EditExercisePage({ params, searchParams }: EditExercisePageProps) {
+  const [{ id }, { zurueck }] = await Promise.all([params, searchParams])
+  const [exercise, customCategories, unitNames] = await Promise.all([
     getExercise(id),
     getCustomCategories(),
+    // Dieselbe Abfrage wie die Löschwarnung: nur gespeicherte Einheiten, keine Entwürfe.
+    getUnitNamesUsingExercise(id),
   ])
 
   if (!exercise) {
@@ -47,7 +53,16 @@ export default async function EditExercisePage({ params }: EditExercisePageProps
   return (
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold mb-6">Übung bearbeiten</h1>
-      <ExerciseWizard initialData={initialData} exerciseId={id} onSave={handleSave} customCategories={customCategories} />
+      <ExerciseWizard
+        initialData={initialData}
+        exerciseId={id}
+        onSave={handleSave}
+        customCategories={customCategories}
+        // Aus der Nachbereitung einer Stunde geöffnet (PROJ-14): Speichern und
+        // Abbrechen führen dorthin zurück.
+        returnTo={safeReturnPath(zurueck)}
+        notice={<ExerciseUnitsNotice unitNames={unitNames} />}
+      />
     </div>
   )
 }
