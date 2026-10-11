@@ -1458,10 +1458,10 @@ Auf Auftrag des Nutzers: **BUG-23 und BUG-25.** Offen bleiben BUG-22, BUG-24 und
 
 **BUG-23 — der Offline-Baustein füllt sich jetzt auch auf dem Weg aus der App.** Drei Änderungen:
 
-- **Die Seite wartet am Baustein selbst, bis er aktiv ist** (). Vorher
-  wartete sie auf ein Zeichen des Browsers, das nur für Seiten kommt, die *innerhalb* von 
-  geladen wurden — aus der App heraus wird die Seite aber nicht neu geladen
-- **Der Baustein holt alles selbst** (): er lädt  frisch und liest aus
+- **Die Seite wartet am Baustein selbst, bis er aktiv ist** (`src/hooks/use-live-offline.ts`).
+  Vorher wartete sie auf ein Zeichen des Browsers, das nur für Seiten kommt, die *innerhalb* von
+  `/live` geladen wurden — aus der App heraus wird die Seite aber nicht neu geladen
+- **Der Baustein holt alles selbst** (`public/live-sw.js`): er lädt `/live` frisch und liest aus
   der Seite heraus, welche Bausteine sie braucht. Was die Seite zusätzlich als geladen meldet,
   ist nur noch die zweite Quelle — die Liste des Browsers ist begrenzt und kann nach langer
   Benutzung unvollständig sein. Die Seite wird zuletzt abgelegt: sie liegt erst da, wenn ihre
@@ -1470,7 +1470,7 @@ Auf Auftrag des Nutzers: **BUG-23 und BUG-25.** Offen bleiben BUG-22, BUG-24 und
   Sekunden, dass alles abgelegt ist, gilt das als „nicht möglich", und der Hinweis erscheint
 
 **BUG-25 — „Fertig" ohne Netz bleibt in der App.** Vor jedem Verlassen des Live-Modus fragt die
-App beim Server nach, ob er erreichbar ist (, höchstens vier Sekunden).
+App beim Server nach, ob er erreichbar ist (`src/lib/live/network.ts`, höchstens vier Sekunden).
 Dem Gerät allein wird dabei nicht geglaubt: ein Hallen-WLAN ohne Internet gilt dem Browser als
 „online". Ist der Server nicht erreichbar, steht „Fertig — die Stunde ist festgehalten" da, mit
 dem Satz, dass Durchführung und Notiz auf dem Gerät liegen und nachgereicht werden. Kommt das
@@ -1479,7 +1479,7 @@ Netz zurück, wird von selbst nachgereicht; „Zur Einheit" führt dann weiter.
 **Über den Auftrag hinaus, weil es derselbe Fehler war:** „Live-Modus verlassen (läuft weiter)"
 im Menü führte ohne Netz ebenfalls auf die Fehlerseite des Browsers. Jetzt bleibt man im
 Live-Modus und bekommt eine Meldung; die Stunde läuft weiter. Und ohne laufende Stunde sagt
-, wenn noch eine Durchführung auf dem Gerät wartet.
+`/live`, wenn noch eine Durchführung auf dem Gerät wartet.
 
 **Nachgeprüft:** **337 von 337 Browser-Tests grün in einem Zug** (21,4 Minuten, zwei Arbeiter,
 ohne Entwicklungsserver), **517 Unit-Tests grün** (5 neue für die Nachfrage beim Server),
