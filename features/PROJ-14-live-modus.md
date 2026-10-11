@@ -1,6 +1,6 @@
 # PROJ-14: Live-Modus (Stundenbegleitung)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-10
 **Last Updated:** 2026-10-10
 
@@ -1710,4 +1710,65 @@ Nichts davon ist ein gefundener Fehler. Es ist das, was sich an diesem Rechner n
   Bildschirm an, Ton und ein Neuladen ohne Netz
 
 ## Deployment
-_To be added by /deploy_
+
+**Ausgeliefert:** 2026-10-11
+**Produktions-URL:** https://stundenplaner-self.vercel.app
+**Tag:** `v1.7.0-PROJ-14` · **Commit:** `7567062`
+
+### Vorprüfung
+
+| | Ergebnis |
+|---|---|
+| Freigabe durch `/qa` | ja — kein Fehler der Stufe „kritisch" oder „hoch", offen nur BUG-26 (niedrig) |
+| Produktionsbuild | sauber, `/live` wird als statische Seite gebaut |
+| Lint | 0 Fehler (4 bekannte Warnungen zu `<img>` aus PROJ-3) |
+| Typprüfung | sauber |
+| Unit-Tests | 529 grün |
+| Browser-Tests | 339 von 339 grün, am selben Stand aus der QA |
+| Migrationen | beide in der Datenbank, Register 17 zu 17 — im Projekt nachgesehen |
+| Umgebungsvariablen | keine neue |
+| Geheimnisse im Diff | keine; `.env.local` ist nicht im Repository |
+| Hochgeladen | 13 Commits seit der Auslieferung von PROJ-7, `5627176..7567062` |
+
+### Nachprüfung in der Produktion — 2026-10-11
+
+Von außen, ohne Anmeldung:
+
+- **Vercel** meldet die Auslieferung am Commit als abgeschlossen
+- **Öffentliche Seiten** (`/`, `/login`, `/register`) antworten mit 200
+- **Geschützte Seiten** (`/dashboard`, `/units`, `/exercises`, `/groups`, eine einzelne Einheit)
+  leiten mit 307 auf `/login`
+- **`/live`** antwortet mit 200 und enthält keine Daten; **`/live-sw.js`** liegt aus, als
+  JavaScript und mit `nosniff`
+- **Sicherheits-Kopfzeilen** liegen an `/live` an: X-Frame-Options, X-Content-Type-Options,
+  Referrer-Policy, HSTS
+- **Der Live-Bildschirm läuft in der Produktion:** mit einer von Hand auf das Gerät gelegten
+  Stundenakte zeigt `/live` den Schritt mit laufender Uhr. Der Offline-Baustein meldet sich an,
+  legt 21 Dateien samt der Seite ab — und **ein Neuladen ohne Netz zeigt den Live-Bildschirm
+  wieder**
+- **Supabase-Protokolle:** in den letzten 24 Stunden ein einziger Fehler der Datenbank, und der
+  stammt aus dem SQL-Editor (der versehentlich eingefügte PowerShell-Befehl beim Anwenden der
+  zweiten Migration). Nichts aus der App
+
+### Was damit nicht belegt ist
+
+- **Der angemeldete Weg in der Produktion.** „Stunde starten" an einer echten Einheit, eine Stunde
+  durchgehen, beenden, die Durchführung an der Einheit, die Nachbereitung: ohne Anmeldung von
+  außen nicht prüfbar. Auf dem Testserver ist all das mit 181 Browser-Tests belegt, in der
+  Produktion noch **von niemandem durchgespielt**
+- **Der Offline-Baustein auf dem Weg aus der App** (der Fall von BUG-23) ist in der Produktion nur
+  für das direkte Öffnen von `/live` nachgesehen, nicht für den Wechsel über „Stunde starten"
+- **Echte Geräte:** Wachhalten, Stromsparmodus, Ton, Vibration; Safari auf dem iPhone; Firefox
+- **Die Bilder der Übungen** im Live-Modus
+
+### Zurückrollen
+
+Im Vercel-Dashboard unter „Deployments" die Auslieferung von PROJ-7 (`5627176`, Tag
+`v1.6.0-PROJ-7`) auf „Promote to Production" setzen. Die Datenbank muss dafür **nicht**
+zurückgedreht werden: beide Migrationen sind rein hinzufügend, und die Fassung von PROJ-7 benutzt
+weder die neuen Tabellen noch die neuen Funktionen.
+
+Ein Gerät, das den Offline-Baustein schon angemeldet hat, behält ihn nach dem Zurückrollen. Er
+wirkt nur auf `/live`; die Seite gäbe es dann nicht mehr, und der Baustein lieferte sie — ohne
+Netz — weiter aus seiner Ablage. Mit Netz holt er immer die aktuelle Fassung und fällt damit von
+selbst auf die Antwort des Servers zurück.

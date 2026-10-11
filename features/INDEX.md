@@ -204,7 +204,16 @@ Offen bleibt **BUG-26** (niedrig, kein Hindernis). Bewusst hingenommen: eine bee
 5. **Nicht prüfbar auf diesem Rechner:** Firefox und echtes Safari; die Bilder der Übungen im Live-Modus (die Testübungen haben keine)
 6. **Für Browser-Tests auf diesem Rechner:** `--workers=2`, kein Entwicklungsserver nebenher, und vorher den Port 3100 prüfen — ein alter Testserver liefert sonst einen veralteten Build
 
-**Nächster Schritt:** `/deploy` für PROJ-14.
+**PROJ-14 (Live-Modus) ist am 2026-10-11 ausgeliefert** — https://stundenplaner-self.vercel.app, Tag `v1.7.0-PROJ-14`, Commit `7567062`. Abschnitt „Deployment" in der Spec. Vor dem Hochladen noch einmal geprüft: Build, Lint, 529 Unit-Tests, Typprüfung, Register 17 zu 17, kein Geheimnis und keine neue Umgebungsvariable im Diff. Nach dem Hochladen: Vercel meldet die Auslieferung als abgeschlossen, öffentliche Seiten 200, geschützte Seiten 307 auf `/login`, `/live` und `/live-sw.js` liegen aus, Sicherheits-Kopfzeilen liegen an, keine Fehler aus der App in den Supabase-Protokollen. **Der Live-Bildschirm läuft in der Produktion**, und ein Neuladen ohne Netz zeigt ihn wieder — nachgesehen mit einer von Hand aufs Gerät gelegten Stundenakte, ohne Anmeldung.
+
+Zwei Dinge bleiben daraus, beide nur von Hand zu erledigen:
+
+- **Der angemeldete Weg ist in der Produktion noch nicht durchgespielt** — eine Stunde starten, durchgehen, beenden, die Durchführung an der Einheit ansehen, eine Notiz anhängen. Ohne Anmeldung ist das von außen nicht prüfbar
+- **Am echten Handy:** bleibt der Bildschirm an, kommt der Ton, zeigt ein Neuladen ohne Netz den Live-Bildschirm (vor allem Safari auf dem iPhone), stimmen die Texte der Anleitung zum Stromsparmodus
+
+Offen aus der QA: **BUG-26** (niedrig). Bewusst hingenommen: eine beendete Stunde bleibt ohne Anmeldung stehen, solange ihre Durchführung noch auf dem Gerät wartet.
+
+**Nächster Schritt:** `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec; danach PROJ-16 (Eigene Kategorien verwalten).
 
 ## Features
 
@@ -222,7 +231,7 @@ Offen bleibt **BUG-26** (niedrig, kein Hindernis). Bewusst hingenommen: eine bee
 | PROJ-11 | PWA (Homescreen-Installation) | P1 | None | Roadmap | — | 2026-09-28 |
 | PROJ-12 | Community-Features (Übungen teilen) | P2 | PROJ-3 | Roadmap | — | 2026-09-28 |
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
-| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Approved | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
+| PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Deployed | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Eigene Kategorien verwalten | P0 | PROJ-3 | Roadmap | — | 2026-10-04 |
 | PROJ-17 | Stundenmuster (wiederverwendbare Einheiten-Konfigurationen) | P1 | PROJ-6 | Roadmap | — | 2026-10-04 |
