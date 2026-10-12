@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { Home } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { LogoutButton } from '@/components/logout-button'
 import { LiveBanner } from '@/components/live/live-banner'
+import { Logo } from '@/components/logo'
 
 export default async function ProtectedLayout({
   children,
@@ -26,11 +26,11 @@ export default async function ProtectedLayout({
           <div className="flex items-center gap-3 sm:gap-6 min-w-0">
             <Link
               href="/dashboard"
-              className="shrink-0 text-primary hover:opacity-80 transition-opacity"
+              className="shrink-0 hover:opacity-80 transition-opacity"
               aria-label="Startseite"
             >
-              <Home className="h-5 w-5 sm:hidden" />
-              <span className="hidden sm:inline text-xl font-bold">Stundenplaner</span>
+              {/* Am Handy nur das Symbol — die Wortmarke hat neben dem Menü erst ab md Platz. */}
+              <Logo wordmarkClassName="hidden md:inline" />
             </Link>
             <nav className="flex items-center gap-3 sm:gap-4 min-w-0">
               <Link

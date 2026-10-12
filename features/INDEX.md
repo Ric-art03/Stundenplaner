@@ -213,6 +213,13 @@ Zwei Dinge bleiben daraus, beide nur von Hand zu erledigen:
 
 Offen aus der QA: **BUG-26** (niedrig). Bewusst hingenommen: eine beendete Stunde bleibt ohne Anmeldung stehen, solange ihre Durchführung noch auf dem Gerät wartet.
 
+**Die App hat seit dem 2026-10-12 ein Logo** — kein eigenes Feature, deshalb ohne Spec. Symbol: Klemmbrett mit Uhr; Wortmarke: „stunden" (Stärke 450) und „planer" (fett, grün) in der Schrift Outfit. Eingebaut als Favicon und App-Symbol (`src/app/icon.svg`, `apple-icon.png`), in beiden Kopfzeilen (am Handy nach dem Anmelden nur das Symbol, mit Wortmarke ab 768 px) und gestapelt über der Karte der vier Anmelde-Seiten, die bis dahin weder Namen noch Logo zeigten. Ein Baustein: `src/components/logo.tsx`. Die Entwürfe liegen unter https://claude.ai/artifact/3ejn77aT2Dbpaxm2VZBKJb.
+
+- **Die Schrift liegt als Datei im Projekt** (`src/fonts/`), nicht bei Google: `next/font/google` holt sie beim Bauen, und das scheitert auf diesem Rechner an der Verbindung
+- **Auf der Landingpage ist „Anmelden" in der Kopfzeile am Handy ausgeblendet** — Logo und zwei Knöpfe passen bei 375 px nicht nebeneinander; der Knopf steht weiter in der Seitenmitte
+- **Zurückgestellt:** die Navigation. Drei Menüpunkte passen am Handy gerade noch; mit dem vierten (spätestens der Kalender, PROJ-9) braucht es eine Leiste am unteren Rand und ein Konto-Menü
+- **Ungesehen:** die Kopfzeile hinter der Anmeldung. Geprüft sind Landingpage und Login am Produktionsbuild bei 375 und 1280 px, dazu Build, Lint, Typprüfung und 529 Unit-Tests; die Browser-Tests sind nicht gelaufen
+
 **Nächster Schritt:** `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec; danach PROJ-16 (Eigene Kategorien verwalten).
 
 ## Features

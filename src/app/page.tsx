@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/logo'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function LandingPage() {
@@ -15,9 +16,10 @@ export default async function LandingPage() {
     <div className="min-h-screen flex flex-col">
       <header className="border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <span className="text-xl font-bold text-primary">Stundenplaner</span>
+          <Logo />
           <div className="flex gap-2">
-            <Button variant="ghost" asChild>
+            {/* Am Handy passt neben das Logo nur ein Knopf; „Anmelden" steht dort weiter unten auf der Seite. */}
+            <Button variant="ghost" asChild className="hidden sm:inline-flex">
               <Link href="/login">Anmelden</Link>
             </Button>
             <Button asChild>
