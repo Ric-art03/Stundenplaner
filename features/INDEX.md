@@ -220,7 +220,13 @@ Offen aus der QA: **BUG-26** (niedrig). Bewusst hingenommen: eine beendete Stund
 - **Zurückgestellt:** die Navigation. Drei Menüpunkte passen am Handy gerade noch; mit dem vierten (spätestens der Kalender, PROJ-9) braucht es eine Leiste am unteren Rand und ein Konto-Menü
 - **Ungesehen:** die Kopfzeile hinter der Anmeldung. Geprüft sind Landingpage und Login am Produktionsbuild bei 375 und 1280 px, dazu Build, Lint, Typprüfung und 529 Unit-Tests; die Browser-Tests sind nicht gelaufen
 
-**Nächster Schritt:** `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec; danach PROJ-16 (Eigene Kategorien verwalten).
+**PROJ-16 (Verwaltung) hat seit dem 2026-10-12 eine Spec** — [PROJ-16-verwaltung.md](PROJ-16-verwaltung.md). Das Feature ist größer geworden als vorgemerkt: **PROJ-17 (Stundenmuster) ist darin aufgegangen**, und die **Hallenverwaltung zieht aus PROJ-5 mit um**. Eine Seite „Verwaltung" mit drei Reitern (Hallen, Stundenmuster, Kategorien) ist der eine Ort für alles, was der Nutzer selbst angelegt hat — ohne vierten Menüpunkt, erreichbar über eine Karte der Startseite und über „verwalten"-Links dort, wo die Dinge benutzt werden.
+
+- **Kategorien** lassen sich anlegen, umbenennen und löschen. Umbenennen wirkt überall, wo der Begriff steht, in einem Zug; gleicht der neue Name einem vorhandenen, wird nach Nachfrage zusammengeführt. Löschen nimmt den Begriff nur aus den Auswahllisten — und er **kommt nicht von selbst zurück**. Heute trüge ihn das nächste Speichern einer Übung wieder ein; das ist beim Schreiben der Spec am Code aufgefallen
+- **Stundenmuster** gelten für alle Gruppen. Passt die Dauer nicht, wird anteilig umgerechnet und es wird gesagt; Sportarten trägt ein Muster nur dort, wo bewusst von der Gruppe abgewichen wurde. Im Generator stehen sie als dritter Weg neben „Standard" und „Individuell", dazu „Auf Stundenmuster setzen" und „Stundenmuster speichern" am Zeitverlauf. Geändert wird ein Muster nur im Generator; Einheiten merken sich ihr Muster nicht
+- Damit sind die drei Fragen beantwortet, die PROJ-6 an die Spec weitergereicht hatte
+
+**Nächster Schritt:** `/architecture PROJ-16`; daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
 
 ## Features
 
@@ -240,11 +246,12 @@ Offen aus der QA: **BUG-26** (niedrig). Bewusst hingenommen: eine beendete Stund
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Deployed | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
-| PROJ-16 | Eigene Kategorien verwalten | P0 | PROJ-3 | Roadmap | — | 2026-10-04 |
-| PROJ-17 | Stundenmuster (wiederverwendbare Einheiten-Konfigurationen) | P1 | PROJ-6 | Roadmap | — | 2026-10-04 |
+| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Planned | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
 
 <!-- Add features above this line -->
+
+**PROJ-17 (Stundenmuster) ist am 2026-10-12 in PROJ-16 aufgegangen** und steht deshalb nicht mehr in der Tabelle. Die Nummer wird nicht neu vergeben; Verweise auf PROJ-17 in den Specs von PROJ-6 und PROJ-7 meinen PROJ-16.
 
 ## Next Available ID: PROJ-19
 
@@ -258,4 +265,4 @@ Offen aus der QA: **BUG-26** (niedrig). Bewusst hingenommen: eine beendete Stund
 6. **PROJ-6** — Einheiten-Generator (Herzstück der App)
 7. **PROJ-7** — Einheiten-Editor (Feinschliff der generierten Einheiten)
 8. **PROJ-14** — Live-Modus (Stundenbegleitung während der Durchführung)
-9. **PROJ-16** — Eigene Kategorien verwalten (behebt eine Lücke aus PROJ-3, blockiert nichts, muss aber vor der Marktreife rein)
+9. **PROJ-16** — Verwaltung: Hallen, Stundenmuster, eigene Kategorien (behebt eine Lücke aus PROJ-3, blockiert nichts, muss aber vor der Marktreife rein)
