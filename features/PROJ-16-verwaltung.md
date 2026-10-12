@@ -1,6 +1,6 @@
 # PROJ-16: Verwaltung (Hallen, Stundenmuster, eigene Kategorien)
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-04
 **Last Updated:** 2026-10-12
 
@@ -222,8 +222,9 @@ Dieses Feature bringt drei Dinge:
 
 ## Open Questions
 - [ ] **Filter der Übungsübersicht und gelöschte Begriffe.** Nach dieser Spec verschwindet ein gelöschter Begriff auch aus den Filtern — Übungen, die ihn noch tragen, lassen sich danach nicht mehr über ihn finden. Folgerichtig zu „aus allen Auswahllisten", aber beim Test im Browser anzusehen, ob es stört
-- [ ] **Welche Mindestlänge hat ein Segment im Zeitverlauf heute, und in welchen Schritten wird gerechnet?** Die Umrechnung der Muster richtet sich danach; `/architecture` liest es aus dem Generator ab
-- [ ] **Wie merkt sich die App einen gelöschten Begriff**, damit er beim Speichern einer Übung nicht zurückkommt? Heute trägt jedes Speichern alle nicht vordefinierten Begriffe wieder ein. Eine Frage für `/architecture`
+- [x] **Welche Mindestlänge hat ein Segment im Zeitverlauf heute, und in welchen Schritten wird gerechnet?** — Eine Minute, ganze Minuten. Beantwortet im Tech Design (2026-10-12)
+- [x] **Wie merkt sich die App einen gelöschten Begriff**, damit er beim Speichern einer Übung nicht zurückkommt? — Gar nicht: eingetragen wird künftig nur, was neu eingetippt wurde. Beantwortet im Tech Design (2026-10-12)
+- [ ] **Begriffe, die in Übungen stehen, aber in keiner Auswahlliste**, sind in der Verwaltung unsichtbar und lassen sich erst nach erneutem Anlegen umbenennen. Beim Test im Browser anzusehen, ob das reicht oder ob die Verwaltung sie eigens zeigen soll
 
 ## Decision Log
 
@@ -256,12 +257,264 @@ Dieses Feature bringt drei Dinge:
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Eingetragen wird nur, was im Formular neu eingetippt wurde; Löschen ist echtes Löschen ohne Markierung | Behebt die Ursache statt ihr eine Merkliste nachzuführen. Drei Randfälle (Zurück zum Generator, Muster, Schnell-Anlegen) fallen ohne eigene Regel ab | 2026-10-12 |
+| Die Auswahlliste eines Formulars zeigt zusätzlich, was der Eintrag selbst schon trägt | Ein gelöschter Begriff bleibt an seiner Übung sichtbar, ohne anderswo aufzutauchen | 2026-10-12 |
+| Umbenennen und Zusammenführen als eine Datenbank-Funktion | Bis zu neun Stellen; ein Abbruch in der Mitte ließe alte und neue Namen nebeneinander stehen | 2026-10-12 |
+| Zählen und Verwendungen-Nennen als Datenbank-Funktionen, das Nennen erst auf Anforderung | Die Begriffe stehen in Listenfeldern über sechs Tabellen; ein Aufruf statt vieler. Namen werden nur für den einen Begriff gebraucht, den der Nutzer öffnet | 2026-10-12 |
+| Vordefinierte Begriffe prüft der Server, eigene die Datenbank | Die mitgelieferten Listen stehen im Programm, nicht in der Datenbank | 2026-10-12 |
+| Stundenmuster: eine Tabelle, die Segmente als Liste in einem Feld | Wird immer als Ganzes gelesen und überschrieben; Überschreiben ist damit von selbst unteilbar, ein Satz Zugriffsregeln genügt | 2026-10-12 |
+| Einheit ohne Verweis auf ihr Muster; nach „Zurück zum Generator" steht der Zeitverlauf unter „Individuell" | Setzt „Vorlage, keine Verbindung" durch, statt es nur zu behaupten. Kein neues Feld an der Einheit | 2026-10-12 |
+| Muster anwenden und speichern als reine Umformungen neben den Zeitverlauf-Bausteinen; Umrechnen über den vorhandenen Baustein | Ohne Oberfläche und Datenbank prüfbar, wie beim Editor. Das Umrechnen gibt es seit PROJ-6 | 2026-10-12 |
+| Phasen höchstens 60 Zeichen, die übrigen Arten 100 | Das Segment einer Einheit fasst nur 60; eine längere Phase ließe sich nicht mehr einplanen | 2026-10-12 |
+| Kein Recht „ändern" an der Kategorientabelle | Umbenennen läuft ausschließlich über die Funktion; ein direkter Weg könnte die Verwendungen zurücklassen | 2026-10-12 |
+| Der Reiter steht in der Adresse | Neuladen, Weitergeben und „verwalten"-Links ohne eigenen Merkmechanismus | 2026-10-12 |
+| „Verwalten"-Links aus Formularen öffnen einen neuen Tab; das Formular holt seine Listen beim Zurückkommen frisch | Keine Eingabe kann verloren gehen, keine Nachfrage nötig | 2026-10-12 |
+| Hallenliste zieht unverändert um, alte Adresse leitet weiter | Ausgeliefert und getestet; nur der Ort ändert sich | 2026-10-12 |
+| Eine Migration, rein hinzufügend; keine neuen Pakete | An bestehenden Tabellen ändert sich kein Feld | 2026-10-12 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+**Stand:** 2026-10-12
+
+### Der tragende Gedanke
+
+Zwei Regeln tragen das Feature, und beide sind einfacher als das, was sie ersetzen:
+
+1. **In die Auswahllisten kommt nur, was der Nutzer eingetippt hat.** Heute trägt jedes Speichern
+   einer Übung, Gruppe, Halle oder Einheit alles ein, was nicht vordefiniert ist — egal, ob es neu
+   ist oder schon seit Wochen dort steht. Künftig meldet das Formular nur die Begriffe, die in
+   *diesem* Formular neu eingetippt wurden. Damit ist „Löschen" ein echtes Löschen ohne
+   Merkliste: Ein gelöschter Begriff, der noch in einer Übung steht, wird beim Speichern nicht
+   gemeldet und kommt deshalb nicht zurück. Tippt der Nutzer ihn neu, ist er wieder da
+2. **Umbenennen ist eine einzige, nicht teilbare Datenbank-Operation.** Ein Begriff steht als Text
+   an bis zu neun Stellen. Eine Datenbank-Funktion ändert alle gemeinsam oder keine — dasselbe
+   Vorgehen wie beim Speichern im Editor (PROJ-7)
+
+Stundenmuster sind dagegen fast reine Rechnung im Browser: Ein Muster in einen Zeitverlauf
+verwandeln und umgekehrt sind zwei Umformungen ohne Oberfläche und ohne Datenbank, prüfbar wie die
+Bausteine des Editors. Das Umrechnen auf eine andere Dauer **gibt es schon** — der Generator
+benutzt es heute beim Gruppenwechsel.
+
+### A) Aufbau der Oberfläche
+
+```
+Startseite
++-- Karte „Verwaltung" (neu, vierte Karte)
+
+Seite „Verwaltung"  (eine Adresse, der Reiter steht in der Adresse)
++-- Reiterleiste: Hallen | Stundenmuster | Kategorien
++-- Reiter „Hallen"
+|   +-- Erklärtext
+|   +-- Hallenliste  (die bestehende, unverändert übernommen)
+|       +-- Dialog „Halle anlegen / bearbeiten"  (bestehend)
+|       +-- Löschen mit Warnung zu Gruppen       (bestehend)
++-- Reiter „Stundenmuster"
+|   +-- Erklärtext
+|   +-- Musterliste
+|   |   +-- Musterzeile: Name, Dauer, Kurzfassung des Aufbaus, Menü
+|   |       +-- Dialog „Umbenennen"
+|   |       +-- Nachfrage „Löschen"
+|   +-- Leerzustand mit Knopf zum Generator
++-- Reiter „Kategorien"
+    +-- Erklärtext
+    +-- Abschnitt je Art (5×): Sportarten, Altersgruppen, Phasen, Organisationsformen, Material
+        +-- Knopf „Anlegen" -> Dialog „Begriff anlegen"
+        +-- Begriffszeile: Name, Verwendungszahlen oder „unbenutzt", Menü
+        |   +-- Dialog „Verwendungen ansehen"
+        |   +-- Dialog „Umbenennen" -> bei Namensgleichheit Nachfrage „Zusammenführen"
+        |   +-- Dialog „Löschen" (nennt Verwendungen, bietet „Stattdessen umbenennen")
+        +-- Leerzustand des Abschnitts
+
+Generator  (bestehend, erweitert)
++-- Schritt 2 „Wie soll die Einheit aufgebaut sein?"
+|   +-- Standard
+|   +-- Stundenmuster  (neu)
+|   |   +-- Auswahlliste der Muster, Link „Stundenmuster verwalten"
+|   |   +-- ohne Muster: Erklärsatz, nicht wählbar
+|   +-- Individuell
++-- Zeitverlauf
+    +-- Hinweis „Muster von x auf y Minuten umgerechnet"  (neu)
+    +-- Knopf „Auf Standard zurücksetzen"                 (bestehend)
+    +-- Knopf „Auf Stundenmuster setzen"                  (neu, dieselbe Auswahlliste)
+    +-- Knopf „Stundenmuster speichern"                   (neu)
+        +-- Dialog: Name; bei geladenem Muster „überschreiben" oder „als neues"
+    +-- Nachfrage „Bisherigen Zeitverlauf ersetzen?"      (neu)
+
+Bestehende Formulare  (kleine Eingriffe)
++-- Übungs-Formular, Gruppen-Formular, Hallen-Dialog, Schnell-Anlegen, Phasenauswahl
+    +-- Link „Kategorien verwalten" bzw. „Hallen verwalten"
+    +-- melden beim Speichern nur neu Eingetipptes
++-- Gruppenübersicht: „Hallen verwalten" zeigt auf die neue Seite
++-- Alte Adresse der Hallenverwaltung leitet weiter
+```
+
+Alle Reiter, Dialoge, Menüs und Listen bestehen aus Bausteinen, die schon im Projekt liegen. Neu
+gebaut wird nur die Zusammenstellung.
+
+### B) Daten
+
+**Eigene Kategorien — die bestehende Tabelle, unverändert.** Jeder Eintrag hat Art, Name und
+Besitzer. Es kommt kein Feld dazu; insbesondere keine Markierung „gelöscht".
+
+**Stundenmuster — eine neue Tabelle, ein Eintrag je Muster:**
+
+```
+Jedes Stundenmuster hat:
+- Kennung und Besitzer
+- Name (1–60 Zeichen, je Nutzer eindeutig ohne Rücksicht auf Groß-/Kleinschreibung)
+- Gesamtdauer in Minuten, bei der es gespeichert wurde
+- Die Segmente als eine geordnete Liste in einem Feld. Je Segment:
+    - Phase
+    - Minuten
+    - generieren oder frei lassen
+    - Schwierigkeiten
+    - Organisationsformen
+    - Arbeitsnotiz der Phase
+    - Sportarten und Hauptsportart — oder der Vermerk „wie die Gruppe"
+- Angelegt am, zuletzt geändert am
+
+Gespeichert in: der Datenbank, nur für den Besitzer sichtbar und änderbar
+```
+
+Eine Einheit bekommt **kein** Feld, das auf ihr Muster zeigt.
+
+**Wo ein Begriff überall steht** — das ist die Liste, die Zählen und Umbenennen abarbeiten:
+
+| Stelle | Sportart | Altersgruppe | Phase | Organisationsform | Material |
+|---|---|---|---|---|---|
+| Übung | ja | ja | ja | ja | ja |
+| Variante einer Übung | — | ja | — | ja | ja |
+| Gruppe | ja, auch Hauptsportart | ja | — | — | — |
+| Halle | — | — | — | — | ja |
+| Segment einer Einheit (gespeichert und Entwurf) | ja, auch Hauptsportart | — | ja | ja | — |
+| Stundenmuster | ja, auch Hauptsportart | — | ja | ja | — |
+| Durchführung (PROJ-14) | — | — | steht dort als Abschrift, **wird nie angefasst** | — | — |
+
+Drei neue Datenbank-Funktionen arbeiten auf dieser Liste:
+
+- **Zählen** — liefert für alle eigenen Begriffe des Nutzers auf einmal, wie oft jeder in Übungen,
+  Gruppen, Hallen, Einheiten und Mustern steht. Ein Aufruf beim Öffnen des Reiters
+- **Verwendungen nennen** — liefert für *einen* Begriff die Namen der betroffenen Einträge. Wird
+  erst geholt, wenn der Nutzer „Verwendungen ansehen" oder „Löschen" öffnet
+- **Umbenennen / Zusammenführen** — ändert den Begriff an allen Stellen und in der Kategorienliste
+  in einem Zug und meldet zurück, wie viele Einträge mitgezogen sind. Beim Zusammenführen räumt
+  sie Doppeltes auf (ein Begriff zweimal an einer Übung; zwei Materialzeilen mit demselben Namen)
+
+Anlegen und Löschen einer Kategorie sowie alles an den Stundenmustern sind gewöhnliche Schreibwege
+auf je einer Tabelle und brauchen keine Funktion.
+
+### C) Entscheidungen und ihre Gründe
+
+**Löschen ohne Merkliste.** Die naheliegende Lösung wäre, gelöschte Begriffe zu markieren und
+beim Speichern zu überspringen. Dann müsste aber jede Stelle, die Begriffe einträgt, die Markierung
+kennen, und „neu eintippen" müsste sie wieder aufheben — eine Regel, die dem Löschen hinterherläuft.
+Stattdessen wird die Ursache behoben: Die vier Stellen, die heute pauschal eintragen (Übung, Gruppe,
+Halle, Generator), tragen nur noch ein, was das Formular als neu eingetippt meldet. Das beantwortet
+die offene Frage der Spec, und es erfüllt nebenbei drei Randfälle ohne eigene Regel: „Zurück zum
+Generator" mit gelöschter Phase, ein Muster mit gelöschter Phase, und „Schnell anlegen" mit
+vorbelegter Organisationsform — in keinem der drei wird etwas eingetippt.
+
+**Die Auswahlliste eines Formulars = vordefiniert + eigene + was der Eintrag schon trägt.** So
+bleibt ein gelöschter Begriff an seiner Übung sichtbar und ausgewählt, ohne in anderen Formularen
+aufzutauchen. Die Mehrfachauswahl verhält sich schon heute so; für Material und Phase wird es
+nachgezogen.
+
+**Umbenennen in der Datenbank statt in der Anwendung.** Die Anwendung müsste bis zu neun Stellen
+nacheinander ändern; bricht die Verbindung in der Mitte, trüge ein Teil der Übungen den alten und
+ein Teil den neuen Namen — genau der Zustand, den das Feature beseitigen soll. In der Datenbank
+gilt alles oder nichts.
+
+**Vordefinierte Begriffe prüft die Serverschicht, eigene die Datenbank.** Die mitgelieferten Listen
+stehen im Programm, nicht in der Datenbank. Ob ein neuer Name einem vordefinierten gleicht,
+entscheidet deshalb der Server vor dem Aufruf; ob er einem eigenen gleicht, die Funktion selbst.
+
+**Stundenmuster als ein Eintrag mit einer Liste darin, nicht als zwei Tabellen.** Ein Muster wird
+immer als Ganzes gelesen und als Ganzes überschrieben, nie segmentweise. Ein Eintrag macht das
+Überschreiben von selbst unteilbar und braucht nur einen Satz Zugriffsregeln. Der Preis: Die
+Umbenennen-Funktion muss in diese Liste hineinsehen. Das ist ein Abschnitt mehr in einer Funktion,
+die ohnehin gebaut wird.
+
+**Muster anwenden und speichern als zwei reine Umformungen.** „Zeitverlauf + Gruppe → Muster" und
+„Muster + Gruppe → Zeitverlauf" liegen neben den bestehenden Zeitverlauf-Bausteinen und werden
+ohne Oberfläche getestet. Das Umrechnen auf eine andere Dauer übernimmt der vorhandene Baustein
+unverändert.
+
+**Mindestlänge und Schrittweite (offene Frage der Spec):** Der Zeitverlauf rechnet in ganzen
+Minuten, ein Segment ist mindestens **eine Minute** lang. Ein Muster lässt sich also nur dann nicht
+anwenden, wenn es mehr Segmente hat als die Gruppe Minuten — bei der kürzesten erlaubten Einheit
+(5 Minuten) ab dem sechsten Segment.
+
+**Nach „Zurück zum Generator" steht der Zeitverlauf unter „Individuell".** Die Einheit merkt sich
+ihren Zeitverlauf, nicht ihr Muster — das ist die Produktentscheidung „keine Verbindung". Der
+Zeitverlauf steht deshalb genau so da, wie er verlassen wurde, aber der Weg „Stundenmuster" ist
+nicht vorgewählt, und „Stundenmuster speichern" bietet kein „überschreiben" an. Wer denselben Namen
+eingibt, wird wie immer gefragt.
+
+**Der Reiter steht in der Adresse.** Damit funktionieren Neuladen, Weitergeben und jeder
+„verwalten"-Link ohne eigenen Merkmechanismus; ein Link kann zusätzlich den Abschnitt einer Art
+ansteuern.
+
+**„Verwalten"-Links aus einem Formular öffnen einen neuen Tab.** Das Formular bleibt, wie es ist —
+nichts kann verloren gehen, und es braucht keine Nachfrage. Kehrt der Nutzer zurück, holt das
+Formular seine Auswahllisten frisch, ohne die Eingaben anzufassen. Links von Seiten ohne Eingaben
+(Startseite, Gruppenübersicht) wechseln gewöhnlich die Seite.
+
+**Die Hallenliste zieht um, wie sie ist.** Dieselben Bausteine, dieselben Serverwege, nur an
+neuer Adresse. Die alte Adresse leitet weiter, damit Lesezeichen halten.
+
+**Zugriffsschutz.** Die neue Tabelle bekommt vier Regeln nur für den Besitzer (lesen, anlegen,
+ändern, löschen). Die bestehende Kategorientabelle hat lesen, anlegen und löschen; **ändern kommt
+nicht dazu**, weil Umbenennen ausschließlich über die Funktion läuft. Die drei Funktionen prüfen
+den angemeldeten Nutzer selbst, sind für nicht Angemeldete gesperrt und folgen der Härtung aus
+PROJ-6. *Neue Zugriffsregeln brauchen laut Projektregel die ausdrückliche Zustimmung des Nutzers —
+sie wird in `/backend` mit dem fertigen Text der Migration eingeholt.*
+
+### D) Was dabei aufgefallen ist
+
+- **Phasen dürfen höchstens 60 Zeichen haben, nicht 100.** Die Kategorientabelle erlaubt 100, das
+  Segment einer Einheit nur 60. Eine auf 80 Zeichen umbenannte Phase ließe sich in keine Einheit
+  mehr schreiben. Anlegen und Umbenennen begrenzen Phasen deshalb auf 60; für die anderen vier
+  Arten bleibt es bei 100. Die beiden Akzeptanzkriterien zur Länge sind entsprechend zu lesen
+- **Hallen haben eine eigene vordefinierte Materialliste**, getrennt von der der Übungen. Ein
+  eigener Materialbegriff gilt trotzdem für beide — so ist es heute, und so bleibt es. Beim
+  Zusammenführen mit einem vordefinierten Begriff gelten beide Listen als „vorhanden"
+- **Umbenennen setzt den Änderungsstempel der betroffenen Übungen und Einheiten neu.** Folge: Die
+  Sortierung „zuletzt geändert" verschiebt sich, und ein Editor, der dieselbe Einheit in einem
+  anderen Tab offen hat, meldet beim Speichern „inzwischen geändert". Das zweite ist richtig so;
+  das erste wird hingenommen
+- **Eine laufende Stunde im Live-Modus** arbeitet auf ihrer Akte auf dem Gerät und sieht ein
+  Umbenennen nicht — sie zeigt bis zum Ende den alten Namen. Gewollt
+
+### E) Reihenfolge beim Bauen
+
+Das Feature besteht aus drei Teilen, die sich einzeln fertigstellen und prüfen lassen:
+
+1. **Seite „Verwaltung" mit dem Reiter „Hallen"** — Umzug, Weiterleitung, Karte der Startseite.
+   Braucht keine Datenbank-Änderung; die Browser-Tests von PROJ-5 ziehen mit
+2. **Stundenmuster** — erst die beiden Umformungen mit Tests, dann Generator und Reiter. Die
+   Oberfläche lässt sich vor der Migration nur mit Beispieldaten ansehen
+3. **Kategorien** — Reiter, Dialoge und die Umstellung der vier Eintragestellen. Anlegen und
+   Löschen gehen sofort, Zählen und Umbenennen erst mit der Migration
+
+**Eine Migration**, rein hinzufügend: die Tabelle der Stundenmuster mit ihren Zugriffsregeln und
+die drei Funktionen. An bestehenden Tabellen ändert sich kein Feld. Angewendet über den SQL-Editor
+des Dashboards.
+
+### F) Pakete
+
+**Keine neuen Pakete.**
+
+### G) Was der Entwurf nicht beantwortet
+
+- Ob die Umbenennen-Funktion bei einem Nutzer mit sehr vielen Übungen spürbar dauert, zeigt erst
+  der Nachweis am lebenden System. Bei heutigen Mengen ist es ohne Belang
+- Begriffe, die in Übungen stehen, aber in keiner Auswahlliste (aus der Zeit der Testdaten oder
+  nach einem Löschen), sind in der Verwaltung unsichtbar. Wer so einen Begriff umbenennen will,
+  legt ihn erst neu an — die Verwendungen zählen dann sofort mit. Ob das im Alltag reicht, zeigt
+  der Test im Browser
 
 ## QA Test Results
 _To be added by /qa_

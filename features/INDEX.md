@@ -226,7 +226,17 @@ Offen aus der QA: **BUG-26** (niedrig). Bewusst hingenommen: eine beendete Stund
 - **Stundenmuster** gelten für alle Gruppen. Passt die Dauer nicht, wird anteilig umgerechnet und es wird gesagt; Sportarten trägt ein Muster nur dort, wo bewusst von der Gruppe abgewichen wurde. Im Generator stehen sie als dritter Weg neben „Standard" und „Individuell", dazu „Auf Stundenmuster setzen" und „Stundenmuster speichern" am Zeitverlauf. Geändert wird ein Muster nur im Generator; Einheiten merken sich ihr Muster nicht
 - Damit sind die drei Fragen beantwortet, die PROJ-6 an die Spec weitergereicht hatte
 
-**Nächster Schritt:** `/architecture PROJ-16`; daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
+**PROJ-16 hat seit dem 2026-10-12 einen Technikentwurf** — Abschnitt „Tech Design" in der Spec, vom Nutzer am selben Tag abgenommen. Zwei Entscheidungen tragen ihn:
+
+- **Löschen ohne Merkliste.** Die vier Stellen, die heute pauschal alles Nicht-Vordefinierte in die Auswahllisten eintragen (Übung, Gruppe, Halle, Generator), tragen künftig nur noch ein, was im Formular **neu eingetippt** wurde. Ein gelöschter Begriff, der noch in einer Übung steht, kommt damit nicht zurück — ohne Markierung „gelöscht"
+- **Umbenennen und Zusammenführen als eine Datenbank-Funktion** — alle Stellen gemeinsam oder keine, wie das Speichern im Editor
+- **Stundenmuster:** eine neue Tabelle, die Segmente als Liste in einem Feld; Anwenden und Speichern als zwei reine Umformungen. Das Umrechnen auf eine andere Dauer gibt es seit PROJ-6
+- **Eine Migration**, rein hinzufügend (Tabelle der Muster, drei Funktionen); an bestehenden Tabellen ändert sich kein Feld. **Keine neuen Pakete.** Die neuen Zugriffsregeln brauchen die ausdrückliche Zustimmung des Nutzers, einzuholen in `/backend`
+- **Abweichungen von der Spec, abgenommen:** Phasen höchstens 60 Zeichen statt 100 (mehr fasst das Segment einer Einheit nicht); nach „Zurück zum Generator" steht der Zeitverlauf unter „Individuell"; „verwalten"-Links aus Formularen öffnen einen neuen Tab
+
+Baubar in drei Teilen: erst die Seite mit dem Umzug der Hallen (ohne Datenbank-Änderung, die Browser-Tests von PROJ-5 ziehen mit), dann Stundenmuster, dann Kategorien.
+
+**Nächster Schritt:** `/frontend PROJ-16`; daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
 
 ## Features
 
@@ -246,7 +256,7 @@ Offen aus der QA: **BUG-26** (niedrig). Bewusst hingenommen: eine beendete Stund
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Deployed | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
-| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Planned | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
+| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Architected | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
 
 <!-- Add features above this line -->
