@@ -18,6 +18,8 @@ import { useToast } from '@/hooks/use-toast'
 import { MultiSelect } from '@/components/exercises/multi-select'
 import { ScheduleInput } from './schedule-input'
 import { VenueDialog } from './venue-dialog'
+import { ManageLink } from '@/components/manage/manage-link'
+import { manageHref } from '@/lib/manage/tabs'
 import { groupSchema } from '@/lib/validations/group'
 import {
   SPORTS, AGE_GROUPS,
@@ -202,6 +204,7 @@ export function GroupForm({
           customLabel="Eigene Sportart hinzufügen"
           error={errors.sports}
         />
+        <ManageLink href={manageHref('categories', 'sport')}>Kategorien verwalten</ManageLink>
       </div>
 
       {/* Hauptsportart */}
@@ -247,6 +250,7 @@ export function GroupForm({
           customLabel="Eigene Altersgruppe hinzufügen"
           error={errors.ageGroups}
         />
+        <ManageLink href={manageHref('categories', 'age_group')}>Kategorien verwalten</ManageLink>
       </div>
 
       {/* Teilnehmerzahl */}
@@ -343,6 +347,7 @@ export function GroupForm({
             Neue Halle
           </Button>
         </div>
+        <ManageLink href={manageHref('venues')}>Hallen verwalten</ManageLink>
       </div>
 
       {/* Save / Cancel */}

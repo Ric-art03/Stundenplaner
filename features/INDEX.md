@@ -236,7 +236,15 @@ Offen aus der QA: **BUG-26** (niedrig). Bewusst hingenommen: eine beendete Stund
 
 Baubar in drei Teilen: erst die Seite mit dem Umzug der Hallen (ohne Datenbank-Änderung, die Browser-Tests von PROJ-5 ziehen mit), dann Stundenmuster, dann Kategorien.
 
-**Nächster Schritt:** `/frontend PROJ-16`; daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
+**Die Oberfläche von PROJ-16 steht seit dem 2026-10-12** — Abschnitt „Implementation Notes (Frontend)" in der Spec. **570 Unit-Tests grün** (529 plus 41 neue), Typprüfung, Lint und Produktionsbuild sauber; **im Browser nicht angesehen**, die Browser-Tests sind nicht gelaufen. Gebaut: die Seite `/manage` mit drei Reitern, der Umzug der Hallen (`/groups/venues` leitet weiter), die Karte auf der Startseite, die „verwalten"-Links, und im Generator der dritte Weg „Stundenmuster" samt „Auf Stundenmuster setzen" und „Stundenmuster speichern".
+
+Sofort benutzbar sind der Reiter „Hallen" und bei den Kategorien **Anlegen und Löschen**. Alles andere wartet auf die Migration aus `/backend`:
+
+- **Stundenmuster** — die Serverwege sind geschrieben, die Tabelle fehlt noch. Bis dahin ist der dritte Weg im Generator nicht wählbar, und „Stundenmuster speichern" meldet einen Fehler
+- **Verwendungszahlen, Verwendungen nennen, Umbenennen/Zusammenführen** — die drei Datenbank-Funktionen
+- **„Gelöschtes kommt nicht zurück"** ist nur für den Generator gebaut. An Übung, Gruppe und Halle kehrt ein gelöschter, aber noch benutzter Begriff beim nächsten Speichern zurück, bis der Server dort vorher/nachher vergleicht
+
+**Nächster Schritt:** `/backend PROJ-16`; daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
 
 ## Features
 
@@ -256,7 +264,7 @@ Baubar in drei Teilen: erst die Seite mit dem Umzug der Hallen (ohne Datenbank-�
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Deployed | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
-| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Architected | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
+| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | In Progress | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
 
 <!-- Add features above this line -->

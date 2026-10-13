@@ -1,27 +1,10 @@
-import { VenueList } from '@/components/groups/venue-list'
-import {
-  getVenuesWithGroupCount,
-  createVenue,
-  updateVenue,
-  deleteVenue,
-} from '@/lib/actions/groups'
-import { getCustomCategories } from '@/lib/actions/exercises'
+import { redirect } from 'next/navigation'
+import { manageHref } from '@/lib/manage/tabs'
 
-export default async function VenuesPage() {
-  const [venues, customCategories] = await Promise.all([
-    getVenuesWithGroupCount(),
-    getCustomCategories(),
-  ])
-
-  return (
-    <div className="container mx-auto px-4 py-6">
-      <VenueList
-        venues={venues}
-        customMaterials={customCategories.material ?? []}
-        onCreateVenue={createVenue}
-        onUpdateVenue={updateVenue}
-        onDeleteVenue={deleteVenue}
-      />
-    </div>
-  )
+/**
+ * Die Hallenverwaltung ist mit PROJ-16 in die Verwaltung umgezogen. Die alte
+ * Adresse leitet weiter, damit Lesezeichen halten.
+ */
+export default function VenuesPage() {
+  redirect(manageHref('venues'))
 }

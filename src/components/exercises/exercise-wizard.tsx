@@ -13,6 +13,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useToast } from '@/hooks/use-toast'
 import { StepIndicator } from './step-indicator'
 import { MultiSelect } from './multi-select'
+import { ManageLink } from '@/components/manage/manage-link'
+import { manageHref } from '@/lib/manage/tabs'
 import { MaterialInput } from './material-input'
 import { VariantInput } from './variant-input'
 import { LinkInput } from './link-input'
@@ -351,6 +353,7 @@ function StepEinordnung({ data, errors, update, sportsOptions, ageGroupOptions, 
           customLabel="Eigene Sportart hinzufügen"
           error={errors.sports}
         />
+        <ManageLink href={manageHref('categories', 'sport')}>Kategorien verwalten</ManageLink>
       </div>
       <div className="space-y-2">
         <Label>Altersgruppe(n) *</Label>
@@ -363,6 +366,7 @@ function StepEinordnung({ data, errors, update, sportsOptions, ageGroupOptions, 
           customLabel="Eigene Altersgruppe hinzufügen"
           error={errors.ageGroups}
         />
+        <ManageLink href={manageHref('categories', 'age_group')}>Kategorien verwalten</ManageLink>
       </div>
       <div className="space-y-2">
         <Label>Phase(n) *</Label>
@@ -375,6 +379,7 @@ function StepEinordnung({ data, errors, update, sportsOptions, ageGroupOptions, 
           customLabel="Eigene Phase hinzufügen"
           error={errors.phases}
         />
+        <ManageLink href={manageHref('categories', 'phase')}>Kategorien verwalten</ManageLink>
       </div>
       <div className="space-y-2">
         <Label>Schwierigkeitsgrad *</Label>
@@ -403,6 +408,9 @@ function StepEinordnung({ data, errors, update, sportsOptions, ageGroupOptions, 
           allowCustom
           customLabel="Eigene Form hinzufügen"
         />
+        <ManageLink href={manageHref('categories', 'organization_form')}>
+          Kategorien verwalten
+        </ManageLink>
       </div>
     </div>
   )
@@ -466,6 +474,7 @@ function StepLogistik({ data, errors, update, customMaterials }: StepProps) {
           onChange={(v) => update('materials', v)}
           customMaterials={customMaterials}
         />
+        <ManageLink href={manageHref('categories', 'material')}>Kategorien verwalten</ManageLink>
       </div>
 
       <div className="space-y-4">

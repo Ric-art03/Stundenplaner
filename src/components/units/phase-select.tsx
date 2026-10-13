@@ -16,10 +16,12 @@ interface PhaseSelectProps {
   options: string[]
   value: string
   onChange: (value: string) => void
+  /** Wird gerufen, wenn der Nutzer eine Phase neu eintippt — nicht beim Auswählen. */
+  onCreate?: (name: string) => void
   error?: string
 }
 
-export function PhaseSelect({ options, value, onChange, error }: PhaseSelectProps) {
+export function PhaseSelect({ options, value, onChange, onCreate, error }: PhaseSelectProps) {
   const [adding, setAdding] = React.useState(false)
   const [draft, setDraft] = React.useState('')
 
@@ -33,6 +35,7 @@ export function PhaseSelect({ options, value, onChange, error }: PhaseSelectProp
   function confirmCustom() {
     const name = draft.trim()
     if (!name) return
+    onCreate?.(name)
     onChange(name)
     setDraft('')
     setAdding(false)

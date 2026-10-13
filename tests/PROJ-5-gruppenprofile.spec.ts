@@ -130,7 +130,9 @@ test.describe('Gruppenprofile - Hallen verwalten', () => {
   })
 
   test('AC: Hallen-Verwaltungsseite ist erreichbar', async ({ page }) => {
-    await expect(page.getByText('Hallen verwalten')).toBeVisible()
+    // Seit PROJ-16 leitet die alte Adresse in die Verwaltung, Reiter „Hallen".
+    await expect(page).toHaveURL(/\/manage\?tab=venues$/)
+    await expect(page.getByRole('tab', { name: 'Hallen', selected: true })).toBeVisible()
   })
 
   test('AC: Hallen-Seite zeigt Empty State oder Hallen', async ({ page }) => {
@@ -143,9 +145,10 @@ test.describe('Gruppenprofile - Hallen verwalten', () => {
     await expect(page.getByRole('button', { name: /Neue Halle/ })).toBeVisible()
   })
 
-  test('AC: Zurück-Link führt zu Gruppen', async ({ page }) => {
-    await page.getByRole('link', { name: /Alle Gruppen/ }).click()
-    await expect(page).toHaveURL(/\/groups$/)
+  test('AC: Die Verwaltung zeigt die drei Reiter', async ({ page }) => {
+    // Der Zurück-Link „Alle Gruppen" ist mit dem Umzug entfallen (PROJ-16).
+    await expect(page.getByRole('tab', { name: 'Stundenmuster' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Kategorien' })).toBeVisible()
   })
 })
 

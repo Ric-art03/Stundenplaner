@@ -17,7 +17,7 @@ export default async function GroupsPage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 shrink-0">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/groups/venues">
+            <Link href="/manage?tab=venues">
               <MapPin className="mr-2 h-4 w-4" />
               Hallen verwalten
             </Link>

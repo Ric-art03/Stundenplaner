@@ -585,6 +585,36 @@ export type Database = {
         }
         Relationships: []
       }
+      unit_patterns: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          total_minutes: number
+          segments: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          total_minutes: number
+          segments: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          total_minutes?: number
+          segments?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {

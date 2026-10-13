@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ClipboardList, Users, Calendar } from 'lucide-react'
+import { ClipboardList, Users, Calendar, Settings2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
@@ -43,7 +43,7 @@ export default async function DashboardPage() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">Gruppenprofile</CardTitle>
-                  <CardDescription>Trainingsgruppen und Hallen verwalten</CardDescription>
+                  <CardDescription>Trainingsgruppen und ihre Profile verwalten</CardDescription>
                 </div>
               </CardHeader>
             </Card>
@@ -57,6 +57,19 @@ export default async function DashboardPage() {
                 <div>
                   <CardTitle className="text-lg">Einheiten-Generator</CardTitle>
                   <CardDescription>Einheit für eine Gruppe zusammenstellen</CardDescription>
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/manage">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center gap-4">
+                <div className="rounded-lg bg-primary/10 p-3">
+                  <Settings2 className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Verwaltung</CardTitle>
+                  <CardDescription>Hallen, Stundenmuster und eigene Kategorien an einem Ort</CardDescription>
                 </div>
               </CardHeader>
             </Card>

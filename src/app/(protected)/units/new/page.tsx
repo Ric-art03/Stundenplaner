@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { getGroups } from '@/lib/actions/groups'
 import { getCustomCategories, getExercises } from '@/lib/actions/exercises'
 import { getUnit } from '@/lib/actions/units'
+import { getPatterns } from '@/lib/actions/patterns'
 import { EMPTY_FILTERS } from '@/lib/types/exercise'
 import { UnitConfigForm } from '@/components/units/unit-config-form'
 import { UnitGeneratorEmptyState } from '@/components/units/unit-generator-empty-state'
@@ -16,9 +17,10 @@ interface NewUnitPageProps {
 export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
   const { group: groupParam, from: fromUnitId } = await searchParams
 
-  const [groups, categories, exerciseResult] = await Promise.all([
+  const [groups, categories, patterns, exerciseResult] = await Promise.all([
     getGroups(),
     getCustomCategories(),
+    getPatterns(),
     // Nur die Gesamtzahl interessiert hier — deshalb ein Limit von 1.
     getExercises(EMPTY_FILTERS, 'name', 'asc', 0, 1),
   ])
@@ -71,6 +73,7 @@ export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
         ) : (
           <UnitConfigForm
             groups={groups}
+            patterns={patterns}
             customPhases={categories.phase ?? []}
             customSports={categories.sport ?? []}
             customOrganizationForms={categories.organization_form ?? []}

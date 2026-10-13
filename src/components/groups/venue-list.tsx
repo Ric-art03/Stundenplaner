@@ -1,8 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Pencil, Trash2, MapPin, Plus, Package, ChevronDown, ChevronUp, Info, Users } from 'lucide-react'
+import { Pencil, Trash2, MapPin, Plus, Package, ChevronDown, ChevronUp, Info, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -101,18 +100,12 @@ export function VenueList({
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-            <Link href="/groups">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Alle Gruppen
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold">Hallen verwalten</h1>
-          <p className="text-muted-foreground mt-1">Bearbeite oder lösche deine Trainingsstandorte.</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          Hallen sind deine Trainingsorte mit ihrem Material. Du weist sie im Gruppenprofil zu —
+          der Generator plant dann nur Übungen ein, für die das Material der Halle reicht.
+        </p>
         <Button onClick={() => setCreateOpen(true)} className="shrink-0">
           <Plus className="mr-2 h-4 w-4" />
           Neue Halle

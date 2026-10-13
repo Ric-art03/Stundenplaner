@@ -1,6 +1,6 @@
 # PROJ-16: Verwaltung (Hallen, Stundenmuster, eigene Kategorien)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-04
 **Last Updated:** 2026-10-12
 
@@ -515,6 +515,92 @@ des Dashboards.
   nach einem Löschen), sind in der Verwaltung unsichtbar. Wer so einen Begriff umbenennen will,
   legt ihn erst neu an — die Verwendungen zählen dann sofort mit. Ob das im Alltag reicht, zeigt
   der Test im Browser
+
+## Implementation Notes (Frontend)
+
+**Stand:** 2026-10-12. **570 Unit-Tests grün** (529 plus 41 neue), Typprüfung, Lint und
+Produktionsbuild sauber. **Im Browser nicht angesehen** — alles liegt hinter der Anmeldung. Die
+Browser-Tests sind nicht gelaufen.
+
+### Was gebaut ist
+
+**Logik ohne Oberfläche, mit Tests**
+
+- `src/lib/units/patterns.ts` — die beiden Umformungen der Stundenmuster: Zeitverlauf → Muster
+  (`toPatternSegments`, merkt sich „wie die Gruppe") und Muster → Zeitverlauf (`applyPattern`,
+  rechnet über den vorhandenen Baustein `rescaleSegments` um und lehnt ab, wenn die Gruppe weniger
+  Minuten als das Muster Segmente hat). Dazu Kurzfassung, Auswahlzeile, Namensprüfung. 25 Tests
+- `src/lib/manage/categories.ts` — Arten, Beschriftungen, Namensgrenzen (Phase 60, sonst 100),
+  Namensgleichheit gegen vordefinierte und eigene Begriffe, Verwendungszeile. 16 Tests
+- `src/lib/manage/tabs.ts` — die drei Reiter und ihre Adressen
+
+**Seite „Verwaltung"** unter `/manage`, der Reiter steht als `?tab=venues|patterns|categories` in
+der Adresse, ein Abschnitt der Kategorien als Sprungmarke dahinter.
+
+- `src/app/(protected)/manage/page.tsx` und `loading.tsx` — der Server lädt nur den gewählten Reiter
+- `src/components/manage/manage-tabs.tsx` — Reiterleiste
+- `src/components/manage/pattern-list.tsx` — Liste, Umbenennen, Löschen, Leerzustand
+- `src/components/manage/category-manager.tsx` — fünf Abschnitte, Anlegen, Verwendungen ansehen,
+  Umbenennen mit Nachfrage zum Zusammenführen, Löschen mit „Stattdessen umbenennen"
+- `src/components/manage/manage-link.tsx` — der „verwalten"-Link aus Formularen: neuer Tab, und
+  beim Zurückkommen holt die Seite ihre Listen frisch
+- **Hallen:** `venue-list.tsx` ist unverändert übernommen, nur der Kopf (Zurück-Link, Überschrift)
+  ist dem Erklärtext gewichen. `/groups/venues` leitet weiter
+- Startseite: vierte Karte „Verwaltung"; die Karte „Gruppenprofile" nennt die Hallen nicht mehr
+
+**Generator** (`unit-config-form.tsx`, `save-pattern-dialog.tsx`)
+
+- Dritter Weg „Stundenmuster" mit Auswahlliste; ohne Muster nicht wählbar und mit Erklärsatz
+- Am Zeitverlauf „Auf Stundenmuster setzen" (dieselbe Liste als Menü) und „Stundenmuster speichern"
+- Hinweis „Muster von x auf y Minuten umgerechnet"
+- Nachfrage „Bisherigen Zeitverlauf ersetzen?" — nur wenn von Hand geändert wurde
+- Gruppenwechsel bei geladenem Muster wendet es frisch an; passt es nicht, fällt die Maske mit
+  Begründung auf „Standard" zurück
+- Die Phasenauswahl meldet neu eingetippte Phasen; `generateUnit` trägt nur noch diese ein
+
+**Serverwege, schon angeschlossen**
+
+- `src/lib/actions/patterns.ts` — lesen, speichern/überschreiben, umbenennen, löschen, gegen die
+  Tabelle `unit_patterns`. Die Tabelle steht in `database.types.ts`, **existiert aber noch nicht**:
+  bis zur Migration liefert das Lesen eine leere Liste und das Speichern eine Fehlermeldung
+- `src/lib/actions/categories.ts` — lesen, anlegen, löschen arbeiten auf der bestehenden Tabelle
+  und **funktionieren sofort**
+
+### Was erst mit `/backend` trägt
+
+1. **Stundenmuster überhaupt** — ohne die Tabelle ist der dritte Weg im Generator nicht wählbar und
+   der Reiter zeigt den Leerzustand. „Stundenmuster speichern" meldet einen Fehler
+2. **Verwendungszahlen** — `getManagedCategories` liefert noch keine; die Zeilen zeigen deshalb
+   weder Zahl noch „unbenutzt"
+3. **Verwendungen nennen** — `getCategoryUsages` liefert noch nichts; die Dialoge sagen „lassen
+   sich gerade nicht auflisten"
+4. **Umbenennen und Zusammenführen** — `renameCategory` prüft Form und Namensgleichheit und fragt
+   nach, ändert dann aber bewusst nichts: nur die Zeile der Kategorie umzubenennen ließe die
+   Übungen mit dem alten Namen zurück
+5. **„Gelöschtes kommt nicht zurück" für Übung, Gruppe und Halle** — für den Generator ist es
+   gebaut. Die drei anderen Stellen tragen beim Speichern weiter alles Nicht-Vordefinierte ein;
+   **ein dort gelöschter, aber noch benutzter Begriff kehrt bis dahin beim nächsten Speichern
+   zurück**
+
+### Abweichungen vom Entwurf
+
+- **Wer meldet das neu Eingetippte?** Der Entwurf sah vor, dass jedes Formular es meldet. Für den
+  Generator ist das so gebaut. Für Übung, Gruppe und Halle genügt ein Vergleich auf dem Server:
+  neu ist, was der Eintrag vor dem Speichern nicht trug. Das spart den Umbau von acht Bausteinen
+  und kommt in `/backend`
+- **Die Adresse ist `/manage`**, passend zu den übrigen (`/exercises`, `/groups`, `/units`)
+- **„Kategorien verwalten" steht nicht an jeder Auswahlliste:** an den vier Listen und am Material
+  des Übungs-Formulars, an Sportart und Altersgruppe der Gruppe und an der Phase im Generator.
+  Nicht an den Listen der Varianten und nicht am Material im Hallen-Dialog — dieselben Begriffe,
+  ein Link pro Formular-Abschnitt reicht
+- **Anführungszeichen:** die neuen Texte schließen mit dem deutschen „…“ statt mit dem geraden
+  Zeichen; die Lint-Regel verlangt es in Fließtext
+
+### Tests angepasst
+
+`tests/PROJ-5-gruppenprofile.spec.ts`: die Hallenseite wird über die Weiterleitung und den Reiter
+geprüft; der Test zum Zurück-Link „Alle Gruppen" ist durch einen zu den drei Reitern ersetzt.
+**Nicht ausgeführt.**
 
 ## QA Test Results
 _To be added by /qa_

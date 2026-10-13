@@ -250,12 +250,21 @@ async function buildUnitName(
 async function saveCustomPhases(
   supabase: SupabaseClient,
   userId: string,
-  segments: SegmentConfig[]
+  segments: SegmentConfig[],
+  typedPhases: string[]
 ) {
+  // Nur was in diesem Formular neu eingetippt wurde. Eine Phase, die über
+  // „Zurück zum Generator" oder ein Stundenmuster mitkommt, wird nicht erneut
+  // eingetragen — sonst käme eine in der Verwaltung gelöschte Phase von selbst
+  // zurück (PROJ-16).
+  const typed = new Set(typedPhases.map((name) => name.trim()))
   const customs = unique(
     segments
       .map((segment) => segment.name.trim())
-      .filter((name) => name !== '' && !(PHASES as readonly string[]).includes(name))
+      .filter(
+        (name) =>
+          name !== '' && typed.has(name) && !(PHASES as readonly string[]).includes(name)
+      )
   ).map((name) => ({ user_id: userId, category_type: 'phase', name }))
 
   if (customs.length === 0) return
@@ -343,7 +352,9 @@ function newSeed(): number {
 }
 
 export async function generateUnit(
-  config: UnitConfig
+  config: UnitConfig,
+  /** Phasen, die der Nutzer in diesem Formular neu eingetippt hat. */
+  typedPhases: string[] = []
 ): Promise<{ unitId?: string; error?: string }> {
   const { supabase, user } = await getAuthUser()
   if (!user) return { error: 'Nicht angemeldet.' }
@@ -409,7 +420,12 @@ export async function generateUnit(
     return { error: GENERIC_ERROR }
   }
 
-  await saveCustomPhases(supabase, user.id, config.segments)
+  await saveCustomPhases(
+    supabase,
+    user.id,
+    config.segments,
+    Array.isArray(typedPhases) ? typedPhases.filter((name) => typeof name === 'string').slice(0, 50) : []
+  )
 
   return { unitId: unitRow.id }
 }
