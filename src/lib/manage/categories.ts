@@ -136,6 +136,50 @@ export function conflictMessage(conflict: NameConflict): string {
     : `„${conflict.name}" gibt es schon — als eigenen Begriff.`
 }
 
+/**
+ * Die eigenen Begriffe, die mit diesem Speichern neu an den Eintrag kommen —
+ * nur sie werden in die Auswahllisten eingetragen. Was der Eintrag schon trug,
+ * wird nicht erneut gemeldet: sonst käme ein in der Verwaltung gelöschter
+ * Begriff beim nächsten Speichern von selbst zurück.
+ */
+export function newlyAddedCustom(
+  type: CategoryType,
+  before: readonly string[],
+  after: readonly string[]
+): string[] {
+  const known = new Set(before)
+  const predefined = PREDEFINED_CATEGORIES[type] as readonly string[]
+  return [
+    ...new Set(
+      after
+        .map((name) => name.trim())
+        .filter((name) => name !== '' && !known.has(name) && !predefined.includes(name))
+    ),
+  ]
+}
+
+/** Die Zeilen von `category_usages`, nach Sorte gegliedert und nach Namen sortiert. */
+export function groupUsages(rows: { kind: string; entry_name: string }[]): CategoryUsages {
+  const usages: CategoryUsages = { exercises: [], groups: [], venues: [], units: [], patterns: [] }
+  for (const row of rows) {
+    if ((USAGE_KINDS as readonly string[]).includes(row.kind)) {
+      usages[row.kind as UsageKind].push(row.entry_name)
+    }
+  }
+  for (const kind of USAGE_KINDS) {
+    usages[kind].sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }))
+  }
+  return usages
+}
+
+/** Die Ausnahmen von `rename_category`, wie die Oberfläche sie unterscheidet. */
+export function renameFailure(message: string): 'gone' | 'taken' | 'invalid' | 'other' {
+  if (message.includes('category_not_found')) return 'gone'
+  if (message.includes('name_taken')) return 'taken'
+  if (message.includes('invalid_name')) return 'invalid'
+  return 'other'
+}
+
 export function sortCategories<T extends { name: string }>(entries: T[]): T[] {
   return [...entries].sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }))
 }

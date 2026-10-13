@@ -5,7 +5,10 @@ import {
   categoryNameMax,
   conflictMessage,
   findNameConflict,
+  groupUsages,
   isCategoryType,
+  newlyAddedCustom,
+  renameFailure,
   sortCategories,
   totalUsage,
   usageSummary,
@@ -107,5 +110,62 @@ describe('Hilfen', () => {
       'Ball',
       'zirkel',
     ])
+  })
+})
+
+describe('newlyAddedCustom', () => {
+  it('meldet nur, was vorher nicht am Eintrag stand', () => {
+    expect(newlyAddedCustom('sport', ['Parkour'], ['Parkour', 'Slackline'])).toEqual(['Slackline'])
+  })
+
+  it('meldet einen gelöschten Begriff nicht erneut, solange er nur stehen bleibt', () => {
+    // „Parkour" wurde in der Verwaltung gelöscht, steht aber noch an der Übung.
+    expect(newlyAddedCustom('sport', ['Parkour', 'Volleyball'], ['Parkour', 'Volleyball'])).toEqual([])
+  })
+
+  it('lässt vordefinierte Begriffe aus', () => {
+    expect(newlyAddedCustom('sport', [], ['Volleyball', 'Slackline'])).toEqual(['Slackline'])
+  })
+
+  it('meldet bei einem neuen Eintrag alles Eigene, jedes einmal und ohne Leeres', () => {
+    expect(newlyAddedCustom('material', [], ['Pezziball', ' Pezziball ', '', 'Ball'])).toEqual([
+      'Pezziball',
+    ])
+  })
+
+  it('unterscheidet Groß- und Kleinschreibung wie die Datenbank', () => {
+    expect(newlyAddedCustom('material', ['reifen'], ['Pezzi', 'reifen'])).toEqual(['Pezzi'])
+    expect(newlyAddedCustom('material', ['pezzi'], ['Pezzi'])).toEqual(['Pezzi'])
+  })
+})
+
+describe('groupUsages', () => {
+  it('gliedert nach Sorte und sortiert nach Namen', () => {
+    expect(
+      groupUsages([
+        { kind: 'exercises', entry_name: 'Zirkel' },
+        { kind: 'exercises', entry_name: 'ärmelfangen' },
+        { kind: 'units', entry_name: 'Montag' },
+      ])
+    ).toEqual({
+      exercises: ['ärmelfangen', 'Zirkel'],
+      groups: [],
+      venues: [],
+      units: ['Montag'],
+      patterns: [],
+    })
+  })
+
+  it('übergeht unbekannte Sorten', () => {
+    expect(groupUsages([{ kind: 'runs', entry_name: 'x' }]).exercises).toEqual([])
+  })
+})
+
+describe('renameFailure', () => {
+  it('erkennt die Ausnahmen der Datenbank-Funktion', () => {
+    expect(renameFailure('category_not_found')).toBe('gone')
+    expect(renameFailure('ERROR: name_taken')).toBe('taken')
+    expect(renameFailure('invalid_name')).toBe('invalid')
+    expect(renameFailure('connection reset')).toBe('other')
   })
 })

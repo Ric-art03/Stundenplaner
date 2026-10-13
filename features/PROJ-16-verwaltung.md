@@ -2,7 +2,7 @@
 
 ## Status: In Progress
 **Created:** 2026-10-04
-**Last Updated:** 2026-10-12
+**Last Updated:** 2026-10-13
 
 > **PROJ-17 (Stundenmuster) ist am 2026-10-12 in diesem Feature aufgegangen.** Der Nutzer hat
 > entschieden, beides zusammen zu verwirklichen: Stundenmuster sind wie eigene Kategorien etwas,
@@ -601,6 +601,108 @@ der Adresse, ein Abschnitt der Kategorien als Sprungmarke dahinter.
 `tests/PROJ-5-gruppenprofile.spec.ts`: die Hallenseite wird über die Weiterleitung und den Reiter
 geprüft; der Test zum Zurück-Link „Alle Gruppen" ist durch einen zu den drei Reitern ersetzt.
 **Nicht ausgeführt.**
+
+## Implementation Notes (Backend)
+
+**Stand:** 2026-10-13. **578 Unit-Tests grün** (570 plus 8 neue), Typprüfung, Lint und
+Produktionsbuild sauber. **Die Migration ist angewendet** — vom Nutzer am 2026-10-13 freigegeben
+(neue Zugriffsregeln) und im SQL-Editor des Dashboards ausgeführt, **Register 18 zu 18**, am
+lebenden System in einer zurückgerollten Transaktion nachgewiesen (siehe unten).
+
+Der erste Versuch scheiterte an einem Syntaxfehler: ein ungeklammertes `CASE … THEN` in einer
+`IF`-Bedingung, dessen `THEN` plpgsql für das Ende der Bedingung hält. Es blieb nichts zurück; die
+Datei im Repository ist die berichtigte Fassung.
+
+### Migration `20261013090000_unit_patterns_and_category_management.sql`
+
+Rein hinzufügend; an bestehenden Tabellen ändert sich kein Feld und keine Zugriffsregel.
+
+- **Tabelle `unit_patterns`** — Name 1–60 Zeichen, Gesamtdauer 5–300, die Segmente als Liste in
+  einem Feld. Je Nutzer eindeutig ohne Rücksicht auf Groß-/Kleinschreibung, **in der Datenbank
+  erzwungen** (eindeutiger Index auf `user_id, lower(name)`). Vier Zugriffsregeln nur für den
+  Besitzer, Änderungsstempel über den vorhandenen Auslöser
+- **`category_usages(art, name)`** — nennt die Einträge, an denen ein Begriff steht
+- **`category_usage_counts()`** — die Zahlen für alle eigenen Begriffe in einem Aufruf
+- **`rename_category(kennung, neuer_name, zusammenführen, vordefiniert)`** — alle Stellen und die
+  Kategorienliste in einem Zug; meldet Name, „zusammengeführt" und die Zahl der Einträge zurück
+- **`category_replace_in_list`** — Hilfsfunktion: ersetzt einen Begriff in einer Liste, ohne
+  Doppeltes zu hinterlassen. Eine vierte Funktion neben den drei des Entwurfs; sie erspart
+  denselben Ausdruck an neun Stellen
+
+Alle Funktionen laufen mit den Rechten des Aufrufers, filtern zusätzlich selbst auf den
+angemeldeten Nutzer, haben einen festen Suchpfad und sind für nicht Angemeldete gesperrt.
+
+### Entscheidungen beim Bauen
+
+- **Umbenennen ohne Recht „ändern":** die Kategorientabelle bekommt weiterhin keine
+  Zugriffsregel fürs Ändern. Die Funktion löscht die Zeile und legt sie unter **derselben Kennung**
+  neu an — beides erlauben die bestehenden Regeln
+- **Doppeltes wird immer aufgeräumt**, nicht nur beim Zusammenführen: der neue Name kann an einer
+  Übung schon stehen, ohne in der Kategorienliste zu sein (ein früher gelöschter Begriff)
+- **Verglichen wird genau**, mit Groß-/Kleinschreibung: „Reifen" und „reifen" sind zwei Begriffe
+  und werden getrennt gezählt und umbenannt
+- **Gezählt und genannt werden nur gespeicherte Einheiten**; umbenannt wird auch im Entwurf des
+  Generators
+- **Die Lücken-Erklärung eines Segments** trägt die Phase als Abschrift und wird mit umbenannt —
+  sonst riete der Hinweis „Lege Übungen der Phase … an" zum alten Namen. Der Entwurf nannte diese
+  Stelle nicht
+- **Änderungsstempel:** betroffene Übungen (auch wenn der Begriff nur an Variante oder Material
+  stand) und betroffene Einheiten bekommen einen neuen; Hallen nicht
+- **Zwei gleichzeitige Umbenennungen** desselben Nutzers laufen nacheinander (Sperre je Nutzer für
+  die Dauer des Aufrufs)
+- **Die Grenze von 100 Stundenmustern** prüft nur der Server, nicht die Datenbank
+
+### Serverwege
+
+- `src/lib/actions/categories.ts` — `getManagedCategories` holt die Zahlen mit; scheitert die
+  Zählung, zeigt die Oberfläche keine Zahl statt einer falschen Null. `getCategoryUsages` und
+  `renameCategory` sind angeschlossen. Vergibt ein anderer Tab den Namen zwischen Prüfung und
+  Aufruf, kommt die Nachfrage zum Zusammenführen statt eines Fehlers
+- **„Gelöschtes kommt nicht zurück" für Übung, Gruppe und Halle** (`exercises.ts`, `groups.ts`):
+  vor dem Überschreiben wird gelesen, was der Eintrag trägt; eingetragen wird nur, was neu
+  dazukommt (`newlyAddedCustom` in `src/lib/manage/categories.ts`, mit Tests). Lässt sich der Stand
+  davor nicht lesen, wird **nichts** eingetragen statt alles
+- `src/lib/actions/patterns.ts` — unverändert; trägt, sobald die Tabelle existiert
+
+### Nachweis am lebenden System
+
+Sechzehn Fälle in einer zurückgerollten Transaktion unter der Rolle `authenticated`, alle wie
+erwartet, nichts zurückgeblieben; `get_advisors` meldet weiter nur den bekannten Hinweis zum
+Passwortschutz.
+
+1. Zählen: Übung zählt einmal, auch nur über die Variante; der Entwurf zählt nicht; Unbenutztes
+   kommt mit Nullen
+2. Verwendungen nennen, nach Sorte
+3. Phase umbenennen: Übung, Segmente (gespeichert und Entwurf), Lücken-Erklärung, Muster,
+   Kategorienliste unter derselben Kennung; Leerzeichen am Rand entfernt
+4. Vergebener Name ohne Zusammenführen: abgewiesen, nichts geändert
+5. Zusammenführen mit eigenem Begriff: dessen Schreibweise gilt, Doppeltes an der Übung weg,
+   Hauptsportart von Gruppe, Segment und Muster zieht mit; „wie die Gruppe" im Muster bleibt
+6. Zusammenführen mit vordefiniertem Begriff: der eigene verschwindet aus der Liste
+7. Material zusammenführen: an Übung und Variante bleibt die Zeile des vorhandenen Materials, die
+   Halle wird umbenannt
+8. Nur Groß-/Kleinschreibung: gewöhnliches Umbenennen
+9. Länge: Phase 61 Zeichen, andere Art 101 Zeichen und leerer Name abgewiesen; Phase mit 60 geht
+10. Unbekannte Kennung: abgewiesen
+11. Altersgruppe: Übung, Variante, Gruppe
+12. Organisationsform auf vordefinierten Begriff: Übung, Variante (trug beide), Segment, Muster
+13. Mustername ohne Rücksicht auf Groß-/Kleinschreibung eindeutig
+14. Fremdes Konto: sieht kein Muster, keine Zahl, keine Verwendung; Umbenennen, Anlegen unter
+    fremdem Besitzer und Ändern eines fremden Musters wirkungslos
+15. Ohne Anmeldung: abgewiesen
+16. `anon`: Funktion gesperrt
+
+### Nicht belegt
+
+- **Der neue Änderungsstempel** an Übungen und Einheiten: innerhalb einer Transaktion steht die
+  Uhr der Datenbank, der Unterschied ist dort nicht messbar
+- **Zwei wirklich gleichzeitige Umbenennungen** — die Sperre ist gebaut, aber nicht erprobt
+- **Die Geschwindigkeit bei 500 Übungen** (Richtwert der Spec: unter einer Sekunde) — geprüft ist
+  mit der heutigen Menge von 45
+- **Der Weg im Browser** — Verwaltung, Generator mit Stundenmuster und die Browser-Tests sind nicht
+  gelaufen
+- **Begriffe an Varianten** werden beim Speichern einer Übung weiterhin nicht in die Auswahllisten
+  eingetragen — so war es vor PROJ-16 schon
 
 ## QA Test Results
 _To be added by /qa_

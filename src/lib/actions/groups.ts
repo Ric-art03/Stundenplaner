@@ -4,22 +4,16 @@ import { createClient } from '@/lib/supabase/server'
 import type { Database, Json } from '@/lib/database.types'
 import { groupSchema, venueSchema } from '@/lib/validations/group'
 import {
-  SPORTS, AGE_GROUPS, MATERIALS,
   type Group, type GroupFormData, type GroupSchedule,
   type Venue, type VenueFormData, type VenueMaterial,
   type ScheduleType,
 } from '@/lib/types/group'
+import { newlyAddedCustom } from '@/lib/manage/categories'
 
 type VenueRow = Database['public']['Tables']['venues']['Row']
 type VenueMaterialRow = Database['public']['Tables']['venue_materials']['Row']
 type GroupRow = Database['public']['Tables']['groups']['Row']
 type ScheduleRow = Database['public']['Tables']['group_schedules']['Row']
-
-const PREDEFINED: Record<string, readonly string[]> = {
-  sport: SPORTS,
-  age_group: AGE_GROUPS,
-  material: MATERIALS,
-}
 
 async function getAuthUser() {
   const supabase = await createClient()
@@ -187,7 +181,7 @@ export async function createVenue(
     )
   }
 
-  await saveCustomMaterials(supabase, user.id, data.materials.map((m) => m.name))
+  await saveCustomMaterials(supabase, user.id, data.materials.map((m) => m.name), [])
 
   return { id: venue.id }
 }
@@ -226,6 +220,11 @@ export async function updateVenue(
 
   if (error) return { error: 'Halle konnte nicht aktualisiert werden.' }
 
+  const { data: materialsBefore, error: beforeError } = await supabase
+    .from('venue_materials')
+    .select('name')
+    .eq('venue_id', id)
+
   await supabase.from('venue_materials').delete().eq('venue_id', id)
 
   if (data.materials.length > 0) {
@@ -239,7 +238,12 @@ export async function updateVenue(
     )
   }
 
-  await saveCustomMaterials(supabase, user.id, data.materials.map((m) => m.name))
+  await saveCustomMaterials(
+    supabase,
+    user.id,
+    data.materials.map((m) => m.name),
+    beforeError ? null : (materialsBefore ?? []).map((row) => row.name),
+  )
 
   return { success: true }
 }
@@ -421,7 +425,7 @@ export async function createGroup(
     )
   }
 
-  await saveGroupCustomCategories(supabase, user.id, data)
+  await saveGroupCustomCategories(supabase, user.id, data, { sports: [], ageGroups: [] })
 
   return { id: group.id }
 }
@@ -447,6 +451,13 @@ export async function updateGroup(
   if (existingGroup && existingGroup.length > 0) {
     return { error: `Eine Gruppe mit dem Namen "${data.name.trim()}" existiert bereits.` }
   }
+
+  const { data: groupBefore } = await supabase
+    .from('groups')
+    .select('sports, age_groups')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle()
 
   const { error } = await supabase
     .from('groups')
@@ -480,7 +491,17 @@ export async function updateGroup(
     )
   }
 
-  await saveGroupCustomCategories(supabase, user.id, data)
+  await saveGroupCustomCategories(
+    supabase,
+    user.id,
+    data,
+    groupBefore
+      ? {
+          sports: (groupBefore.sports as string[]) ?? [],
+          ageGroups: (groupBefore.age_groups as string[]) ?? [],
+        }
+      : null,
+  )
 
   return { success: true }
 }
@@ -503,13 +524,21 @@ export async function deleteGroup(
 
 // ---- Custom category helpers ----
 
+// Eingetragen wird nur, was mit diesem Speichern neu an den Eintrag gekommen
+// ist. Was er schon trug, wird nicht erneut eingetragen — sonst käme ein in der
+// Verwaltung gelöschter Begriff von selbst zurück (PROJ-16). `before` ist der
+// Stand vor dem Speichern; `null` heißt, er ließ sich nicht lesen, und dann
+// wird nichts eingetragen statt alles.
+
 async function saveCustomMaterials(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   materialNames: string[],
+  before: string[] | null,
 ) {
-  const customs = materialNames
-    .filter((name) => !(MATERIALS as readonly string[]).includes(name))
+  if (!before) return
+
+  const customs = newlyAddedCustom('material', before, materialNames)
     .map((name) => ({ user_id: userId, category_type: 'material', name }))
 
   if (customs.length > 0) {
@@ -523,19 +552,16 @@ async function saveGroupCustomCategories(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   data: GroupFormData,
+  before: { sports: string[]; ageGroups: string[] } | null,
 ) {
-  const customs: { user_id: string; category_type: string; name: string }[] = []
+  if (!before) return
 
-  for (const sport of data.sports) {
-    if (!(SPORTS as readonly string[]).includes(sport)) {
-      customs.push({ user_id: userId, category_type: 'sport', name: sport })
-    }
-  }
-  for (const ag of data.ageGroups) {
-    if (!(AGE_GROUPS as readonly string[]).includes(ag)) {
-      customs.push({ user_id: userId, category_type: 'age_group', name: ag })
-    }
-  }
+  const customs = [
+    ...newlyAddedCustom('sport', before.sports, data.sports)
+      .map((name) => ({ user_id: userId, category_type: 'sport', name })),
+    ...newlyAddedCustom('age_group', before.ageGroups, data.ageGroups)
+      .map((name) => ({ user_id: userId, category_type: 'age_group', name })),
+  ]
 
   if (customs.length > 0) {
     await supabase

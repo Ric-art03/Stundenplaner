@@ -653,6 +653,37 @@ export type Database = {
         }
         Returns: string
       }
+      category_usages: {
+        Args: {
+          p_type: string
+          p_name: string
+        }
+        Returns: {
+          kind: string
+          entry_id: string
+          entry_name: string
+        }[]
+      }
+      category_usage_counts: {
+        Args: Record<string, never>
+        Returns: {
+          category_id: string
+          exercises: number
+          groups: number
+          venues: number
+          units: number
+          patterns: number
+        }[]
+      }
+      rename_category: {
+        Args: {
+          p_id: string
+          p_new_name: string
+          p_merge?: boolean
+          p_predefined?: boolean
+        }
+        Returns: Json
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

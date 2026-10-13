@@ -5,7 +5,9 @@ import {
   categoryNameError,
   conflictMessage,
   findNameConflict,
+  groupUsages,
   isCategoryType,
+  renameFailure,
   sortCategories,
   type CategoryType,
   type CategoryUsages,
@@ -15,8 +17,6 @@ import {
 
 const GENERIC_ERROR = 'Das hat nicht geklappt — es wurde nichts geändert. Bitte versuche es erneut.'
 const GONE_ERROR = 'Diesen Begriff gibt es nicht mehr.'
-/** Bis die Datenbank-Funktionen aus `/backend` stehen. */
-const NOT_CONNECTED = 'Umbenennen ist noch nicht angeschlossen — es wurde nichts geändert.'
 
 async function getAuthUser() {
   const supabase = await createClient()
@@ -26,44 +26,77 @@ async function getAuthUser() {
 }
 
 /**
- * Alle eigenen Begriffe des Nutzers für die Verwaltung.
- *
- * Die Verwendungszahlen liefert künftig eine Datenbank-Funktion in einem
- * Aufruf; bis dahin ist `usage` leer und die Oberfläche zeigt keine Zahl.
+ * Alle eigenen Begriffe des Nutzers für die Verwaltung, mit den
+ * Verwendungszahlen aus einem Aufruf. Scheitert die Zählung, bleibt `usage`
+ * leer und die Oberfläche zeigt keine Zahl — statt einer falschen Null.
  */
 export async function getManagedCategories(): Promise<CustomCategory[]> {
   const { supabase, user } = await getAuthUser()
   if (!user) return []
 
-  const { data, error } = await supabase
-    .from('custom_categories')
-    .select('id, category_type, name')
-    .eq('user_id', user.id)
-    .limit(2000)
+  const [rowsRes, countsRes] = await Promise.all([
+    supabase
+      .from('custom_categories')
+      .select('id, category_type, name')
+      .eq('user_id', user.id)
+      .limit(2000),
+    supabase.rpc('category_usage_counts'),
+  ])
 
-  if (error || !data) return []
+  if (rowsRes.error || !rowsRes.data) return []
+
+  const counts = countsRes.error
+    ? null
+    : new Map((countsRes.data ?? []).map((row) => [row.category_id, row]))
 
   return sortCategories(
-    data
+    rowsRes.data
       .filter((row) => isCategoryType(row.category_type))
-      .map((row) => ({
-        id: row.id,
-        type: row.category_type as CategoryType,
-        name: row.name,
-        usage: null,
-      }))
+      .map((row) => {
+        const count = counts?.get(row.id)
+        return {
+          id: row.id,
+          type: row.category_type as CategoryType,
+          name: row.name,
+          usage: counts
+            ? {
+                exercises: count?.exercises ?? 0,
+                groups: count?.groups ?? 0,
+                venues: count?.venues ?? 0,
+                units: count?.units ?? 0,
+                patterns: count?.patterns ?? 0,
+              }
+            : null,
+        }
+      })
   )
 }
 
 /**
  * Die Namen der Einträge, an denen ein Begriff steht. Wird erst geholt, wenn
- * der Nutzer „Verwendungen ansehen" oder „Löschen" öffnet. `null` = liegt
- * (noch) nicht vor.
+ * der Nutzer „Verwendungen ansehen" oder „Löschen" öffnet. `null` = ließ sich
+ * nicht holen.
  */
 export async function getCategoryUsages(id: string): Promise<CategoryUsages | null> {
-  const { user } = await getAuthUser()
+  const { supabase, user } = await getAuthUser()
   if (!user || !id) return null
-  return null
+
+  const { data: category, error: readError } = await supabase
+    .from('custom_categories')
+    .select('category_type, name')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (readError || !category) return null
+
+  const { data, error } = await supabase.rpc('category_usages', {
+    p_type: category.category_type,
+    p_name: category.name,
+  })
+
+  if (error || !data) return null
+  return groupUsages(data)
 }
 
 export async function createCategory(
@@ -149,10 +182,34 @@ export async function renameCategory(
   )
   if (conflict && !merge) return { conflict }
 
-  // Das Umschreiben aller Verwendungen ist eine Datenbank-Funktion, die mit
-  // `/backend` kommt. Ohne sie wird bewusst nichts geändert: nur die Zeile der
-  // Kategorie umzubenennen ließe die Übungen mit dem alten Namen zurück.
-  return { error: NOT_CONNECTED }
+  // Alle Verwendungen und die Kategorienliste in einem Zug — alles oder nichts.
+  // Ob der neue Name ein mitgelieferter Begriff ist, weiß nur der Server; ob er
+  // einem anderen eigenen gleicht, prüft die Datenbank selbst noch einmal.
+  const { data, error } = await supabase.rpc('rename_category', {
+    p_id: id,
+    p_new_name: conflict?.kind === 'predefined' ? conflict.name : newName.trim(),
+    p_merge: merge,
+    p_predefined: conflict?.kind === 'predefined',
+  })
+
+  if (error) {
+    const failure = renameFailure(error.message)
+    if (failure === 'gone') return { error: GONE_ERROR, gone: true }
+    // Zwischen Prüfung und Aufruf hat ein anderer Tab den Namen vergeben.
+    if (failure === 'taken') return { conflict: { kind: 'custom', name: newName.trim() } }
+    if (failure === 'invalid') return { error: 'Dieser Name ist nicht zulässig.' }
+    return { error: GENERIC_ERROR }
+  }
+
+  const result = data as { name?: unknown; merged?: unknown; affected?: unknown } | null
+  if (!result || typeof result.name !== 'string') return { error: GENERIC_ERROR }
+
+  return {
+    success: true,
+    name: result.name,
+    merged: result.merged === true,
+    affected: typeof result.affected === 'number' ? result.affected : 0,
+  }
 }
 
 /**

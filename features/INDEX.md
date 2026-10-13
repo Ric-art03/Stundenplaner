@@ -244,7 +244,14 @@ Sofort benutzbar sind der Reiter „Hallen" und bei den Kategorien **Anlegen und
 - **Verwendungszahlen, Verwendungen nennen, Umbenennen/Zusammenführen** — die drei Datenbank-Funktionen
 - **„Gelöschtes kommt nicht zurück"** ist nur für den Generator gebaut. An Übung, Gruppe und Halle kehrt ein gelöschter, aber noch benutzter Begriff beim nächsten Speichern zurück, bis der Server dort vorher/nachher vergleicht
 
-**Nächster Schritt:** `/backend PROJ-16`; daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
+**Die Serverseite von PROJ-16 steht seit dem 2026-10-13** — Abschnitt „Implementation Notes (Backend)" in der Spec. Migration `20261013090000_unit_patterns_and_category_management.sql` vom Nutzer freigegeben und angewendet, **Register 18 zu 18**; **578 Unit-Tests grün** (570 plus 8 neue), Typprüfung, Lint und Produktionsbuild sauber. Neu: die Tabelle der Stundenmuster mit vier Zugriffsregeln nur für den Besitzer und vier Funktionen (Verwendungen nennen, zählen, umbenennen/zusammenführen, dazu eine Hilfsfunktion). Alles, was die Oberfläche offen ließ, ist angeschlossen: Stundenmuster, Verwendungszahlen, Verwendungen nennen, Umbenennen und Zusammenführen — und Übung, Gruppe und Halle tragen beim Speichern nur noch ein, was neu dazukommt, sodass ein gelöschter Begriff dort nicht mehr von selbst zurückkehrt.
+
+Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, sechzehn Fälle: Zählen und Nennen, Umbenennen je Art an allen Stellen, Zusammenführen mit eigenem und mit vordefiniertem Begriff ohne Doppeltes, Material mit Menge, vergebener Name abgewiesen und nichts geändert, Längengrenzen, fremdes Konto sieht und ändert nichts, `anon` ausgesperrt. Nichts zurückgeblieben; `get_advisors` meldet weiter nur den bekannten Hinweis zum Passwortschutz.
+
+- **Über den Entwurf hinaus:** die Lücken-Erklärung eines Segments trägt die Phase als Abschrift und wird mit umbenannt; Doppeltes wird bei jedem Umbenennen aufgeräumt, nicht nur beim Zusammenführen
+- **Nicht belegt und für `/qa`:** der ganze Weg im Browser (Verwaltung, Generator mit Stundenmuster — nichts davon ist je angesehen worden, und die Browser-Tests sind seit dem Umzug der Hallen nicht gelaufen), der neue Änderungsstempel beim Umbenennen, zwei gleichzeitige Umbenennungen, die Geschwindigkeit bei 500 Übungen
+
+**Nächster Schritt:** `/qa PROJ-16`; daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
 
 ## Features
 

@@ -9,20 +9,12 @@ type MaterialRow = Database['public']['Tables']['exercise_materials']['Row']
 type VariantRow = Database['public']['Tables']['exercise_variants']['Row']
 type LinkRow = Database['public']['Tables']['exercise_links']['Row']
 import {
-  SPORTS, AGE_GROUPS, PHASES, ORGANIZATION_FORMS, MATERIALS,
   type Exercise, type ExerciseFormData, type ExerciseFilters,
   type ExerciseSortField, type ExerciseSortDirection,
   type ExerciseMaterial, type ExerciseVariant, type ExerciseLink,
   type ExerciseImage, type DifficultyLevel,
 } from '@/lib/types/exercise'
-
-const PREDEFINED: Record<string, readonly string[]> = {
-  sport: SPORTS,
-  age_group: AGE_GROUPS,
-  phase: PHASES,
-  organization_form: ORGANIZATION_FORMS,
-  material: MATERIALS,
-}
+import { CATEGORY_TYPES, newlyAddedCustom, type CategoryType } from '@/lib/manage/categories'
 
 async function getAuthUser() {
   const supabase = await createClient()
@@ -258,7 +250,7 @@ export async function createExercise(
   if (error || !exercise) return { error: 'Übung konnte nicht erstellt werden.' }
 
   await insertRelatedData(supabase, exercise.id, data)
-  await saveCustomCategories(supabase, user.id, data)
+  await saveCustomCategories(supabase, user.id, data, NO_TERMS)
 
   return { success: true, id: exercise.id }
 }
@@ -272,6 +264,8 @@ export async function updateExercise(
 
   const parsed = exerciseSchema.safeParse(data)
   if (!parsed.success) return { error: 'Ungültige Eingabe.' }
+
+  const termsBefore = await readExerciseTerms(supabase, user.id, id)
 
   const { error } = await supabase
     .from('exercises')
@@ -309,7 +303,7 @@ export async function updateExercise(
     insertRelatedData(supabase, id, data, { skipVariants: true }),
     syncVariants(supabase, id, data.variants),
   ])
-  await saveCustomCategories(supabase, user.id, data)
+  await saveCustomCategories(supabase, user.id, data, termsBefore)
 
   return { success: true, id }
 }
@@ -464,28 +458,71 @@ async function insertRelatedData(
   await Promise.all(promises)
 }
 
+/** Die Begriffe einer Übung je Art — der Stand vor dem Speichern. */
+type ExerciseTerms = Record<CategoryType, string[]>
+
+const NO_TERMS: ExerciseTerms = {
+  sport: [], age_group: [], phase: [], organization_form: [], material: [],
+}
+
+/**
+ * Was die Übung trägt, bevor sie überschrieben wird. `null`, wenn es sich nicht
+ * lesen ließ — dann wird nichts in die Auswahllisten eingetragen, statt alles.
+ */
+async function readExerciseTerms(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  exerciseId: string,
+): Promise<ExerciseTerms | null> {
+  const [exerciseRes, materialsRes] = await Promise.all([
+    supabase
+      .from('exercises')
+      .select('sports, age_groups, phases, organization_forms')
+      .eq('id', exerciseId)
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase.from('exercise_materials').select('name').eq('exercise_id', exerciseId),
+  ])
+
+  if (exerciseRes.error || !exerciseRes.data || materialsRes.error) return null
+
+  return {
+    sport: (exerciseRes.data.sports as string[]) ?? [],
+    age_group: (exerciseRes.data.age_groups as string[]) ?? [],
+    phase: (exerciseRes.data.phases as string[]) ?? [],
+    organization_form: (exerciseRes.data.organization_forms as string[]) ?? [],
+    material: (materialsRes.data ?? []).map((row) => row.name),
+  }
+}
+
+/**
+ * Trägt in die Auswahllisten ein, was mit diesem Speichern neu an die Übung
+ * gekommen ist. Was sie schon trug, wird nicht erneut eingetragen — sonst käme
+ * ein in der Verwaltung gelöschter Begriff von selbst zurück (PROJ-16).
+ */
 async function saveCustomCategories(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   data: ExerciseFormData,
+  before: ExerciseTerms | null,
 ) {
-  const customs: { user_id: string; category_type: string; name: string }[] = []
+  if (!before) return
 
-  function collectCustom(items: string[], type: string) {
-    const predefined = PREDEFINED[type]
-    if (!predefined) return
-    for (const item of items) {
-      if (!(predefined as readonly string[]).includes(item)) {
-        customs.push({ user_id: userId, category_type: type, name: item })
-      }
-    }
+  const after: ExerciseTerms = {
+    sport: data.sports,
+    age_group: data.ageGroups,
+    phase: data.phases,
+    organization_form: data.organizationForms,
+    material: data.materials.map((m) => m.name),
   }
 
-  collectCustom(data.sports, 'sport')
-  collectCustom(data.ageGroups, 'age_group')
-  collectCustom(data.phases, 'phase')
-  collectCustom(data.organizationForms, 'organization_form')
-  collectCustom(data.materials.map((m) => m.name), 'material')
+  const customs = CATEGORY_TYPES.flatMap((type) =>
+    newlyAddedCustom(type, before[type], after[type]).map((name) => ({
+      user_id: userId,
+      category_type: type,
+      name,
+    }))
+  )
 
   if (customs.length > 0) {
     await supabase
