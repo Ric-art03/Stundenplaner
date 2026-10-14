@@ -51,10 +51,23 @@ export default async function ProtectedLayout({
               >
                 Einheiten
               </Link>
+              {/* Am Handy fehlt der Platz — dort führen Startseite und „verwalten"-Links hin. */}
+              <Link
+                href="/manage"
+                className="hidden md:inline text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Verwaltung
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4 shrink-0">
-            <span className="text-sm text-muted-foreground hidden sm:inline">{displayName}</span>
+            {/* Gekürzt, damit bei 768 px neben vier Menüpunkten nichts umbricht. */}
+            <span
+              className="hidden sm:block max-w-32 lg:max-w-64 truncate text-sm text-muted-foreground"
+              title={displayName}
+            >
+              {displayName}
+            </span>
             <LogoutButton />
           </div>
         </div>

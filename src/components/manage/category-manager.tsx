@@ -436,6 +436,9 @@ export function CategoryManager({ categories: initialCategories }: CategoryManag
               {target?.usage && !used
                 ? 'Der Begriff wird nirgends verwendet und verschwindet aus den Auswahllisten.'
                 : 'Der Begriff verschwindet nur aus den Auswahllisten. Wo er schon steht, bleibt er stehen — an deinen Übungen, Gruppen, Hallen, Einheiten und Stundenmustern ändert sich nichts.'}
+              {target?.type === 'material' &&
+                !(target.usage && !used) &&
+                ' Auch der Generator rechnet wie bisher: Übungen brauchen das Material weiter, Hallen haben es weiter in ihrer Anzahl.'}
             </DialogDescription>
           </DialogHeader>
           {!(target?.usage && !used) && <UsageList usages={usages} />}

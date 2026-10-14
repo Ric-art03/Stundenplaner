@@ -137,7 +137,10 @@ function matchesOrganization(candidate: Candidate, forms: string[]): boolean {
  * Pro Übung geprüft, nicht kumulativ über das Segment: Übungen laufen
  * nacheinander und konkurrieren nicht um dasselbe Material.
  */
-export function materialsAvailable(candidate: Candidate, group: GeneratorGroup): boolean {
+export function materialsAvailable(
+  candidate: Pick<Candidate, 'materials'>,
+  group: Pick<GeneratorGroup, 'participants' | 'venueMaterials'>
+): boolean {
   if (group.venueMaterials === null) return true
 
   for (const material of candidate.materials) {

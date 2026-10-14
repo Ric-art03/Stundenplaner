@@ -91,6 +91,13 @@ interface UnitConfigFormProps {
    */
   initialSegments?: SegmentConfig[]
   initialEditorState?: EditorState
+  /**
+   * „Im Generator öffnen" aus der Verwaltung: das Muster ist vorgewählt und
+   * wird angewendet, sobald eine Gruppe gewählt ist.
+   */
+  initialPatternId?: string
+  /** Das Muster aus der Adresse gibt es nicht mehr. */
+  patternMissing?: boolean
 }
 
 const NO_PATTERNS: UnitPattern[] = []
@@ -104,20 +111,34 @@ export function UnitConfigForm({
   initialGroupId,
   initialSegments,
   initialEditorState,
+  initialPatternId,
+  patternMissing = false,
 }: UnitConfigFormProps) {
   const router = useRouter()
   const { toast } = useToast()
 
   const [groupId, setGroupId] = React.useState(initialGroupId ?? '')
   const [mode, setMode] = React.useState<FormMode>(
-    initialSegments ? (initialEditorState?.mode ?? 'custom') : 'standard'
+    initialSegments
+      ? (initialEditorState?.mode ?? 'custom')
+      : initialPatternId
+        ? 'pattern'
+        : 'standard'
   )
   const [patterns, setPatterns] = React.useState(initialPatterns)
   // Das Muster, aus dem der Zeitverlauf stammt. Der Verweis hält denselben
   // Wert für den Effekt beim Gruppenwechsel bereit.
-  const [patternId, setPatternId] = React.useState<string | null>(null)
-  const patternIdRef = React.useRef<string | null>(null)
+  const [patternId, setPatternId] = React.useState<string | null>(initialPatternId ?? null)
+  const patternIdRef = React.useRef<string | null>(initialPatternId ?? null)
   const patternsRef = React.useRef(initialPatterns)
+  /**
+   * Das gewählte Muster passt nicht zur Gruppe (mehr Segmente als Minuten).
+   * Es bleibt gewählt, damit eine andere Gruppe es übernehmen kann — aber ohne
+   * Zeitverlauf, damit nichts anderes als dieses Muster generiert wird.
+   */
+  const [blocked, setBlocked] = React.useState<{ segmentCount: number; totalMinutes: number } | null>(
+    null
+  )
   /** Die ursprüngliche Dauer, wenn das geladene Muster umgerechnet wurde. */
   const [convertedFrom, setConvertedFrom] = React.useState<number | null>(null)
   // Von Hand verändert seit Standard bzw. dem zuletzt geladenen Muster. Ein
@@ -139,7 +160,11 @@ export function UnitConfigForm({
   // und jedes Neurendern mit frischen Server-Daten erzeugt ein neues
   // `group`-Objekt. Ein Einmal-Schalter wäre dabei nach dem ersten Lauf
   // verbraucht und würde den mitgebrachten Stand beim zweiten verwerfen.
-  const lastGroupId = React.useRef<string | null>(initialGroupId ?? null)
+  // Nur ein mitgebrachter Stand gilt als schon angewendet; sonst läuft die
+  // Gruppe wie ein frischer Wechsel durch, damit ein vorgewähltes Muster greift.
+  const lastGroupId = React.useRef<string | null>(
+    initialSegments ? (initialGroupId ?? null) : null
+  )
   const [selectedId, setSelectedId] = React.useState<string | null>(
     // Der Einstellbereich, der beim Verlassen offen war — über die Position,
     // weil die Kennungen im Formular bei jedem Laden neu vergeben werden.
@@ -186,6 +211,7 @@ export function UnitConfigForm({
       if (result.ok) {
         setCustomSegments(result.segments)
         setConvertedFrom(result.convertedFrom)
+        setBlocked(null)
         return
       }
       toast({
@@ -193,14 +219,32 @@ export function UnitConfigForm({
         title: 'Stundenmuster passt nicht zu dieser Gruppe',
         description: patternTooLongMessage(result.segmentCount, result.totalMinutes),
       })
+      // Gewählt bleiben — eine andere Gruppe kann es übernehmen.
+      setBlocked({ segmentCount: result.segmentCount, totalMinutes: result.totalMinutes })
+      setCustomSegments(null)
+      setConvertedFrom(null)
+      setMode('pattern')
+      return
     }
 
     patternIdRef.current = null
     setPatternId(null)
+    setBlocked(null)
     setConvertedFrom(null)
     setCustomSegments(null)
     setMode('standard')
   }, [group, toast])
+
+  // Aus der Verwaltung mit einem Muster gekommen, das es nicht mehr gibt.
+  const missingNoticed = React.useRef(false)
+  React.useEffect(() => {
+    if (!patternMissing || missingNoticed.current) return
+    missingNoticed.current = true
+    toast({
+      title: 'Dieses Stundenmuster gibt es nicht mehr',
+      description: 'Es wurde inzwischen gelöscht. Der Generator steht auf „Standard“.',
+    })
+  }, [patternMissing, toast])
 
   // Frische Liste vom Server, etwa nach einem Abstecher in die Verwaltung.
   React.useEffect(() => {
@@ -209,7 +253,8 @@ export function UnitConfigForm({
   }, [initialPatterns])
 
   const loadedPattern = patterns.find((p) => p.id === patternId) ?? null
-  const showTimeline = mode === 'custom' || (mode === 'pattern' && patternId !== null)
+  const showTimeline =
+    mode === 'custom' || (mode === 'pattern' && patternId !== null && blocked === null)
   const segments = mode === 'standard' ? classicSegments : (customSegments ?? classicSegments)
 
   function selectPattern(id: string | null) {
@@ -233,6 +278,7 @@ export function UnitConfigForm({
 
     setCustomSegments(result.segments)
     selectPattern(id)
+    setBlocked(null)
     setConvertedFrom(result.convertedFrom)
     setTouched(false)
     setSelectedId(null)
@@ -286,6 +332,11 @@ export function UnitConfigForm({
   function handleModeChange(next: FormMode) {
     setMode(next)
     setFormError(null)
+    // Ein unpassendes Muster bleibt nur gewählt, solange der Weg „Stundenmuster" offen ist.
+    if (blocked && next !== 'pattern') {
+      selectPattern(null)
+      setBlocked(null)
+    }
     if (next === 'custom') {
       const base = customSegments ?? classicSegments
       if (!customSegments) setCustomSegments(base)
@@ -356,6 +407,11 @@ export function UnitConfigForm({
 
     if (mode === 'pattern' && !patternId) {
       setFormError('Bitte wähle ein Stundenmuster aus — oder nimm „Standard" oder „Individuell".')
+      return
+    }
+
+    if (mode === 'pattern' && blocked) {
+      setFormError(patternTooLongMessage(blocked.segmentCount, blocked.totalMinutes))
       return
     }
 
@@ -486,6 +542,11 @@ export function UnitConfigForm({
                         ))}
                       </SelectContent>
                     </Select>
+                    {blocked && (
+                      <p className="rounded-md bg-muted px-3 py-2 text-sm" role="status">
+                        {patternTooLongMessage(blocked.segmentCount, blocked.totalMinutes)}
+                      </p>
+                    )}
                     <ManageLink href={manageHref('patterns')}>Stundenmuster verwalten</ManageLink>
                   </div>
                 )}
@@ -616,10 +677,14 @@ export function UnitConfigForm({
                 ))}
               </Accordion>
 
-              <Button type="button" variant="outline" size="sm" onClick={handleAddSegment}>
-                <Plus className="mr-2 h-4 w-4" />
-                Phase hinzufügen
-              </Button>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button type="button" variant="outline" size="sm" onClick={handleAddSegment}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Phase hinzufügen
+                </Button>
+                {/* Ein Link für alle Segmente statt einer an jeder Phase. */}
+                <ManageLink href={manageHref('categories')}>Kategorien verwalten</ManageLink>
+              </div>
             </section>
           )}
 

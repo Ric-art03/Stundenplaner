@@ -261,7 +261,9 @@ Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, sechzehn 
 
 Neu offen, nicht entschieden: ob das Gruppen-Formular bei „Keine Halle" sagen soll, dass dann kein Material geprüft wird (eher PROJ-5).
 
-**Nächster Schritt:** `/frontend PROJ-16` für die Überarbeitung — keine Migration nötig, die Nachfrage zum Hallenmaterial braucht nur einen kleinen Serverweg zum Zählen. Danach `/qa PROJ-16`. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
+**Die Überarbeitung ist am 2026-10-14 gebaut** — Abschnitt „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-14" in der Spec. **590 Unit-Tests grün** (578 plus 12 neue), Typprüfung, Lint und Build sauber; keine Migration, keine neuen Pakete. Die Zählung für die Nachfrage zum Hallenmaterial rechnet über dieselbe Materialprüfung wie der Generator (`src/lib/manage/venue-materials.ts`). **Eine Verhaltensänderung:** passt ein Muster nicht zur gewählten Gruppe, bleibt es gewählt (mit Grund), statt auf „Standard" zurückzufallen. **Im Browser gesehen** ist nur die Kopfzeile (375, 768, 1280 px); das Testkonto hat keine Gruppe, Halle oder Muster, die Dialoge und der Generator mit vorgewähltem Muster sind ungesehen.
+
+**Nächster Schritt:** einmal von Hand ansehen (Halle löschen, Material einer Halle senken, „Im Generator öffnen"), dann `/qa PROJ-16`. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
 
 ## Features
 

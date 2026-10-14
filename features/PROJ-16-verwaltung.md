@@ -4,8 +4,8 @@
 **Created:** 2026-10-04
 **Last Updated:** 2026-10-14
 
-> **Am 2026-10-14 überarbeitet (`/refine`), nach der Durchsicht durch den Nutzer — noch nicht
-> gebaut.** Vier Punkte: „Verwaltung" steht am Rechner als vierter Menüpunkt in der Kopfzeile;
+> **Am 2026-10-14 überarbeitet (`/refine`), nach der Durchsicht durch den Nutzer — am selben Tag
+> gebaut**, siehe „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-14". Vier Punkte: „Verwaltung" steht am Rechner als vierter Menüpunkt in der Kopfzeile;
 > Löschen einer Halle erklärt seine Folgen, und Material, das aus einer Halle wegfällt, wird beim
 > Speichern nachgefragt; je Bildschirm nur noch **ein** „Kategorien verwalten"-Link, unten;
 > „Im Generator öffnen" am Stundenmuster. Betroffen sind A, B, I, Out of Scope und das Decision
@@ -749,6 +749,60 @@ Passwortschutz.
   gelaufen
 - **Begriffe an Varianten** werden beim Speichern einer Übung weiterhin nicht in die Auswahllisten
   eingetragen — so war es vor PROJ-16 schon
+
+## Implementation Notes (Frontend) — Überarbeitung vom 2026-10-14
+
+**Stand:** 2026-10-14. **590 Unit-Tests grün** (578 plus 12 neue), Typprüfung, Lint und
+Produktionsbuild sauber. Keine Migration, keine neuen Pakete.
+
+### Was gebaut ist
+
+- **Kopfzeile** (`src/app/(protected)/layout.tsx`): „Verwaltung" als vierter Punkt ab `md`
+  (768 px). Der Anzeigename wird dort gekürzt (`max-w-32`, ab `lg` `max-w-64`), damit ein langer
+  Name die Zeile nicht sprengt; der volle Name steht im Tooltip
+- **Halle löschen** (`venue-list.tsx`): Titel nennt die Halle; mit Gruppen nennt der Dialog sie,
+  sagt, dass der Generator für sie kein Material mehr prüft, wo man umhängt, dass Einheiten bleiben
+  und dass es nicht rückgängig zu machen ist. Ohne Gruppen ein Satz und „nicht rückgängig"
+- **Nachfrage beim Hallenmaterial** (`venue-dialog.tsx`): vor dem Speichern einer Halle mit
+  Gruppen wird verglichen, was wegfällt oder weniger wird. Gibt es das, holt der Dialog die Zahlen
+  vom Server und fragt nur nach, wenn wirklich Übungen herausfallen. Lassen sich die Zahlen nicht
+  ermitteln, fragt er trotzdem — ohne Zahlen, mit den Gruppen
+  - Rechnung: `src/lib/manage/venue-materials.ts` (`materialLosses`, `materialImpacts`,
+    `describeLoss`), 12 Tests. Jeder Verlust wird einzeln gegen den alten Stand gerechnet, über
+    `materialsAvailable` des Generators — „pro Teilnehmer" also mit der Gruppe
+  - Serverweg: `getVenueMaterialImpact` in `src/lib/actions/groups.ts`. Rechnet gegen den
+    **gespeicherten** Stand der Halle, nicht gegen den im Browser
+  - `materialsAvailable` nimmt jetzt nur die Felder, die es braucht (`Pick<…>`); am Verhalten
+    ändert sich nichts
+- **Materialbegriff löschen** (`category-manager.tsx`): bei verwendetem Material der Zusatz, dass
+  der Generator wie bisher rechnet
+- **Ein „Kategorien verwalten"-Link je Bildschirm:** Übungs-Assistent einmal am Ende von
+  „Einordnung" (vorher vier), Material unverändert; Gruppen-Formular einmal unter der Altersgruppe
+  (vorher zwei); Generator einmal neben „Phase hinzufügen" (vorher einer je Segment). Wo mehrere
+  Arten zusammenstehen, öffnet der Link den Reiter ohne Sprung zu einem Abschnitt
+- **„Im Generator öffnen"** (`pattern-list.tsx`): erster Punkt im Menü, führt auf
+  `/units/new?pattern=<id>`. Die Seite reicht das Muster an `UnitConfigForm` als
+  `initialPatternId` weiter, oder `patternMissing`, wenn es das Muster nicht mehr gibt (Meldung,
+  Generator auf „Standard"). Kommt der Nutzer über „Zurück zum Generator", zählt dessen Stand und
+  das Muster wird übergangen. Der Erklärtext des Reiters nennt den neuen Weg
+
+### Abweichung vom bisherigen Verhalten
+
+- **Passt ein Muster nicht zur gewählten Gruppe, bleibt es jetzt gewählt.** Bisher fiel die Maske
+  beim Gruppenwechsel auf „Standard" zurück. Jetzt bleibt der Weg „Stundenmuster" mit dem Muster
+  stehen, ohne Zeitverlauf und mit dem Grund darunter; „Einheit generieren" nennt den Grund statt
+  zu generieren. Das verlangt das neue Kriterium in I und gilt für jeden Gruppenwechsel, nicht
+  nur nach „Im Generator öffnen". Wechselt der Nutzer auf „Standard" oder „Individuell", ist das
+  Muster abgewählt
+
+### Nicht belegt
+
+- **Im Browser angesehen** ist nur die Kopfzeile (Verwaltung bei 375, 768 und 1280 px gegen den
+  Entwicklungsserver: vier Punkte ab 768 px ohne Umbruch, keine waagerechte Scrollleiste, am
+  Handy weiter drei) und der Generator ohne Gruppe mit einem nicht vorhandenen Muster. Das
+  Testkonto hat weder Gruppe noch Halle noch Muster — **die Hallen-Dialoge, die Nachfrage zum
+  Material, der Generator mit vorgewähltem Muster und das Menü der Muster sind ungesehen**
+- Die Browser-Tests sind nicht gelaufen
 
 ## QA Test Results
 _To be added by /qa_

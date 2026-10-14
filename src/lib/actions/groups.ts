@@ -9,6 +9,12 @@ import {
   type ScheduleType,
 } from '@/lib/types/group'
 import { newlyAddedCustom } from '@/lib/manage/categories'
+import {
+  materialImpacts,
+  materialLosses,
+  type MaterialImpact,
+} from '@/lib/manage/venue-materials'
+import type { ExerciseVariantMaterial, MaterialMode } from '@/lib/types/exercise'
 
 type VenueRow = Database['public']['Tables']['venues']['Row']
 type VenueMaterialRow = Database['public']['Tables']['venue_materials']['Row']
@@ -262,6 +268,68 @@ export async function deleteVenue(
 
   if (error) return { error: 'Halle konnte nicht gelöscht werden.' }
   return { success: true }
+}
+
+/**
+ * Was ein geändertes Hallenmaterial für den Generator bedeutet: je Material,
+ * das wegfällt oder weniger wird, die betroffenen Gruppen und die Zahl der
+ * Übungen, die für sie nicht mehr eingeplant werden (PROJ-16). Gerechnet wird
+ * gegen den gespeicherten Stand der Halle, nicht gegen das, was der Browser
+ * für den alten Stand hält.
+ */
+export async function getVenueMaterialImpact(
+  venueId: string,
+  materials: VenueMaterial[],
+): Promise<{ impacts?: MaterialImpact[]; error?: string }> {
+  const { supabase, user } = await getAuthUser()
+  if (!user) return { error: 'Nicht angemeldet.' }
+
+  const failed = { error: 'Die Folgen ließen sich gerade nicht ermitteln.' }
+
+  const [beforeRes, groupsRes] = await Promise.all([
+    supabase.from('venue_materials').select('name, quantity').eq('venue_id', venueId),
+    supabase
+      .from('groups')
+      .select('name, participants')
+      .eq('user_id', user.id)
+      .eq('venue_id', venueId),
+  ])
+  if (beforeRes.error || groupsRes.error) return failed
+
+  const groups = (groupsRes.data ?? []) as { name: string; participants: number | null }[]
+  const before = (beforeRes.data ?? []) as { name: string; quantity: number }[]
+  const losses = materialLosses(before, materials)
+  if (groups.length === 0 || losses.length === 0) return { impacts: [] }
+
+  const { data: exerciseRows, error: exerciseError } = await supabase
+    .from('exercises')
+    .select('id')
+    .eq('user_id', user.id)
+  if (exerciseError) return failed
+
+  const ids = (exerciseRows ?? []).map((row) => row.id)
+  if (ids.length === 0) return { impacts: [] }
+
+  const [materialsRes, variantsRes] = await Promise.all([
+    supabase.from('exercise_materials').select('exercise_id, name, quantity, mode').in('exercise_id', ids),
+    supabase.from('exercise_variants').select('exercise_id, materials').in('exercise_id', ids),
+  ])
+  if (materialsRes.error || variantsRes.error) return failed
+
+  const exercises = ids.map((id) => ({
+    materials: (materialsRes.data ?? [])
+      .filter((row) => row.exercise_id === id)
+      .map((row) => ({ name: row.name, quantity: row.quantity, mode: row.mode as MaterialMode })),
+    variants: (variantsRes.data ?? [])
+      .filter((row) => row.exercise_id === id)
+      .map((row) => ({
+        title: '',
+        description: '',
+        materials: (row.materials as unknown as ExerciseVariantMaterial[] | null) ?? [],
+      })),
+  }))
+
+  return { impacts: materialImpacts(before, losses, groups, exercises) }
 }
 
 export async function getVenuesWithGroupCount(): Promise<(Venue & { groupCount: number; groupNames: string[] })[]> {

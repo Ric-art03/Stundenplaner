@@ -18,8 +18,6 @@ import { MultiSelect } from '@/components/exercises/multi-select'
 import { WorkNoteField } from '@/components/exercises/work-note'
 import { resolvePrimarySport } from '@/lib/units/timeline'
 import { PhaseSelect } from './phase-select'
-import { ManageLink } from '@/components/manage/manage-link'
-import { manageHref } from '@/lib/manage/tabs'
 import { DIFFICULTY_LEVELS } from '@/lib/types/exercise'
 import type { DifficultyLevel } from '@/lib/types/exercise'
 import type { SegmentConfig } from '@/lib/types/unit'
@@ -80,7 +78,6 @@ export function SegmentEditor({
             onChange={(name) => onChange({ ...segment, name })}
             onCreate={onPhaseCreated}
           />
-          <ManageLink href={manageHref('categories', 'phase')}>Kategorien verwalten</ManageLink>
         </div>
 
         <div className="space-y-2">

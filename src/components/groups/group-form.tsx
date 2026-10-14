@@ -204,7 +204,6 @@ export function GroupForm({
           customLabel="Eigene Sportart hinzufügen"
           error={errors.sports}
         />
-        <ManageLink href={manageHref('categories', 'sport')}>Kategorien verwalten</ManageLink>
       </div>
 
       {/* Hauptsportart */}
@@ -250,7 +249,8 @@ export function GroupForm({
           customLabel="Eigene Altersgruppe hinzufügen"
           error={errors.ageGroups}
         />
-        <ManageLink href={manageHref('categories', 'age_group')}>Kategorien verwalten</ManageLink>
+        {/* Ein Link für Sportart und Altersgruppe zusammen. */}
+        <ManageLink href={manageHref('categories')}>Kategorien verwalten</ManageLink>
       </div>
 
       {/* Teilnehmerzahl */}

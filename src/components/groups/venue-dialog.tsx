@@ -12,8 +12,25 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { venueSchema } from '@/lib/validations/group'
+import { getVenueMaterialImpact } from '@/lib/actions/groups'
+import {
+  describeLoss,
+  materialLosses,
+  type MaterialImpact,
+  type MaterialLoss,
+} from '@/lib/manage/venue-materials'
 import { VenueMaterialInput } from './venue-material-input'
 import type { VenueFormData, VenueMaterial, Venue } from '@/lib/types/group'
 import { EMPTY_VENUE_FORM } from '@/lib/types/group'
@@ -21,7 +38,8 @@ import { EMPTY_VENUE_FORM } from '@/lib/types/group'
 interface VenueDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  venue?: Venue | null
+  /** Mit `groupCount` und `groupNames`, damit beim Ändern des Materials nachgefragt werden kann. */
+  venue?: (Venue & { groupNames?: string[] }) | null
   onSave: (data: VenueFormData) => Promise<{ id?: string; error?: string }>
   customMaterials?: string[]
 }
@@ -31,6 +49,13 @@ export function VenueDialog({ open, onOpenChange, venue, onSave, customMaterials
   const [saving, setSaving] = React.useState(false)
   const [errors, setErrors] = React.useState<Record<string, string>>({})
   const [form, setForm] = React.useState<VenueFormData>(EMPTY_VENUE_FORM)
+  // Die offene Nachfrage zum Material; `impacts` = null, wenn sich die Zahlen
+  // nicht ermitteln ließen.
+  const [pending, setPending] = React.useState<{
+    data: VenueFormData
+    impacts: MaterialImpact[] | null
+    losses: MaterialLoss[]
+  } | null>(null)
 
   React.useEffect(() => {
     if (open) {
@@ -72,6 +97,34 @@ export function VenueDialog({ open, onOpenChange, venue, onSave, customMaterials
       return
     }
 
+    // Fällt Material weg, an dem Gruppen hängen, erst nachfragen (PROJ-16).
+    const losses =
+      venue && (venue.groupCount ?? 0) > 0 ? materialLosses(venue.materials, cleanedForm.materials) : []
+    if (venue && losses.length > 0) {
+      setSaving(true)
+      try {
+        const res = await getVenueMaterialImpact(venue.id, cleanedForm.materials)
+        if (res.error) {
+          // Ohne Zahlen trotzdem fragen — still zu speichern hieße, die Folge zu verschweigen.
+          setPending({ data: cleanedForm, impacts: null, losses })
+          return
+        }
+        if (res.impacts && res.impacts.length > 0) {
+          setPending({ data: cleanedForm, impacts: res.impacts, losses })
+          return
+        }
+      } catch {
+        setPending({ data: cleanedForm, impacts: null, losses })
+        return
+      } finally {
+        setSaving(false)
+      }
+    }
+
+    await save(cleanedForm)
+  }
+
+  async function save(cleanedForm: VenueFormData) {
     setSaving(true)
     try {
       const res = await onSave(cleanedForm)
@@ -141,6 +194,58 @@ export function VenueDialog({ open, onOpenChange, venue, onSave, customMaterials
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={pending !== null} onOpenChange={(next) => !next && setPending(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Weniger Material speichern?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                {pending?.impacts ? (
+                  <>
+                    <p>
+                      Der Generator plant nur Übungen ein, für die das Material der Halle reicht.
+                      Danach fallen heraus:
+                    </p>
+                    <ul className="space-y-2">
+                      {pending.impacts.map((impact) => (
+                        <li key={impact.name} className="rounded-md bg-muted px-3 py-2">
+                          <span className="font-medium text-foreground">{describeLoss(impact)}</span>
+                          {' — '}
+                          {impact.exerciseCount === 1
+                            ? '1 Übung'
+                            : `${impact.exerciseCount} Übungen`}{' '}
+                          für {impact.groups.join(', ')}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p>
+                    {pending?.losses.map(describeLoss).join(', ')}. Der Generator plant für die
+                    Gruppen dieser Halle ({venue?.groupNames?.join(', ')}) dann keine Übungen
+                    mehr ein, für die es nicht mehr reicht. Wie viele das sind, ließ sich gerade
+                    nicht ermitteln.
+                  </p>
+                )}
+                <p>Gespeicherte Einheiten bleiben, wie sie sind.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zurück</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const data = pending?.data
+                setPending(null)
+                if (data) void save(data)
+              }}
+            >
+              Trotzdem speichern
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }

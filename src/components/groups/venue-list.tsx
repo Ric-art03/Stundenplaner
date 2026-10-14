@@ -241,19 +241,35 @@ export function VenueList({
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Halle löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteTarget && deleteTarget.groupCount > 0 ? (
-                <>
-                  Diese Halle wird von {deleteTarget.groupCount === 1 ? '1 Gruppe' : `${deleteTarget.groupCount} Gruppen`} verwendet
-                  {deleteTarget.groupNames.length > 0 && (
-                    <> ({deleteTarget.groupNames.join(', ')})</>
-                  )}
-                  . Diese Gruppen haben danach keine Halle mehr zugewiesen.
-                </>
-              ) : (
-                <>Möchtest du &quot;{deleteTarget?.name}&quot; wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</>
-              )}
+            <AlertDialogTitle>„{deleteTarget?.name}“ löschen?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                {deleteTarget && deleteTarget.groupCount > 0 ? (
+                  <>
+                    <p>
+                      {deleteTarget.groupCount === 1 ? 'Diese Gruppe hat' : 'Diese Gruppen haben'}{' '}
+                      danach keine Halle mehr:{' '}
+                      <span className="font-medium text-foreground">
+                        {deleteTarget.groupNames.join(', ')}
+                      </span>
+                    </p>
+                    <p>
+                      Ohne Halle prüft der Generator für{' '}
+                      {deleteTarget.groupCount === 1 ? 'sie' : 'diese Gruppen'} kein Material mehr — er
+                      plant dann auch Übungen ein, deren Material es dort nicht gibt. Einer anderen
+                      Halle weist du eine Gruppe in ihrem Gruppenprofil zu.
+                    </p>
+                    <p>
+                      Gespeicherte Einheiten bleiben, wie sie sind. Das Löschen lässt sich nicht
+                      rückgängig machen.
+                    </p>
+                  </>
+                ) : (
+                  <p>
+                    Keine Gruppe nutzt diese Halle. Das Löschen lässt sich nicht rückgängig machen.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

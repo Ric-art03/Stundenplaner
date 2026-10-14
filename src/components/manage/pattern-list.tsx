@@ -129,8 +129,9 @@ export function PatternList({ patterns: initialPatterns }: PatternListProps) {
       <p className="text-sm text-muted-foreground">
         Ein Stundenmuster ist ein Zeitverlauf, den du im Generator unter einem Namen abgelegt
         hast. Du kannst es dort auf jede Gruppe setzen — die Minuten werden auf deren
-        Einheitsdauer umgerechnet. Den Aufbau änderst du im Generator: Muster laden, anpassen,
-        „Stundenmuster speichern“ und überschreiben.
+        Einheitsdauer umgerechnet. „Im Generator öffnen“ im Menü eines Musters wählt es vor; du
+        suchst dann nur noch die Gruppe aus. Den Aufbau änderst du im Generator: Muster laden,
+        anpassen, „Stundenmuster speichern“ und überschreiben.
       </p>
 
       {patterns.length === 0 ? (
@@ -190,6 +191,12 @@ export function PatternList({ patterns: initialPatterns }: PatternListProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/units/new?pattern=${encodeURIComponent(pattern.id)}`}>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Im Generator öffnen
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => openRename(pattern)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Umbenennen

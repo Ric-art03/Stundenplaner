@@ -11,11 +11,11 @@ import { UnitGeneratorEmptyState } from '@/components/units/unit-generator-empty
 import type { SegmentConfig } from '@/lib/types/unit'
 
 interface NewUnitPageProps {
-  searchParams: Promise<{ group?: string; from?: string }>
+  searchParams: Promise<{ group?: string; from?: string; pattern?: string }>
 }
 
 export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
-  const { group: groupParam, from: fromUnitId } = await searchParams
+  const { group: groupParam, from: fromUnitId, pattern: patternParam } = await searchParams
 
   const [groups, categories, patterns, exerciseResult] = await Promise.all([
     getGroups(),
@@ -47,6 +47,12 @@ export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
     : groupParam && groups.some((g) => g.id === groupParam)
       ? groupParam
       : undefined
+
+  // „Im Generator öffnen" aus der Verwaltung. Kommt der Nutzer über „Zurück
+  // zum Generator", gilt dessen Stand und das Muster bleibt außen vor.
+  const patternExists = !!patternParam && patterns.some((p) => p.id === patternParam)
+  const initialPatternId = !source && patternExists ? patternParam : undefined
+  const patternMissing = !source && !!patternParam && !patternExists
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">
@@ -80,6 +86,8 @@ export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
             initialGroupId={initialGroupId}
             initialSegments={initialSegments}
             initialEditorState={source?.editorState}
+            initialPatternId={initialPatternId}
+            patternMissing={patternMissing}
           />
         )}
       </div>
