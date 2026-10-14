@@ -263,7 +263,14 @@ Neu offen, nicht entschieden: ob das Gruppen-Formular bei „Keine Halle" sagen 
 
 **Die Überarbeitung ist am 2026-10-14 gebaut** — Abschnitt „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-14" in der Spec. **590 Unit-Tests grün** (578 plus 12 neue), Typprüfung, Lint und Build sauber; keine Migration, keine neuen Pakete. Die Zählung für die Nachfrage zum Hallenmaterial rechnet über dieselbe Materialprüfung wie der Generator (`src/lib/manage/venue-materials.ts`). **Eine Verhaltensänderung:** passt ein Muster nicht zur gewählten Gruppe, bleibt es gewählt (mit Grund), statt auf „Standard" zurückzufallen. **Im Browser gesehen** ist nur die Kopfzeile (375, 768, 1280 px); das Testkonto hat keine Gruppe, Halle oder Muster, die Dialoge und der Generator mit vorgewähltem Muster sind ungesehen.
 
-**Nächster Schritt:** einmal von Hand ansehen (Halle löschen, Material einer Halle senken, „Im Generator öffnen"), dann `/qa PROJ-16`. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
+**PROJ-16 ist seit dem 2026-10-15 freigegeben** — Abschnitt „QA Test Results" in der Spec, Stand Commit `f825233`. Zum ersten Mal ist die Verwaltung im Browser gelaufen. **113 von 113 Akzeptanzkriterien bestanden** (64 davon im Browser ausgeführt, der Rest am lebenden System, über Unit-Tests oder nur am Code gelesen), kein Befund am Zugriffsschutz. **408 von 408 Browser-Tests grün in einem Zug** (16,3 Minuten), davon 69 neu für PROJ-16; 590 Unit-Tests grün.
+
+- **BUG-27 (niedrig, offen):** ruft man den Generator direkt mit einem gelöschten Muster in der Adresse auf (Lesezeichen, Neuladen), fehlt die Meldung „gibt es nicht mehr". Über „Im Generator öffnen" erscheint sie. Ursache: die Meldungsanzeige hört beim ersten Aufbau einer Seite zu spät zu
+- **Die Browser-Tests von PROJ-16 sind eine eigene Stufe** nach dem Live-Modus („verwaltung", danach „verwaltung mobil")
+- **Erst der dritte Gesamtlauf war grün** — die ersten beiden scheiterten an Tests, nicht an der App: ein zu breiter Textgriff in PROJ-6 (das Wort „Zeitverlauf" steht seit PROJ-16 auch im Erklärsatz), eine feste Frist von 5 Sekunden in PROJ-3 und eine zeitweise langsame Verbindung zu Supabase (rund 1 Sekunde je Anfrage statt 0,2)
+- **Nicht prüfbar auf diesem Rechner:** Firefox und echtes Safari. Nur am Code gelesen: der Generator bei von Hand verändertem Zeitverlauf (Nachfragen beim Ersetzen, beim Gruppenwechsel, beim Überschreiben)
+
+**Nächster Schritt:** `/deploy PROJ-16` — keine neue Migration (die von `/backend` ist schon in der Datenbank, Register 18 zu 18), keine neuen Pakete, keine neue Umgebungsvariable. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
 
 ## Features
 
@@ -283,7 +290,7 @@ Neu offen, nicht entschieden: ob das Gruppen-Formular bei „Keine Halle" sagen 
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Deployed | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
-| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | In Progress | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
+| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Approved | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
 
 <!-- Add features above this line -->

@@ -1,6 +1,6 @@
 # PROJ-16: Verwaltung (Hallen, Stundenmuster, eigene Kategorien)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-04
 **Last Updated:** 2026-10-14
 
@@ -805,7 +805,127 @@ Produktionsbuild sauber. Keine Migration, keine neuen Pakete.
 - Die Browser-Tests sind nicht gelaufen
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-10-14, Stand Commit `f825233`
+**App URL:** http://localhost:3100 (Produktionsbuild)
+**Tester:** QA Engineer (AI)
+
+### Ergebnis in einem Satz
+
+**Bereit für die Auslieferung:** kein Akzeptanzkriterium ist durchgefallen, kein Befund am
+Zugriffsschutz, ein Fehler niedriger Stufe (BUG-27). Zum ersten Mal ist die Verwaltung im Browser
+gelaufen — vorher war sie nie angesehen worden.
+
+### Was gelaufen ist
+
+| | Ergebnis |
+|---|---|
+| Unit-Tests | **590 grün** (darunter 12 für die Nachfrage zum Hallenmaterial, 25 für Stundenmuster, 16 für Kategorien) |
+| Browser-Tests PROJ-16 | **69 neu**: 32 je Projekt (Rechner, Handybreite „iPhone 13", 390 px) plus 5 ohne Anmeldung. Einer je Projekt ist als erwarteter Fehlschlag markiert und stellt BUG-27 nach |
+| Gesamtlauf aller Features | **408 von 408 grün in einem Zug** (16,3 Minuten, zwei Arbeiter, ohne Entwicklungsserver): 336 aus PROJ-3, -5, -6, -7 und -14, 69 aus PROJ-16, dazu 3 für Einrichtung und Aufräumen. **Keine Regression.** Erst der dritte Gesamtlauf — siehe „Hinweis zur Testumgebung" |
+| Datenbank | der Nachweis aus `/backend` (16 Fälle, zurückgerollte Transaktion); dazu jetzt nachgesehen: alle 17 Tabellen mit Zugriffsschutz, Muster und Kategorien nur für den Besitzer, die vier Funktionen ohne erhöhte Rechte, mit festem Suchpfad, für `anon` gesperrt. `get_advisors` meldet nur den bekannten Hinweis zum Passwortschutz |
+| Breiten | 390 px (ganze Suite), 768 px (Kopfzeile) und 1280 px (Rechner): nirgends waagerechtes Scrollen |
+| Browser | **nur Chromium** (Edge). Firefox und echtes Safari sind auf diesem Rechner nicht prüfbar |
+
+Die Browser-Tests von PROJ-16 laufen in einer **eigenen Stufe** nach dem Live-Modus („verwaltung",
+danach „verwaltung mobil"), weil sie Hallen, Gruppen, Kategorien und Muster anlegen, die sonst in
+den Auswahllisten der übrigen Tests stünden. Jeder Test legt seine Daten selbst an (Kennung
+`E2E16`) und räumt vorher alles mit dieser Kennung weg.
+
+### Akzeptanzkriterien
+
+113 aktive Kriterien (zwei weitere sind durch die Überarbeitung vom 2026-10-14 ersetzt).
+**Durchgefallen: keines.**
+
+| Abschnitt | Kriterien | bestanden | davon im Browser | Anmerkung |
+|---|---|---|---|---|
+| A. Seite und Zugang | 15 | 15 | 14 | „Stundenmuster verwalten" im Generator nur am Code |
+| B. Hallen | 14 | 14 | 10 | „Pro Teilnehmer" und „umgestelltes Material gilt als entfernt" über Unit-Tests; Leerzustand und „Neue Halle" im Gruppen-Formular unverändert aus PROJ-5 |
+| C. Kategorien ansehen | 7 | 7 | 6 | „Variante zählt einmal" am lebenden System |
+| D. Kategorie anlegen | 6 | 6 | 4 | Längengrenze und „anderer Art" über Unit-Tests |
+| E. Umbenennen, Zusammenführen | 13 | 13 | 5 | der Rest am lebenden System (Unteilbarkeit, alle Stellen, Material mit Menge, Entwurf, Groß-/Kleinschreibung) |
+| F. Löschen | 12 | 12 | 6 | gelöschte Phase in Einheit, im Live-Modus und nach „Zurück zum Generator" nur am Code |
+| G. Muster speichern | 10 | 10 | 3 | „wie die Gruppe" über Unit-Tests; Überschreiben, zwei Wege und die Grenze von 100 nur am Code |
+| H. Muster anwenden | 18 | 18 | 4 | Umrechnung, Mindestlänge und Sportarten über Unit-Tests; Nachfragen beim Ersetzen und Gruppenwechsel nur am Code |
+| I. Reiter „Stundenmuster" | 13 | 13 | 11 | „gelöscht in einem anderen Tab" besteht auf dem beschriebenen Weg — direkt aufgerufen fehlt die Meldung (BUG-27) |
+| J. Durchgehend | 5 | 5 | 1 | fremde Kennung am lebenden System; Fehler- und Ladezustand am Code |
+
+„Nur am Code" heißt: gelesen und für richtig befunden, aber nie ausgeführt. Das betrifft vor
+allem den Generator bei von Hand verändertem Zeitverlauf (Nachfrage beim Ersetzen, beim
+Gruppenwechsel, beim Überschreiben).
+
+### Edge Cases
+
+- [x] Gleicher Name in zwei Arten, Groß-/Kleinschreibung, einzige Phase umbenannt — am lebenden System (`/backend`)
+- [x] Muster mit mehr Phasen als Minuten — im Browser: bleibt gewählt, Grund unter der Auswahl, „Einheit generieren" nennt ihn
+- [x] Muster in einem anderen Tab gelöscht — im Browser über „Im Generator öffnen"
+- [x] Keine Gruppe — der Generator zeigt seinen Leerzustand, auch mit Muster in der Adresse
+- [x] Material, das nur eine Variante braucht — Unit-Test: zählt als Übung mit
+- [x] Hallenmaterial ohne Gruppen, hinzugefügt oder nirgends gebraucht — im Browser: keine Nachfrage
+- [ ] Zwei gleichzeitige Umbenennungen, 500 Übungen, sehr viele Verwendungen — **nicht geprüft**
+
+### Sicherheit (Red Team)
+
+- [x] **Anmeldung:** `/manage` mit jedem Reiter, `/groups/venues` und der Generator mit Muster in der Adresse leiten ohne Anmeldung zum Login (Browser)
+- [x] **Fremde Daten:** Zugriffsregeln nachgesehen (oben); der neue Serverweg `getVenueMaterialImpact` liest Hallenmaterial nur über den Zugriffsschutz und Gruppen nur des angemeldeten Nutzers — eine fremde Hallen-Kennung ergibt eine leere Rechnung, keine fremden Namen
+- [x] **Eingaben:** Namen werden als Text ausgegeben (React), nirgends als HTML; Längen sind auf dem Server und in der Datenbank begrenzt
+- [x] **Keine Geheimnisse** in den neuen Dateien
+- Ohne Befund. Anzumerken: `getVenueMaterialImpact` liest bei jedem Aufruf alle Übungen des Nutzers. Bei heutigen Mengen ohne Belang, und es wird nur gerufen, wenn Material wegfällt und Gruppen an der Halle hängen
+
+### Bugs Found
+
+#### BUG-27: Gelöschtes Muster in der Adresse — die Meldung fehlt beim direkten Aufruf
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. `/units/new?pattern=<Kennung eines gelöschten Musters>` direkt aufrufen (Lesezeichen, Neuladen)
+  2. Expected: Meldung „Dieses Stundenmuster gibt es nicht mehr", Generator auf „Standard"
+  3. Actual: Generator steht richtig auf „Standard", **die Meldung erscheint nicht**
+- **Ursache:** Die Meldung wird beim ersten Aufbau der Seite ausgelöst. Die Meldungsanzeige der App
+  (`src/hooks/use-toast.ts`) übernimmt ihren Stand beim Zeichnen und hört erst danach zu — was
+  dazwischen ausgelöst wird, geht verloren. Über „Im Generator öffnen" (Seitenwechsel innerhalb der
+  App) hört sie schon zu, dort erscheint die Meldung. Keine andere Stelle der App löst beim ersten
+  Aufbau eine Meldung aus
+- **Nachgestellt:** Browser-Test „BUG-27: …", als erwarteter Fehlschlag markiert
+- **Priority:** Nice to have
+
+### Hinweis zur Testumgebung
+
+Die ersten beiden Gesamtläufe brachen ab — beide Male an Tests, nicht an der App:
+
+1. **Lauf 1, drei Fehlschläge.**
+   - PROJ-6 suchte „Zeitverlauf" irgendwo auf der Seite. Seit PROJ-16 steht das Wort auch im
+     Erklärsatz zum Stundenmuster. Die drei Stellen treffen jetzt nur noch die Überschrift
+     (`exact`)
+   - PROJ-3 „Suchfeld filtert" (Rechner und Handy) hatte als einziger Test eine feste Frist von
+     5 Sekunden. Die Suche reiht sich hinter die beiden Ladeaufrufe der Seite und kam bei
+     **rund 1 Sekunde je Anfrage an Supabase** (gemessen) nach etwa 7 Sekunden. Die Frist ist
+     jetzt die der Konfiguration (15 Sekunden). Einzeln beobachtet filtert die Suche richtig
+2. **Lauf 2, ein Fehlschlag:** PROJ-6 „aus einer gespeicherten Einheit entsteht ein Entwurf
+   daneben". „Neu generieren" macht ein gutes Dutzend Anfragen an Supabase und riss bei derselben
+   langsamen Verbindung die 15 Sekunden. Mit wieder schneller Verbindung (0,2 Sekunden je Anfrage)
+   besteht der Test in 8 Sekunden, und ein eigenes Skript zeigt den Ablauf sauber (neuer Entwurf
+   nach knapp 2 Sekunden, mit Meldung)
+3. **Lauf 3:** 408 von 408
+
+Dazu zwei Fallen dieses Rechners:
+
+- **Aufzeichnen mit `--trace=on`** lässt die Test-Anmeldung (`auth.setup.ts`) jedes Mal an der
+  Zeitgrenze von 2 Minuten hängen; ohne das läuft sie in 2 bis 6 Sekunden durch
+- Ein Rest von `npm run dev` lauschte nach Strg+C weiter auf Port 3000 (1,3 GB). Er wurde mit
+  Zustimmung des Nutzers beendet
+
+### Beobachtungen ohne Fehler
+
+- **Der Generator braucht mindestens eine Übung**, sonst zeigt er nur den Leerzustand — die
+  Browser-Tests legen deshalb je Test eine eigene Übung an, statt sich auf den Grundbestand zu
+  verlassen
+
+### Summary
+- **Acceptance Criteria:** 113/113 passed (64 davon im Browser ausgeführt)
+- **Bugs Found:** 1 total (0 critical, 0 high, 0 medium, 1 low)
+- **Security:** Pass
+- **Production Ready:** YES
+- **Recommendation:** Deploy; BUG-27 kann mitgehen oder folgen
 
 ## Deployment
 _To be added by /deploy_

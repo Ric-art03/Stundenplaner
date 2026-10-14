@@ -46,8 +46,10 @@ test.describe('Übungsdatenbank - Übersichtsseite', () => {
     const searchInput = page.getByPlaceholder('Übung suchen...')
     await expect(searchInput).toBeVisible()
     await searchInput.fill('NONEXISTENT_SEARCH_TERM_XYZ')
-    // Should show no-results message
-    await expect(page.getByText('Keine Übungen gefunden')).toBeVisible({ timeout: 5000 })
+    // Should show no-results message. Ohne eigene Frist: Die Suche reiht sich
+    // hinter die beiden Ladeaufrufe der Seite ein; bei langsamer Verbindung zu
+    // Supabase (gemessen 2026-10-14: ~1 s je Anfrage) kommt sie nach 7 s.
+    await expect(page.getByText('Keine Übungen gefunden')).toBeVisible()
   })
 
   test('AC: Filter-Button öffnet Filter-Sheet', async ({ page }) => {

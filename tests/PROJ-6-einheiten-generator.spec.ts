@@ -60,7 +60,8 @@ test.describe('PROJ-6 — Generieren und Entwurf', () => {
     await page.goto(`/units/new?group=${fixtures.groupId}`)
     await expect(page.getByText(fixtures.groupName).first()).toBeVisible()
     // „Standard" ist vorausgewählt, der Zeitverlauf also zu.
-    await expect(page.getByText('Zeitverlauf')).toHaveCount(0)
+    // `exact`: Seit PROJ-16 steht das Wort auch im Erklärsatz zum Stundenmuster.
+    await expect(page.getByText('Zeitverlauf', { exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Einheit generieren/ })).toBeEnabled()
   })
 
@@ -214,7 +215,8 @@ test.describe('PROJ-6 — Zurück zum Generator', () => {
 
     await expect(page.getByRole('heading', { name: 'Einheit generieren' })).toBeVisible()
     // Mit „Standard" erzeugt → der Zeitverlauf bleibt zu.
-    await expect(page.getByText('Zeitverlauf')).toHaveCount(0)
+    // `exact`: Seit PROJ-16 steht das Wort auch im Erklärsatz zum Stundenmuster.
+    await expect(page.getByText('Zeitverlauf', { exact: true })).toHaveCount(0)
   })
 
   test('AC: auch aus „Meine Einheiten" heraus greift der Bedienstand', async ({ page }) => {
@@ -229,7 +231,8 @@ test.describe('PROJ-6 — Zurück zum Generator', () => {
     await page.getByRole('link', { name: /Zurück zum Generator/ }).click()
 
     await expect(page.getByRole('heading', { name: 'Einheit generieren' })).toBeVisible()
-    await expect(page.getByText('Zeitverlauf')).toHaveCount(0)
+    // `exact`: Seit PROJ-16 steht das Wort auch im Erklärsatz zum Stundenmuster.
+    await expect(page.getByText('Zeitverlauf', { exact: true })).toHaveCount(0)
   })
 })
 

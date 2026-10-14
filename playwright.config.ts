@@ -52,6 +52,13 @@ const EDITOR_TESTS = /PROJ-7-.*\.spec\.ts/
  * Die Datei ohne Anmeldung (`.anon.`) gehört nicht dazu.
  */
 const LIVE_TESTS = /PROJ-14-(?!.*\.anon\.).*\.spec\.ts/
+/**
+ * Die Tests der Verwaltung (PROJ-16) — eine eigene Stufe **nach** dem
+ * Live-Modus. Sie legen Hallen, Gruppen, Kategorien und Stundenmuster an, die
+ * sonst in den Auswahllisten der übrigen Tests stünden. Rechner und Handy
+ * laufen nacheinander: beide räumen vor jedem Test alles Eigene weg.
+ */
+const MANAGE_TESTS = /PROJ-16-(?!.*\.anon\.).*\.spec\.ts/
 const baseURL = `http://localhost:${port}`
 
 export default defineConfig({
@@ -106,7 +113,13 @@ export default defineConfig({
     // geschützte Seiten auf /login umleiten.
     {
       name: 'chromium',
-      testIgnore: [/.*\.anon\.spec\.ts/, /.*\.exklusiv\.spec\.ts/, EDITOR_TESTS, LIVE_TESTS],
+      testIgnore: [
+        /.*\.anon\.spec\.ts/,
+        /.*\.exklusiv\.spec\.ts/,
+        EDITOR_TESTS,
+        LIVE_TESTS,
+        MANAGE_TESTS,
+      ],
       use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
     },
@@ -126,6 +139,7 @@ export default defineConfig({
         /PROJ-6-einheiten-generator\.spec\.ts/,
         EDITOR_TESTS,
         LIVE_TESTS,
+        MANAGE_TESTS,
       ],
       use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
@@ -164,6 +178,20 @@ export default defineConfig({
       dependencies: ['editor', 'editor mobil'],
     },
 
+    // Die Verwaltung (PROJ-16), nach dem Live-Modus — siehe `MANAGE_TESTS`.
+    {
+      name: 'verwaltung',
+      testMatch: MANAGE_TESTS,
+      use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
+      dependencies: ['live', 'live mobil'],
+    },
+    {
+      name: 'verwaltung mobil',
+      testMatch: MANAGE_TESTS,
+      use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
+      dependencies: ['verwaltung'],
+    },
+
     // Tests, die den Bestand des Testkontos leerräumen und deshalb niemanden
     // neben sich dulden. Über `dependencies` laufen sie garantiert erst,
     // wenn alle übrigen Projekte durch sind.
@@ -179,6 +207,8 @@ export default defineConfig({
         'editor mobil',
         'live',
         'live mobil',
+        'verwaltung',
+        'verwaltung mobil',
       ],
     },
   ],
