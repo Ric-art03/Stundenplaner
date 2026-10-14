@@ -251,7 +251,17 @@ Am lebenden System in einer zurückgerollten Transaktion nachgewiesen, sechzehn 
 - **Über den Entwurf hinaus:** die Lücken-Erklärung eines Segments trägt die Phase als Abschrift und wird mit umbenannt; Doppeltes wird bei jedem Umbenennen aufgeräumt, nicht nur beim Zusammenführen
 - **Nicht belegt und für `/qa`:** der ganze Weg im Browser (Verwaltung, Generator mit Stundenmuster — nichts davon ist je angesehen worden, und die Browser-Tests sind seit dem Umzug der Hallen nicht gelaufen), der neue Änderungsstempel beim Umbenennen, zwei gleichzeitige Umbenennungen, die Geschwindigkeit bei 500 Übungen
 
-**Nächster Schritt:** `/qa PROJ-16`; daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
+**PROJ-16 ist am 2026-10-14 nach der Durchsicht durch den Nutzer überarbeitet** (`/refine`) — vier Punkte, alle in der Spec, **noch nichts davon gebaut**:
+
+- **„Verwaltung" in der Kopfzeile ab 768 px** als vierter Menüpunkt; am Handy bleibt es bei drei
+- **Halle löschen erklärt seine Folgen.** Am Code nachgesehen: die Gruppen verlieren die Halle, und **der Generator prüft für eine Gruppe ohne Halle gar kein Material mehr** — das stand nirgends. Der Dialog sagt es künftig, hängt aber nichts um
+- **Material, das aus einer Halle wegfällt oder weniger wird, wird beim Speichern nachgefragt** (nur wenn Gruppen an der Halle hängen), mit Gruppen und Zahl der Übungen, die dort nicht mehr eingeplant werden. Bisher ohne jeden Hinweis. **Einen Materialbegriff in der Verwaltung zu löschen ist dagegen abgesichert** — Übungen und Hallen behalten ihn, der Generator rechnet wie vorher
+- **Ein „Kategorien verwalten"-Link je Bildschirm**, unter dem letzten Kategorie-Feld, statt an jedem Feld (im Übungs-Assistenten waren es vier in einem Schritt, im Generator einer je Segment)
+- **„Im Generator öffnen" im Menü eines Stundenmusters** — das Muster ist vorgewählt und wird beim Wählen der Gruppe angewendet. Kehrt die Entscheidung vom 2026-10-12 um
+
+Neu offen, nicht entschieden: ob das Gruppen-Formular bei „Keine Halle" sagen soll, dass dann kein Material geprüft wird (eher PROJ-5).
+
+**Nächster Schritt:** `/frontend PROJ-16` für die Überarbeitung — keine Migration nötig, die Nachfrage zum Hallenmaterial braucht nur einen kleinen Serverweg zum Zählen. Danach `/qa PROJ-16`. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
 
 ## Features
 

@@ -2,7 +2,14 @@
 
 ## Status: In Progress
 **Created:** 2026-10-04
-**Last Updated:** 2026-10-13
+**Last Updated:** 2026-10-14
+
+> **Am 2026-10-14 überarbeitet (`/refine`), nach der Durchsicht durch den Nutzer — noch nicht
+> gebaut.** Vier Punkte: „Verwaltung" steht am Rechner als vierter Menüpunkt in der Kopfzeile;
+> Löschen einer Halle erklärt seine Folgen, und Material, das aus einer Halle wegfällt, wird beim
+> Speichern nachgefragt; je Bildschirm nur noch **ein** „Kategorien verwalten"-Link, unten;
+> „Im Generator öffnen" am Stundenmuster. Betroffen sind A, B, I, Out of Scope und das Decision
+> Log; die geänderten Kriterien tragen den Vermerk *(2026-10-14)*.
 
 > **PROJ-17 (Stundenmuster) ist am 2026-10-12 in diesem Feature aufgegangen.** Der Nutzer hat
 > entschieden, beides zusammen zu verwirklichen: Stundenmuster sind wie eigene Kategorien etwas,
@@ -57,16 +64,17 @@ Dieses Feature bringt drei Dinge:
 
 ## Out of Scope
 - **Vordefinierte Begriffe ausblenden, umbenennen oder löschen** — die mitgelieferten Listen bleiben, wie sie sind
-- **Ein vierter Menüpunkt und der Umbau der Navigation** (Leiste am unteren Rand, Konto-Menü) — bleibt zurückgestellt bis PROJ-9 (Kalender)
+- **Ein vierter Menüpunkt am Handy und der Umbau der Navigation** (Leiste am unteren Rand, Konto-Menü) — bleibt zurückgestellt bis PROJ-9 (Kalender). Am Rechner steht „Verwaltung" seit der Überarbeitung vom 2026-10-14 in der Kopfzeile
 - **Den Zeitverlauf eines Stundenmusters in der Verwaltung bearbeiten** — geändert wird ein Muster nur über den Generator (laden, anpassen, erneut speichern)
-- **Ein Knopf „Im Generator öffnen" am Muster** — in der Verwaltung besprochen und nicht gewählt
+- ~~**Ein Knopf „Im Generator öffnen" am Muster**~~ — am 2026-10-14 vom Nutzer doch gewählt, siehe Abschnitt I
+- **Die betroffenen Gruppen beim Löschen einer Halle gleich einer anderen Halle zuweisen** — der Dialog erklärt nur; umgehängt wird im Gruppenprofil (2026-10-14)
 - **Stundenmuster an eine Gruppe binden** oder eine Gruppe als Vorschlag merken
 - **Eine Einheit merkt sich ihr Muster** — es gibt keine Verbindung zwischen Einheit und Muster nach dem Laden; ein geändertes Muster ändert keine Einheit
 - **„Überall entfernen" beim Löschen einer Kategorie** — Löschen wirkt nur auf die Auswahllisten
 - **Mehrere Einträge auf einmal löschen** („alle unbenutzten löschen")
 - **Mitgelieferte Stundenmuster** — gehört, wenn überhaupt, zu PROJ-4 (Starter-Datenbank)
 - **Stundenmuster oder Kategorien teilen** — PROJ-12 (Community)
-- **Neue Funktionen an den Hallen** — die Hallenverwaltung zieht um, so wie sie ist. Dokumente an Hallen bleiben PROJ-15
+- **Neue Funktionen an den Hallen** — die Hallenverwaltung zieht um, so wie sie ist; dazu kommen nur die Erklärung beim Löschen und die Nachfrage zum Material (2026-10-14). Dokumente an Hallen bleiben PROJ-15
 - **Durchführungen nachträglich umschreiben** — was eine Durchführung (PROJ-14) festgehalten hat, bleibt beim Umbenennen stehen; sie ist eine Aufzeichnung
 
 ## Acceptance Criteria
@@ -84,16 +92,36 @@ Dieses Feature bringt drei Dinge:
 - [ ] Angenommen der Nutzer ist auf der Gruppenübersicht, wenn er „Hallen verwalten" wählt, dann öffnet sich die Verwaltung im Reiter „Hallen"
 - [ ] Angenommen der Nutzer ist im Formular einer Gruppe bei der Hallenauswahl, dann steht dort ein Link „Hallen verwalten", der die Verwaltung im Reiter „Hallen" öffnet; „Neue Halle" bleibt daneben erhalten
 - [ ] Angenommen der Nutzer ist im Generator bei den Stundenmustern, dann steht dort ein Link „Stundenmuster verwalten", der die Verwaltung im Reiter „Stundenmuster" öffnet
-- [ ] Angenommen der Nutzer ist im Übungs-Formular, im Gruppen-Formular oder in der Phasenauswahl des Generators an einer Auswahlliste, die eigene Begriffe aufnimmt, dann steht dort ein Link „Kategorien verwalten", der die Verwaltung im Reiter „Kategorien" beim Abschnitt dieser Art öffnet
+- [ ] ~~Angenommen der Nutzer ist im Übungs-Formular, im Gruppen-Formular oder in der Phasenauswahl des Generators an einer Auswahlliste, die eigene Begriffe aufnimmt, dann steht dort ein Link „Kategorien verwalten", der die Verwaltung im Reiter „Kategorien" beim Abschnitt dieser Art öffnet~~ — ersetzt durch die drei folgenden *(2026-10-14)*
+- [ ] *(2026-10-14)* Angenommen ein Bildschirm eines Formulars enthält eine oder mehrere Auswahllisten, die eigene Begriffe aufnehmen, dann steht dort **genau ein** Link „Kategorien verwalten", **unterhalb des letzten** dieser Felder — nicht an jedem Feld. Er öffnet die Verwaltung im Reiter „Kategorien"; stehen auf dem Bildschirm Felder nur einer Art, springt er zu deren Abschnitt, sonst an den Anfang des Reiters
+- [ ] *(2026-10-14)* Angenommen der Nutzer ist im Übungs-Assistenten, dann steht der Link einmal am Ende des Schritts „Einordnung" (Sportart, Altersgruppe, Phase, Organisationsform) und einmal im Schritt mit dem Material; an den Listen der Varianten steht keiner
+- [ ] *(2026-10-14)* Angenommen der Nutzer ist im Gruppen-Formular, dann steht der Link einmal unter Sportart und Altersgruppe, und „Hallen verwalten" bleibt an der Hallenauswahl. Angenommen er ist im Generator, dann steht der Link einmal unter dem Zeitverlauf statt an jedem Segment
 - [ ] Angenommen der Nutzer hat in einem Formular ungespeicherte Eingaben, wenn er einen „verwalten"-Link wählt, dann gehen die Eingaben nicht ohne Nachfrage verloren
-- [ ] Angenommen die Kopfzeile der App, dann hat sie weiterhin genau die drei Menüpunkte Übungen, Gruppen, Einheiten
+- [ ] ~~Angenommen die Kopfzeile der App, dann hat sie weiterhin genau die drei Menüpunkte Übungen, Gruppen, Einheiten~~ — ersetzt durch die beiden folgenden *(2026-10-14)*
+- [ ] *(2026-10-14)* Angenommen die Seite ist mindestens 768 px breit, dann hat die Kopfzeile vier Menüpunkte — Übungen, Gruppen, Einheiten, Verwaltung —, gestaltet wie die drei anderen, und nichts darin bricht um oder scrollt waagerecht
+- [ ] *(2026-10-14)* Angenommen die Seite ist schmaler als 768 px, dann hat die Kopfzeile weiterhin genau die drei Menüpunkte Übungen, Gruppen, Einheiten; die Verwaltung ist über die Karte der Startseite und die „verwalten"-Links erreichbar
 
 ### B. Reiter „Hallen" (Umzug aus PROJ-5)
 
-- [ ] Angenommen der Nutzer hat Hallen angelegt, wenn er den Reiter „Hallen" öffnet, dann sieht er dieselbe Liste mit denselben Angaben und denselben Aktionen (anlegen, bearbeiten, löschen mit Warnung zu betroffenen Gruppen) wie bisher unter „Gruppen → Hallen"
+- [ ] Angenommen der Nutzer hat Hallen angelegt, wenn er den Reiter „Hallen" öffnet, dann sieht er dieselbe Liste mit denselben Angaben und denselben Aktionen (anlegen, bearbeiten, löschen) wie bisher unter „Gruppen → Hallen"; was beim Löschen und beim Ändern des Materials gesagt wird, regeln die Kriterien unter „Folgen erklären"
 - [ ] Angenommen der Nutzer hat keine Halle, wenn er den Reiter öffnet, dann sieht er einen Leerzustand mit „Erste Halle anlegen"
 - [ ] Angenommen der Nutzer ruft die bisherige Adresse der Hallenverwaltung auf, dann landet er in der Verwaltung im Reiter „Hallen"
 - [ ] Angenommen der Nutzer legt im Gruppen-Formular über „Neue Halle" eine Halle an, dann funktioniert das unverändert und die Halle erscheint danach im Reiter „Hallen"
+
+**Folgen erklären** *(2026-10-14)* — Eine Halle wirkt über ihr Material: Der Generator plant für
+eine Gruppe nur Übungen ein, für die das Material ihrer Halle reicht. Hat eine Gruppe **keine**
+Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
+
+- [ ] *(2026-10-14)* Angenommen an der Halle hängen Gruppen, wenn der Nutzer „Löschen" wählt, dann nennt der Dialog die Gruppen mit Namen und sagt: diese Gruppen haben danach keine Halle; der Generator prüft für sie kein Material mehr und plant auch Übungen ein, deren Material dort fehlt; gespeicherte Einheiten bleiben, wie sie sind; das Löschen lässt sich nicht rückgängig machen
+- [ ] *(2026-10-14)* Angenommen an der Halle hängt keine Gruppe, wenn der Nutzer „Löschen" wählt, dann fragt der Dialog einmal nach, nennt die Halle beim Namen und sagt, dass sich das nicht rückgängig machen lässt
+- [ ] *(2026-10-14)* Angenommen der Dialog nennt Gruppen, dann sagt er auch, wo man sie einer anderen Halle zuweist (im Gruppenprofil); er bietet das Umhängen nicht selbst an
+- [ ] *(2026-10-14)* Angenommen die Halle ist gelöscht, dann bleiben die eigenen Materialbegriffe, die nur an ihr standen, in den Auswahllisten und in der Verwaltung (sie sind nur noch „unbenutzt")
+- [ ] *(2026-10-14)* Angenommen an der Halle hängen Gruppen, wenn der Nutzer im Hallen-Dialog ein Material entfernt oder seine Anzahl senkt und speichert, dann fragt die App vorher nach: sie nennt je betroffenem Material die Gruppen und die Zahl der Übungen, die damit für diese Gruppen nicht mehr eingeplant werden, und speichert erst nach der Bestätigung
+- [ ] *(2026-10-14)* Angenommen die Anzahl wird gesenkt, dann zählt die Nachfrage nur die Übungen, für die die neue Anzahl bei mindestens einer betroffenen Gruppe nicht mehr reicht — gerechnet wie im Generator, also „pro Teilnehmer" mit der Teilnehmerzahl der Gruppe. Ist das keine, fragt die App nicht nach
+- [ ] *(2026-10-14)* Angenommen der Nutzer benennt in einer Materialzeile das Material um (wählt ein anderes), dann gilt das alte als entfernt und wird wie oben nachgefragt
+- [ ] *(2026-10-14)* Angenommen an der Halle hängt keine Gruppe, oder es wird nur Material hinzugefügt oder vermehrt, dann speichert die App ohne Nachfrage
+- [ ] *(2026-10-14)* Angenommen der Nutzer bricht die Nachfrage ab, dann ist nichts gespeichert und der Dialog steht mit seinen Eingaben noch da
+- [ ] *(2026-10-14)* Angenommen das Material wird gesenkt oder entfernt, dann ändert sich an gespeicherten Einheiten nichts; die Nachfrage sagt das
 
 ### C. Reiter „Kategorien" — ansehen
 
@@ -143,6 +171,7 @@ Dieses Feature bringt drei Dinge:
 - [ ] Angenommen eine gelöschte Phase steht noch in einer gespeicherten Einheit, dann zeigt die Einheit sie unverändert, auch im Editor und im Live-Modus
 - [ ] Angenommen eine gelöschte Phase steht noch in einer gespeicherten Einheit, wenn der Nutzer von dort „Zurück zum Generator" wählt, dann steht das Segment mit dieser Phase weiter im Zeitverlauf; in der Phasenauswahl anderer Segmente wird sie nicht angeboten
 - [ ] Angenommen das Löschen ist geschehen, dann sagt eine Meldung, dass der Begriff aus den Auswahllisten entfernt ist
+- [ ] *(2026-10-14)* Angenommen ein **Material**begriff ist gelöscht, der an Übungen und Hallen steht, dann plant der Generator genau wie vorher: Übungen verlangen das Material weiter, Hallen haben es weiter in ihrer Anzahl. Der Löschdialog sagt bei Material ausdrücklich, dass sich am Generator nichts ändert
 
 ### G. Stundenmuster speichern (im Generator)
 
@@ -187,6 +216,12 @@ Dieses Feature bringt drei Dinge:
 - [ ] Angenommen der Nutzer wählt „Löschen", dann fragt die App einmal nach und sagt dabei, dass Einheiten, die mit dem Muster entstanden sind, bleiben, wie sie sind
 - [ ] Angenommen das Muster ist gelöscht, dann steht es nicht mehr in der Auswahl des Generators
 - [ ] Angenommen der Reiter ist geöffnet, dann gibt es dort keinen Weg, die Segmente eines Musters zu ändern; der Erklärtext sagt, dass das im Generator geschieht (laden, anpassen, „Stundenmuster speichern", überschreiben)
+- [ ] *(2026-10-14)* Angenommen der Nutzer öffnet das Menü (drei Punkte) eines Musters, dann steht dort als erster Punkt „Im Generator öffnen", vor „Umbenennen" und „Löschen"
+- [ ] *(2026-10-14)* Angenommen der Nutzer wählt „Im Generator öffnen", dann öffnet sich der Generator mit dem Weg „Stundenmuster" und genau diesem Muster vorgewählt, noch ohne Gruppe
+- [ ] *(2026-10-14)* Angenommen der Generator wurde so geöffnet, wenn der Nutzer eine Gruppe wählt, dann ist das Muster sofort auf diese Gruppe angewendet — Zeitverlauf sichtbar, umgerechnet und mit den Sportarten der Gruppe wie unter H —, ohne dass er das Muster noch einmal auswählen muss
+- [ ] *(2026-10-14)* Angenommen das Muster passt nicht auf die gewählte Gruppe (zu viele Segmente für ihre Dauer), dann gilt dasselbe wie unter H: nicht angewendet, die Meldung nennt beide Zahlen; das Muster bleibt vorgewählt, damit eine andere Gruppe es übernehmen kann
+- [ ] *(2026-10-14)* Angenommen der Nutzer hat keine Gruppe, wenn er „Im Generator öffnen" wählt, dann zeigt der Generator wie bisher, dass zuerst eine Gruppe nötig ist
+- [ ] *(2026-10-14)* Angenommen das Muster wurde inzwischen gelöscht (anderer Tab), wenn der Generator damit geöffnet wird, dann steht er auf „Standard" und eine Meldung sagt, dass es das Muster nicht mehr gibt
 
 ### J. Durchgehend
 
@@ -212,6 +247,10 @@ Dieses Feature bringt drei Dinge:
 - **Der Nutzer hat keine Gruppe** — der Generator verlangt wie bisher zuerst eine Gruppe; Muster lassen sich dann weder speichern noch laden, die Verwaltung zeigt bestehende trotzdem
 - **Zwei Tabs benennen denselben Begriff gleichzeitig um** — der zweite trifft auf einen Begriff, den es unter dem alten Namen nicht mehr gibt, und erhält die Meldung aus Abschnitt J
 - **Sehr viele Verwendungen** (ein Begriff in 200 Übungen) — der Dialog nennt die Zahl und zeigt die Namen in einer scrollbaren Liste, nicht abgeschnitten ohne Hinweis
+- **Halle löschen, während für eine ihrer Gruppen ein Entwurf im Generator liegt** *(2026-10-14)* — der Entwurf wurde mit dem Material von damals generiert und bleibt, wie er ist; erst das nächste Generieren rechnet ohne Halle
+- **Material entfernen, das nur eine Variante braucht** *(2026-10-14)* — die Grundübung bleibt einplanbar, nur die Variante fällt weg. Die Nachfrage zählt sie trotzdem mit, als „Übung oder Variante"; ob sie beides getrennt nennt, entscheidet der Entwurf
+- **Material entfernen, das „Kein Material" heißt** — kann an einer Halle nicht stehen; die Hallenliste bietet es nicht an
+- **„Im Generator öffnen", während der Generator in einem anderen Tab mit eigenen Änderungen offen ist** *(2026-10-14)* — die beiden Tabs sind getrennt; der neue beginnt frisch, der alte bleibt unberührt
 
 ## Technical Requirements
 - **Sicherheit:** Anmeldung erforderlich; jeder Lese- und Schreibweg wirkt nur auf Einträge des angemeldeten Nutzers, auf dem Server geprüft und in der Datenbank abgesichert
@@ -225,6 +264,7 @@ Dieses Feature bringt drei Dinge:
 - [x] **Welche Mindestlänge hat ein Segment im Zeitverlauf heute, und in welchen Schritten wird gerechnet?** — Eine Minute, ganze Minuten. Beantwortet im Tech Design (2026-10-12)
 - [x] **Wie merkt sich die App einen gelöschten Begriff**, damit er beim Speichern einer Übung nicht zurückkommt? — Gar nicht: eingetragen wird künftig nur, was neu eingetippt wurde. Beantwortet im Tech Design (2026-10-12)
 - [ ] **Begriffe, die in Übungen stehen, aber in keiner Auswahlliste**, sind in der Verwaltung unsichtbar und lassen sich erst nach erneutem Anlegen umbenennen. Beim Test im Browser anzusehen, ob das reicht oder ob die Verwaltung sie eigens zeigen soll
+- [ ] **Gruppe ohne Halle — sagt die App das, wo es wirkt?** *(2026-10-14)* Dass der Generator ohne Halle kein Material prüft, steht nach dieser Überarbeitung nur im Löschdialog. Wer eine Gruppe von Anfang an ohne Halle anlegt, erfährt es nirgends. Vorschlag: ein Satz an der Auswahl „Keine Halle" im Gruppen-Formular. Gehört eher zu PROJ-5; hier nur notiert, nicht entschieden
 
 ## Decision Log
 
@@ -233,7 +273,7 @@ Dieses Feature bringt drei Dinge:
 |----------|-----------|------|
 | PROJ-17 (Stundenmuster) geht in PROJ-16 auf | Entscheidung des Nutzers: Stundenmuster sind wie eigene Kategorien selbst Angelegtes, und alles selbst Angelegte soll auf einer gemeinsamen Oberfläche verwaltet werden. Weicht bewusst von „ein Feature je Spec" ab; die Abschnitte der Akzeptanzkriterien sind so geschnitten, dass sich Kategorien (C–F) und Stundenmuster (G–I) getrennt bauen und prüfen lassen | 2026-10-12 |
 | Die Hallen ziehen mit um; „Gruppen → Hallen" entfällt | Vom Nutzer gewählt. Ein Ort für alles selbst Angelegte ist nur dann einer, wenn die Hallen nicht daneben stehen. Der Preis ist ein Umbau an PROJ-5 mit Nachtest | 2026-10-12 |
-| Kein vierter Menüpunkt; Zugang über eine Karte der Startseite und „verwalten"-Links am Ort der Benutzung | Die Kopfzeile fasst am Handy gerade drei Punkte, der Umbau der Navigation ist bis PROJ-9 zurückgestellt. Verwaltet wird selten und meist aus einem Anlass heraus — der Link steht dort, wo der Anlass entsteht | 2026-10-12 |
+| Kein vierter Menüpunkt; Zugang über eine Karte der Startseite und „verwalten"-Links am Ort der Benutzung | Die Kopfzeile fasst am Handy gerade drei Punkte, der Umbau der Navigation ist bis PROJ-9 zurückgestellt. Verwaltet wird selten und meist aus einem Anlass heraus — der Link steht dort, wo der Anlass entsteht. *Ab 768 px am 2026-10-14 ersetzt, siehe unten* | 2026-10-12 |
 | Die Seite heißt „Verwaltung" | Passt zu den Links „… verwalten" und braucht keine Erklärung | 2026-10-12 |
 | Drei Reiter: Hallen, Stundenmuster, Kategorien; die fünf Arten als Abschnitte im dritten | Drei sehr verschiedene Dinge, die bei 375 px nebeneinander passen. Sieben Reiter wären am Handy eine Auswahlliste, eine lange Seite viel Scrollen | 2026-10-12 |
 | Stundenmuster gelten für alle Gruppen | Wer drei Gruppen ähnlich aufbaut, soll das Muster nicht dreimal anlegen. Beantwortet die erste offene Frage aus PROJ-6 | 2026-10-12 |
@@ -252,6 +292,12 @@ Dieses Feature bringt drei Dinge:
 | Namen von Mustern höchstens 60 Zeichen, eindeutig ohne Rücksicht auf Groß-/Kleinschreibung | Die Auswahlliste im Generator muss am Handy lesbar bleiben. Vom Nutzer mit dem Entwurf abgenommen | 2026-10-12 |
 | Höchstens 100 Stundenmuster | Vom Nutzer festgelegt; der Entwurf hatte 50 vorgeschlagen | 2026-10-12 |
 | Jeder Reiter trägt einen Erklärtext | Die App soll zeigen, wie man sie richtig benutzt: wo die Einträge entstehen und wo sie wirken | 2026-10-12 |
+| „Verwaltung" als vierter Menüpunkt ab 768 px; am Handy bleibt es bei drei | Wunsch des Nutzers nach der Durchsicht: am Rechner ist Platz, und die Verwaltung soll dort ohne Umweg über die Startseite erreichbar sein. Die Grenze 768 px ist dieselbe, ab der die Wortmarke im Logo erscheint. Ersetzt für breite Bildschirme die Entscheidung „kein vierter Menüpunkt" vom 2026-10-12; der Umbau der Handy-Navigation bleibt bei PROJ-9 | 2026-10-14 |
+| Halle löschen: der Dialog erklärt die Folgen, hängt aber nichts um | Vom Nutzer gewählt (statt „andere Halle wählen" oder „Löschen sperren"). Die versteckte Folge war, dass der Generator für Gruppen ohne Halle das Material gar nicht mehr prüft — das muss gesagt werden; das Umhängen gehört ins Gruppenprofil | 2026-10-14 |
+| Material, das aus einer Halle wegfällt oder weniger wird, wird beim Speichern nachgefragt — nur wenn Gruppen an der Halle hängen | Vom Nutzer gewählt. Bisher ohne jeden Hinweis: danach plant der Generator Übungen mit diesem Material für alle Gruppen der Halle nicht mehr ein. Die Nachfrage nennt Gruppen und Zahl der Übungen; ohne Gruppen oder beim Hinzufügen bleibt es still, damit sie nicht zur Gewohnheitsbestätigung wird | 2026-10-14 |
+| Einen Materialbegriff in der Verwaltung zu löschen bleibt ohne Folgen für den Generator | Am Code nachgesehen: Übungen und Hallen behalten das Material, der Generator vergleicht weiter über den Namen. Die Frage des Nutzers „ist das abgesichert?" ist damit beantwortet; der Löschdialog sagt es künftig ausdrücklich | 2026-10-14 |
+| Ein „Kategorien verwalten"-Link je Bildschirm, unter dem letzten Kategorie-Feld | Vom Nutzer gewählt. Fünf gleiche Links im Schritt „Einordnung" und einer je Segment im Generator wirkten wie Lärm; der Link ist ein seltener Weg und braucht einen festen Platz, nicht jede Gelegenheit. Ersetzt die Abweichung aus dem Frontend („ein Link pro Formular-Abschnitt") | 2026-10-14 |
+| „Im Generator öffnen" am Stundenmuster, Gruppe danach wählen | Wunsch des Nutzers; kehrt die Entscheidung vom 2026-10-12 um, diesen Knopf nicht zu bauen. Das Muster ist vorgewählt und wird beim Wählen der Gruppe angewendet — der Weg „Muster zuerst, dann Gruppe" ist der, aus dem der Nutzer in der Verwaltung kommt | 2026-10-14 |
 
 ### Technical Decisions
 <!-- Added by /architecture -->
