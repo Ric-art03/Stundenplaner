@@ -1,8 +1,8 @@
 # PROJ-16: Verwaltung (Hallen, Stundenmuster, eigene Kategorien)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-04
-**Last Updated:** 2026-10-14
+**Last Updated:** 2026-10-15
 
 > **Am 2026-10-14 überarbeitet (`/refine`), nach der Durchsicht durch den Nutzer — am selben Tag
 > gebaut**, siehe „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-14". Vier Punkte: „Verwaltung" steht am Rechner als vierter Menüpunkt in der Kopfzeile;
@@ -928,4 +928,58 @@ Dazu zwei Fallen dieses Rechners:
 - **Recommendation:** Deploy; BUG-27 kann mitgehen oder folgen
 
 ## Deployment
-_To be added by /deploy_
+
+**Ausgeliefert:** 2026-10-15
+**Produktions-URL:** https://stundenplaner-self.vercel.app
+**Tag:** `v1.8.0-PROJ-16` · **Commit:** `ca89bdb`
+
+### Vorprüfung
+
+| | Ergebnis |
+|---|---|
+| Freigabe durch `/qa` | ja — kein Fehler der Stufe „kritisch" oder „hoch", offen nur BUG-27 (niedrig) |
+| Produktionsbuild | sauber, `/manage` wird gebaut |
+| Lint | 0 Fehler (4 bekannte Warnungen zu `<img>` aus PROJ-3) |
+| Typprüfung | sauber |
+| Unit-Tests | 590 grün |
+| Browser-Tests | 408 von 408 grün, am selben Stand aus der QA (nicht erneut gelaufen — seit `f825233` kam nur der Commit mit den QA-Ergebnissen dazu) |
+| Migrationen | Register 18 zu 18, Namen und Versionen gleich den Dateien — im Projekt nachgesehen |
+| Pakete, Konfiguration | `package.json`, `next.config.ts` und `.env.local.example` seit PROJ-14 unverändert |
+| Umgebungsvariablen | keine neue |
+| Geheimnisse im Diff | keine; `.env.local` ist nicht im Repository |
+| Hochgeladen | 7 Commits, `deaf2ba..ca89bdb`. Das Logo (`deaf2ba`) lag schon vorher auf `main` und war damit schon live |
+
+### Nachprüfung in der Produktion — 2026-10-15
+
+Von außen, ohne Anmeldung:
+
+- **Vercel** meldet die Auslieferung am Commit `ca89bdb` als abgeschlossen
+- **Öffentliche Seiten** (`/`, `/login`, `/register`) antworten mit 200
+- **Geschützte Seiten** (`/dashboard`, `/manage`, `/groups/venues`, `/units/new`, `/exercises`,
+  `/groups`, `/units`) leiten mit 307 auf `/login`
+- **`/live`** und **`/live-sw.js`** liegen weiter aus (200)
+- **Sicherheits-Kopfzeilen** liegen an `/manage` an: X-Frame-Options, X-Content-Type-Options,
+  Referrer-Policy, HSTS
+- **Supabase:** in den letzten 24 Stunden kein Fehler in den Protokollen der Datenbank;
+  `get_advisors` meldet nur den bekannten Hinweis zum Passwortschutz
+
+### Was damit nicht belegt ist
+
+- **Alles von PROJ-16 liegt hinter der Anmeldung** — die Seite „Verwaltung", Stundenmuster im
+  Generator, Umbenennen und Zusammenführen, die Nachfragen an der Halle. Von außen ist nur
+  belegt, dass die Seiten ausliefern und geschützt sind. Auf dem Testserver ist der Weg mit
+  69 Browser-Tests belegt, in der Produktion noch **von niemandem durchgespielt**
+- **Der Generator bei von Hand verändertem Zeitverlauf** (Nachfragen beim Ersetzen, beim
+  Gruppenwechsel, beim Überschreiben) ist auch auf dem Testserver nur am Code gelesen
+- **Firefox und echtes Safari**
+
+### Zurückrollen
+
+Im Vercel-Dashboard unter „Deployments" die Auslieferung von `deaf2ba` (PROJ-14 plus Logo) auf
+„Promote to Production" setzen. Die Datenbank muss dafür **nicht** zurückgedreht werden: die
+Migration ist rein hinzufügend, und die ältere Fassung benutzt weder die Tabelle der Muster noch
+die neuen Funktionen.
+
+Eine Folge des Zurückrollens: dort tragen Übung, Gruppe und Halle beim Speichern wieder alles
+Nicht-Vordefinierte in die Auswahllisten ein. Ein in der Verwaltung gelöschter Begriff, der noch
+in einer Übung steht, käme beim nächsten Speichern dieser Übung zurück.

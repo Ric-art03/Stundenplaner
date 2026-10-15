@@ -270,7 +270,11 @@ Neu offen, nicht entschieden: ob das Gruppen-Formular bei „Keine Halle" sagen 
 - **Erst der dritte Gesamtlauf war grün** — die ersten beiden scheiterten an Tests, nicht an der App: ein zu breiter Textgriff in PROJ-6 (das Wort „Zeitverlauf" steht seit PROJ-16 auch im Erklärsatz), eine feste Frist von 5 Sekunden in PROJ-3 und eine zeitweise langsame Verbindung zu Supabase (rund 1 Sekunde je Anfrage statt 0,2)
 - **Nicht prüfbar auf diesem Rechner:** Firefox und echtes Safari. Nur am Code gelesen: der Generator bei von Hand verändertem Zeitverlauf (Nachfragen beim Ersetzen, beim Gruppenwechsel, beim Überschreiben)
 
-**Nächster Schritt:** `/deploy PROJ-16` — keine neue Migration (die von `/backend` ist schon in der Datenbank, Register 18 zu 18), keine neuen Pakete, keine neue Umgebungsvariable. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec.
+**PROJ-16 (Verwaltung) ist am 2026-10-15 ausgeliefert** — https://stundenplaner-self.vercel.app, Tag `v1.8.0-PROJ-16`, Commit `ca89bdb`. Abschnitt „Deployment" in der Spec. Vor dem Hochladen geprüft: Build, Lint, Typprüfung, 590 Unit-Tests, Register 18 zu 18, kein Geheimnis, kein neues Paket und keine neue Umgebungsvariable im Diff. Nach dem Hochladen: Vercel meldet die Auslieferung als abgeschlossen, öffentliche Seiten 200, geschützte Seiten (auch `/manage` und `/groups/venues`) 307 auf `/login`, Sicherheits-Kopfzeilen liegen an, keine Datenbankfehler in den Supabase-Protokollen.
+
+Eines bleibt daraus: **die Verwaltung ist in der Produktion noch nicht von Hand durchgespielt** — alles von PROJ-16 liegt hinter der Anmeldung. Einmal anmelden, die Seite „Verwaltung" mit allen drei Reitern öffnen, ein Stundenmuster speichern und im Generator anwenden. Offen aus der QA: **BUG-27** (niedrig).
+
+**Nächster Schritt:** `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec. Die 40 Testübungen in der Datenbank sind Rohmasse dafür.
 
 ## Features
 
@@ -290,7 +294,7 @@ Neu offen, nicht entschieden: ob das Gruppen-Formular bei „Keine Halle" sagen 
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Deployed | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
-| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Approved | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
+| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
 
 <!-- Add features above this line -->
