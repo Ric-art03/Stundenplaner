@@ -317,9 +317,9 @@ export function UnitConfigForm({
   // „Standard" gewählt ist: ein Gruppenwechsel nimmt ihn mit.
   const changed =
     customSegments !== null && !sameTimeline(customSegments, patternBaseline ?? classicSegments)
-  // Steht genau so schon als Muster da — Speichern legte nur ein Doppel an.
-  // Ein umgerechnetes Muster ist ein neuer Stand und bleibt speicherbar.
-  const alreadySaved = loadedPattern !== null && convertedFrom === null && !changed
+  // Steht so schon als Muster da — Speichern legte nur ein Doppel an. Das gilt
+  // auch umgerechnet: sonst änderte „überschreiben" still die Dauer des Musters.
+  const alreadySaved = loadedPattern !== null && !changed
 
   function selectPattern(id: string | null) {
     patternIdRef.current = id
@@ -713,7 +713,9 @@ export function UnitConfigForm({
               )}
               {alreadySaved && (
                 <p className="text-xs text-muted-foreground">
-                  Dieses Stundenmuster ist so schon gespeichert.
+                  {convertedFrom !== null
+                    ? `Dieses Stundenmuster ist so schon gespeichert — hier auf ${totalMinutes} Minuten umgerechnet.`
+                    : 'Dieses Stundenmuster ist so schon gespeichert.'}
                 </p>
               )}
 

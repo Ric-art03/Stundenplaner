@@ -852,12 +852,17 @@ test.describe('PROJ-16 — G–I. Stundenmuster', () => {
     await note.fill('')
     await expect(save).toBeDisabled()
 
-    // Ein umgerechnetes Muster ist ein neuer Stand.
+    // Nur umgerechnet ist nicht verändert (2026-10-16): ausgegraut, mit Hinweis auf die Umrechnung.
     await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
     await page.getByRole('option', { name: new RegExp(longer) }).click()
     await expect(page.getByText('Muster von 90 auf 60 Minuten umgerechnet.')).toBeVisible()
+    await expect(save).toBeDisabled()
+    await expect(
+      page.getByText('Dieses Stundenmuster ist so schon gespeichert — hier auf 60 Minuten umgerechnet.')
+    ).toBeVisible()
+    await page.getByRole('button', { name: /Ankommen/ }).first().click()
+    await note.fill('Für die Sechzig-Minuten-Fassung')
     await expect(save).toBeEnabled()
-    await expect(reason).toBeHidden()
   })
 
   test('AC: ein Muster umbenennen und löschen', async ({ page }) => {

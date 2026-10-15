@@ -200,7 +200,7 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 - [ ] Angenommen der Zeitverlauf stammt aus einem geladenen Muster, wenn der Nutzer „Stundenmuster speichern" wählt, dann bietet der Dialog zwei Wege: „‚[Name]' überschreiben" und „Als neues Muster speichern" mit Namensfeld
 - [ ] Angenommen die Minuten der Segmente ergeben nicht die Einheitsdauer, dann ist „Stundenmuster speichern" nicht ausführbar und sagt, warum
 - [ ] *(2026-10-15)* Angenommen ein Muster ist geladen und der Zeitverlauf entspricht ihm genau (im Sinne von „verändert" unter H), dann ist „Stundenmuster speichern" ausgegraut, und unter den Knöpfen steht: „Dieses Stundenmuster ist so schon gespeichert."
-- [ ] *(2026-10-15)* Angenommen das geladene Muster wurde auf die Dauer der Gruppe umgerechnet, dann gilt der Zeitverlauf als abweichend und „Stundenmuster speichern" bleibt ausführbar — so lässt sich die umgerechnete Fassung als neues Muster ablegen
+- [ ] *(2026-10-16, ersetzt das Kriterium vom 2026-10-15)* Angenommen das geladene Muster wurde nur auf die Dauer der Gruppe umgerechnet und sonst nicht verändert, dann ist „Stundenmuster speichern" ebenfalls ausgegraut, und darunter steht: „Dieses Stundenmuster ist so schon gespeichert — hier auf [y] Minuten umgerechnet." Wer die umgerechnete Fassung als eigenes Muster ablegen will, ändert etwas am Zeitverlauf; dann ist der Knopf frei
 - [ ] *(2026-10-15)* Angenommen der Nutzer ändert am geladenen Muster etwas und nimmt es wieder zurück, dann ist der Knopf wieder ausgegraut
 - [ ] *(2026-10-15)* Angenommen der Nutzer hat das Muster gerade gespeichert (überschrieben oder neu), dann ist dieses Muster das geladene und der Knopf ausgegraut, bis sich am Zeitverlauf wieder etwas ändert
 - [ ] Angenommen das Muster ist gespeichert, dann sagt eine Meldung es mit Namen, der Zeitverlauf bleibt unverändert stehen und das Muster steht sofort in der Auswahl des Generators und in der Verwaltung
@@ -282,7 +282,7 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 - **Weg „Standard" gewählt, Änderungen unter „Individuell" aufgehoben, dann Gruppenwechsel** *(2026-10-15, b)* — die Änderungen kommen mit, umgerechnet, und stehen beim Zurückschalten auf „Individuell" für die neue Gruppe da. Der Weg „Standard" bleibt gewählt und zeigt den Standard der neuen Gruppe
 - **Mit „Zurück zum Generator" mitgebrachter Zeitverlauf** *(2026-10-15)* — die Einheit merkt sich kein Muster, verglichen wird deshalb mit dem Standard der Gruppe. Gleicht er ihm, wird ohne Nachfrage ersetzt; sonst wird gefragt. „Stundenmuster speichern" ist aktiv, weil kein Muster geladen ist. Ein Gruppenwechsel nimmt ihn mit *(2026-10-15, b)*
 - **Muster geladen, dann zurück auf Standard gesetzt** *(2026-10-15)* — danach ist kein Muster mehr geladen; verglichen wird mit dem Standard, „Stundenmuster speichern" ist wieder aktiv
-- **Muster geladen, Gruppe gewechselt, auf die neue Gruppe umgerechnet** *(2026-10-15)* — verglichen wird mit dem Muster, wie es auf die neue Gruppe angewendet wurde. „Stundenmuster speichern" ist aktiv, wenn umgerechnet wurde, sonst ausgegraut
+- **Muster geladen, Gruppe gewechselt, auf die neue Gruppe umgerechnet** *(2026-10-15)* — verglichen wird mit dem Muster, wie es auf die neue Gruppe angewendet wurde. „Stundenmuster speichern" ist ausgegraut, solange nichts geändert ist — auch wenn umgerechnet wurde *(2026-10-16)*
 - **Mehrmals hin und her gewechselt** *(2026-10-15, b)* — ein veränderter Zeitverlauf wird bei jedem Wechsel vom jeweils aktuellen Stand aus umgerechnet; über 60 → 30 → 60 Minuten können sich einzelne Minuten verschieben, weil auf ganze Minuten gerundet wird. Ein unveränderter wird jedes Mal frisch aufgebaut und verschiebt sich nicht
 - **Muster gewählt, verändert, dann Gruppe, für die das Muster zu lang ist, der veränderte Stand aber passt** *(2026-10-15, b)* — der Stand kommt mit; das Muster wird abgewählt, weil es auf diese Gruppe nicht anwendbar ist, und der Weg wechselt auf „Individuell"
 - **Muster in einem anderen Tab überschrieben, während es hier geladen ist** *(2026-10-15)* — verglichen wird mit dem Stand, der hier geladen wurde; der Knopf bleibt ausgegraut, bis sich hier etwas ändert. Erst beim Überschreiben von hier aus gilt wie bisher das Zuletzt-Gespeicherte
@@ -337,7 +337,8 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 | Der Weg „Standard" oben fragt nicht nach | Vom Nutzer gewählt. Beim Umschalten geht nichts verloren — die Änderungen stehen unter „Individuell" wieder da. Eine Nachfrage dort würde einen Verlust behaupten, den es nicht gibt | 2026-10-15 |
 | Der Gruppenwechsel nimmt den aktuellen Zeitverlauf mit, umgerechnet wie ein Muster, ohne Nachfrage; gefragt wird nur, wenn er nicht passt | Rückfrage des Nutzers am selben Tag: der Stand des Generators soll ausdrücklich auf eine andere Gruppe übertragbar sein, auch ungespeichert. Das Verwerfen stammt aus PROJ-6, als es noch kein Umrechnen gab; seit den Stundenmustern gibt es das Werkzeug. Gleichzeitig war es uneinheitlich: mit gewähltem Muster — auch nach dem Wechsel auf „Individuell" — wurde das Muster frisch angewendet, ohne Muster neu aufgebaut. Still mitnehmen mit Hinweis statt Nachfrage (vom Nutzer gewählt), weil nichts verloren geht; wer frisch anfangen will, hat „Auf Standard zurücksetzen". Bei „zu kurz" nachfragen statt ablehnen (vom Nutzer gewählt). **Ersetzt die folgende Entscheidung** | 2026-10-15 |
 | ~~Auch der Gruppenwechsel ohne Muster fragt nach, wenn der Zeitverlauf von Hand verändert ist~~ | Vom Nutzer gewählt, beim Durchsehen am Code aufgefallen: bisher fragte der Wechsel nur bei geladenem Muster. Damit gilt überall dieselbe Regel — wer Handarbeit wegwirft, wird vorher gefragt. Erweitert das Verhalten aus PROJ-6 | 2026-10-15 |
-| „Stundenmuster speichern" ist ausgegraut, solange der Zeitverlauf genau dem geladenen Muster entspricht; ein umgerechnetes Muster gilt als abweichend | Wunsch des Nutzers; Speichern ohne Unterschied legt nur ein Doppel an oder überschreibt mit demselben. Das umgerechnete Muster bleibt speicherbar (vom Nutzer gewählt), weil die Fassung für die andere Dauer ein echter neuer Stand ist. Der Grund steht unter dem Knopf, wie beim Hinweis zu den Minuten | 2026-10-15 |
+| „Stundenmuster speichern" ist ausgegraut, solange der Zeitverlauf genau dem geladenen Muster entspricht; ein umgerechnetes Muster gilt als abweichend | Wunsch des Nutzers; Speichern ohne Unterschied legt nur ein Doppel an oder überschreibt mit demselben. Das umgerechnete Muster bleibt speicherbar (vom Nutzer gewählt), weil die Fassung für die andere Dauer ein echter neuer Stand ist. Der Grund steht unter dem Knopf, wie beim Hinweis zu den Minuten. *Der Teil „umgerechnet bleibt speicherbar" ist am 2026-10-16 ersetzt, siehe unten* | 2026-10-15 |
+| Auch ein nur umgerechnetes Muster graut „Stundenmuster speichern" aus | Rückmeldung des Nutzers beim Ausprobieren: Muster gewählt, nichts geändert, und der Knopf bot Speichern an — das wirkte wie ein Fehler. Dazu konnte „überschreiben" dabei still die Dauer des gespeicherten Musters ändern. Die umgerechnete Fassung als eigenes Muster bleibt möglich, sobald etwas geändert wird; der Hinweis unter dem Knopf nennt die Umrechnung. Vom Nutzer gewählt | 2026-10-16 |
 | „Verändert" heißt: anderer Inhalt — nicht „angefasst" | Vom Nutzer gewählt. Ein Begriff für Knopf und Nachfragen; sonst bliebe der Knopf nach einer zurückgenommenen Änderung aktiv und die App fragte nach, obwohl nichts verloren geht | 2026-10-15 |
 
 ### Technical Decisions
@@ -1060,8 +1061,9 @@ Typprüfung, Lint und Produktionsbuild sauber. Keine Migration, keine neuen Pake
   „Trotzdem wechseln"; vorher wird ausgerechnet, ob das gewählte Muster auf die neue Gruppe
   passt, damit der Text sagt, was sie stattdessen bekommt. Passt auch das Muster nicht, wird es
   abgewählt — die Gruppe bekommt ihren Standard statt einer Maske ohne Zeitverlauf
-- **„Stundenmuster speichern" ausgegraut**, solange ein Muster geladen, nicht umgerechnet und der
-  Zeitverlauf unverändert ist; darunter „Dieses Stundenmuster ist so schon gespeichert." — an
+- **„Stundenmuster speichern" ausgegraut**, solange ein Muster geladen und der Zeitverlauf
+  unverändert ist — seit dem 2026-10-16 auch, wenn das Muster umgerechnet wurde; darunter „Dieses
+  Stundenmuster ist so schon gespeichert." bzw. „… — hier auf [y] Minuten umgerechnet." — an
   derselben Stelle und im selben Stil wie der Hinweis zu den Minuten
 
 ### Tests
@@ -1073,7 +1075,8 @@ Typprüfung, Lint und Produktionsbuild sauber. Keine Migration, keine neuen Pake
   „Standard" ohne Nachfrage; Muster gewählt, dann „Individuell" und verändert — der Wechsel nimmt
   den Stand mit, nicht das Muster; zu kurze Gruppe (6 Phasen, 5 Minuten) mit „Abbrechen" und
   „Trotzdem wechseln"; „Stundenmuster speichern" ausgegraut, nach einer Änderung frei, nach der
-  Rücknahme wieder ausgegraut, beim umgerechneten Muster frei. Jeder legt seine eigene Übung an —
+  Rücknahme wieder ausgegraut, beim nur umgerechneten Muster ausgegraut mit Hinweis, nach einer
+  Änderung frei (2026-10-16). Jeder legt seine eigene Übung an —
   ohne Übung zeigt der Generator nur den Leerzustand. Dasselbe nachgetragen am Test „ein
   ‚Kategorien verwalten' unter dem Zeitverlauf", der sich bisher auf den Grundbestand verließ
 
