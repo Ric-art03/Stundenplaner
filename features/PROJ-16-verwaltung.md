@@ -11,6 +11,12 @@
 > Zeitverlauf genau dem geladenen Muster entspricht. Dazu ein Begriff von „verändert" für beides:
 > verglichen wird der Inhalt, eine zurückgenommene Änderung ist keine. Betroffen sind G, H, Edge
 > Cases und das Decision Log; die Kriterien tragen den Vermerk *(2026-10-15)*.
+>
+> **Am selben Tag nachgeschärft, nach einer Rückfrage des Nutzers:** der Gruppenwechsel
+> **nimmt den aktuellen Zeitverlauf mit** — auch ungespeichert, auf die Dauer der neuen Gruppe
+> umgerechnet — statt nachzufragen und zu verwerfen. Nachgefragt wird nur noch, wenn er nicht
+> passt (mehr Phasen als Minuten). Damit gilt dasselbe, ob ein Muster gewählt ist, ob danach
+> „Individuell" gewählt wurde oder keines je geladen war. Kriterien mit *(2026-10-15, b)*.
 
 > **Am 2026-10-14 überarbeitet (`/refine`), nach der Durchsicht durch den Nutzer — am selben Tag
 > gebaut**, siehe „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-14". Vier Punkte: „Verwaltung" steht am Rechner als vierter Menüpunkt in der Kopfzeile;
@@ -219,8 +225,12 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 - [ ] *(2026-10-15)* Angenommen der Nutzer hat den Zeitverlauf von Hand verändert, wenn er „Auf Standard zurücksetzen" wählt, dann fragt die App mit derselben Nachfrage vorher nach („Bisherigen Zeitverlauf ersetzen?"); erst nach „Ersetzen" wird zurückgesetzt und die Meldung „Auf Standard zurückgesetzt" erscheint. Ist der Zeitverlauf unverändert, wird ohne Nachfrage zurückgesetzt
 - [ ] *(2026-10-15)* Angenommen der Nutzer hat den Zeitverlauf von Hand verändert, wenn er oben auf den Weg „Standard" umschaltet, dann fragt die App **nicht** nach — die Änderungen gehen dabei nicht verloren und stehen beim Zurückschalten auf „Individuell" wieder da
 - [ ] Angenommen der Zeitverlauf ist unverändert gegenüber Standard oder dem zuletzt geladenen Muster, wenn der Nutzer ein Muster wählt, dann wird es ohne Nachfrage geladen
-- [ ] Angenommen ein Muster ist geladen, wenn der Nutzer die Gruppe wechselt, dann bleibt das Muster gewählt und wird für die neue Gruppe frisch angewendet (Umrechnung und Sportarten der neuen Gruppe); war der Zeitverlauf von Hand verändert, fragt die App vorher nach
-- [ ] *(2026-10-15)* Angenommen kein Muster ist geladen und der Zeitverlauf ist von Hand verändert, wenn der Nutzer die Gruppe wechselt, dann fragt die App vorher nach: der Zeitverlauf wird für die neue Gruppe neu aufgebaut, was von Hand geändert wurde, geht verloren. Bei „Abbrechen" bleiben Gruppe und Zeitverlauf, wie sie waren. Das erweitert das Verhalten aus PROJ-6, wo der Wechsel still verwarf
+- [ ] *(2026-10-15, b)* **Beim Gruppenwechsel kommt der aktuelle Stand mit** — gespeichert oder nicht, gleich ob ein Muster gewählt ist, ob danach „Individuell" gewählt wurde oder ob nie ein Muster geladen war. Es gibt dabei keine Nachfrage, weil nichts verloren geht
+- [ ] *(2026-10-15, b)* Angenommen der Zeitverlauf ist unverändert, wenn der Nutzer die Gruppe wechselt, dann wird er für die neue Gruppe frisch aufgebaut: ohne Muster ihr Standard, mit Muster das Muster frisch angewendet (Umrechnung und Sportarten der neuen Gruppe); das Muster bleibt gewählt
+- [ ] *(2026-10-15, b)* Angenommen der Zeitverlauf ist von Hand verändert, wenn der Nutzer die Gruppe wechselt, dann steht danach genau dieser Zeitverlauf da, umgerechnet wie ein Muster: die Minuten im selben Verhältnis auf die Dauer der neuen Gruppe, Segmente mit genau den Sportarten der alten Gruppe tragen die der neuen, bewusst abweichende Sportarten bleiben. Phase, Füllart, Schwierigkeit, Organisationsform und Arbeitsnotiz bleiben, wie sie sind
+- [ ] *(2026-10-15, b)* Angenommen der Zeitverlauf wurde so mitgenommen, dann steht am Zeitverlauf ein Hinweis: „Zeitverlauf übernommen und von [x] auf [y] Minuten umgerechnet." — bei gleicher Dauer „Zeitverlauf übernommen." Er verschwindet, sobald ein Muster geladen oder auf Standard zurückgesetzt wird
+- [ ] *(2026-10-15, b)* Angenommen ein Muster war gewählt, dann bleibt es nach dem Mitnehmen gewählt und ist weiter der Vergleichsstand — so wie es auf die neue Gruppe angewendet würde. „Überschreiben" bleibt möglich
+- [ ] *(2026-10-15, b)* Angenommen der veränderte Zeitverlauf hat mehr Phasen, als die neue Gruppe Minuten bietet, dann fragt die App vorher nach und nennt beide Zahlen: „Trotzdem wechseln" gibt der neuen Gruppe ihren Standard (oder das gewählte Muster, wenn es passt), was von Hand geändert wurde, geht verloren; „Abbrechen" lässt Gruppe und Zeitverlauf, wie sie waren
 - [ ] Angenommen der Nutzer hat mit einem Muster generiert, wenn er von der Einheit „Zurück zum Generator" wählt, dann steht der Zeitverlauf so da, wie er ihn verlassen hat
 - [ ] Angenommen eine Einheit ist aus einem Muster entstanden, wenn das Muster danach überschrieben, umbenannt oder gelöscht wird, dann ändert sich an der Einheit nichts
 - [ ] Angenommen ein Muster trägt eine eigene Phase, die inzwischen gelöscht wurde, dann wird das Muster trotzdem vollständig geladen und das Segment trägt die Phase weiter
@@ -269,10 +279,12 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 - **Material entfernen, das nur eine Variante braucht** *(2026-10-14)* — die Grundübung bleibt einplanbar, nur die Variante fällt weg. Die Nachfrage zählt sie trotzdem mit, als „Übung oder Variante"; ob sie beides getrennt nennt, entscheidet der Entwurf
 - **Material entfernen, das „Kein Material" heißt** — kann an einer Halle nicht stehen; die Hallenliste bietet es nicht an
 - **„Im Generator öffnen", während der Generator in einem anderen Tab mit eigenen Änderungen offen ist** *(2026-10-14)* — die beiden Tabs sind getrennt; der neue beginnt frisch, der alte bleibt unberührt
-- **Weg „Standard" gewählt, Änderungen unter „Individuell" aufgehoben, dann Gruppenwechsel** *(2026-10-15)* — die App fragt nach, obwohl die Änderungen gerade nicht zu sehen sind: beim Gruppenwechsel gingen sie verloren, und dass sie beim Zurückschalten wieder dastehen, ist versprochen
-- **Mit „Zurück zum Generator" mitgebrachter Zeitverlauf** *(2026-10-15)* — die Einheit merkt sich kein Muster, verglichen wird deshalb mit dem Standard der Gruppe. Gleicht er ihm, wird ohne Nachfrage ersetzt; sonst wird gefragt. „Stundenmuster speichern" ist aktiv, weil kein Muster geladen ist
+- **Weg „Standard" gewählt, Änderungen unter „Individuell" aufgehoben, dann Gruppenwechsel** *(2026-10-15, b)* — die Änderungen kommen mit, umgerechnet, und stehen beim Zurückschalten auf „Individuell" für die neue Gruppe da. Der Weg „Standard" bleibt gewählt und zeigt den Standard der neuen Gruppe
+- **Mit „Zurück zum Generator" mitgebrachter Zeitverlauf** *(2026-10-15)* — die Einheit merkt sich kein Muster, verglichen wird deshalb mit dem Standard der Gruppe. Gleicht er ihm, wird ohne Nachfrage ersetzt; sonst wird gefragt. „Stundenmuster speichern" ist aktiv, weil kein Muster geladen ist. Ein Gruppenwechsel nimmt ihn mit *(2026-10-15, b)*
 - **Muster geladen, dann zurück auf Standard gesetzt** *(2026-10-15)* — danach ist kein Muster mehr geladen; verglichen wird mit dem Standard, „Stundenmuster speichern" ist wieder aktiv
-- **Muster geladen, Gruppe gewechselt, auf die neue Gruppe umgerechnet** *(2026-10-15)* — verglichen wird mit dem Muster, wie es auf die neue Gruppe angewendet wurde; ohne weitere Änderung fragt der nächste Wechsel nicht nach. „Stundenmuster speichern" ist aktiv, wenn umgerechnet wurde, sonst ausgegraut
+- **Muster geladen, Gruppe gewechselt, auf die neue Gruppe umgerechnet** *(2026-10-15)* — verglichen wird mit dem Muster, wie es auf die neue Gruppe angewendet wurde. „Stundenmuster speichern" ist aktiv, wenn umgerechnet wurde, sonst ausgegraut
+- **Mehrmals hin und her gewechselt** *(2026-10-15, b)* — ein veränderter Zeitverlauf wird bei jedem Wechsel vom jeweils aktuellen Stand aus umgerechnet; über 60 → 30 → 60 Minuten können sich einzelne Minuten verschieben, weil auf ganze Minuten gerundet wird. Ein unveränderter wird jedes Mal frisch aufgebaut und verschiebt sich nicht
+- **Muster gewählt, verändert, dann Gruppe, für die das Muster zu lang ist, der veränderte Stand aber passt** *(2026-10-15, b)* — der Stand kommt mit; das Muster wird abgewählt, weil es auf diese Gruppe nicht anwendbar ist, und der Weg wechselt auf „Individuell"
 - **Muster in einem anderen Tab überschrieben, während es hier geladen ist** *(2026-10-15)* — verglichen wird mit dem Stand, der hier geladen wurde; der Knopf bleibt ausgegraut, bis sich hier etwas ändert. Erst beim Überschreiben von hier aus gilt wie bisher das Zuletzt-Gespeicherte
 
 ## Technical Requirements
@@ -323,7 +335,8 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 | „Im Generator öffnen" am Stundenmuster, Gruppe danach wählen | Wunsch des Nutzers; kehrt die Entscheidung vom 2026-10-12 um, diesen Knopf nicht zu bauen. Das Muster ist vorgewählt und wird beim Wählen der Gruppe angewendet — der Weg „Muster zuerst, dann Gruppe" ist der, aus dem der Nutzer in der Verwaltung kommt | 2026-10-14 |
 | „Auf Standard zurücksetzen" fragt nach, wenn der Zeitverlauf von Hand verändert ist — wie „Auf Stundenmuster setzen" | Rückmeldung des Nutzers nach dem Durchspielen: zwei gleich aussehende Knöpfe nebeneinander, der eine fragt, der andere verwirft still und meldet es erst danach | 2026-10-15 |
 | Der Weg „Standard" oben fragt nicht nach | Vom Nutzer gewählt. Beim Umschalten geht nichts verloren — die Änderungen stehen unter „Individuell" wieder da. Eine Nachfrage dort würde einen Verlust behaupten, den es nicht gibt | 2026-10-15 |
-| Auch der Gruppenwechsel ohne Muster fragt nach, wenn der Zeitverlauf von Hand verändert ist | Vom Nutzer gewählt, beim Durchsehen am Code aufgefallen: bisher fragte der Wechsel nur bei geladenem Muster. Damit gilt überall dieselbe Regel — wer Handarbeit wegwirft, wird vorher gefragt. Erweitert das Verhalten aus PROJ-6 | 2026-10-15 |
+| Der Gruppenwechsel nimmt den aktuellen Zeitverlauf mit, umgerechnet wie ein Muster, ohne Nachfrage; gefragt wird nur, wenn er nicht passt | Rückfrage des Nutzers am selben Tag: der Stand des Generators soll ausdrücklich auf eine andere Gruppe übertragbar sein, auch ungespeichert. Das Verwerfen stammt aus PROJ-6, als es noch kein Umrechnen gab; seit den Stundenmustern gibt es das Werkzeug. Gleichzeitig war es uneinheitlich: mit gewähltem Muster — auch nach dem Wechsel auf „Individuell" — wurde das Muster frisch angewendet, ohne Muster neu aufgebaut. Still mitnehmen mit Hinweis statt Nachfrage (vom Nutzer gewählt), weil nichts verloren geht; wer frisch anfangen will, hat „Auf Standard zurücksetzen". Bei „zu kurz" nachfragen statt ablehnen (vom Nutzer gewählt). **Ersetzt die folgende Entscheidung** | 2026-10-15 |
+| ~~Auch der Gruppenwechsel ohne Muster fragt nach, wenn der Zeitverlauf von Hand verändert ist~~ | Vom Nutzer gewählt, beim Durchsehen am Code aufgefallen: bisher fragte der Wechsel nur bei geladenem Muster. Damit gilt überall dieselbe Regel — wer Handarbeit wegwirft, wird vorher gefragt. Erweitert das Verhalten aus PROJ-6 | 2026-10-15 |
 | „Stundenmuster speichern" ist ausgegraut, solange der Zeitverlauf genau dem geladenen Muster entspricht; ein umgerechnetes Muster gilt als abweichend | Wunsch des Nutzers; Speichern ohne Unterschied legt nur ein Doppel an oder überschreibt mit demselben. Das umgerechnete Muster bleibt speicherbar (vom Nutzer gewählt), weil die Fassung für die andere Dauer ein echter neuer Stand ist. Der Grund steht unter dem Knopf, wie beim Hinweis zu den Minuten | 2026-10-15 |
 | „Verändert" heißt: anderer Inhalt — nicht „angefasst" | Vom Nutzer gewählt. Ein Begriff für Knopf und Nachfragen; sonst bliebe der Knopf nach einer zurückgenommenen Änderung aktiv und die App fragte nach, obwohl nichts verloren geht | 2026-10-15 |
 
@@ -1014,8 +1027,8 @@ in einer Übung steht, käme beim nächsten Speichern dieser Übung zurück.
 
 ## Implementation Notes (Frontend) — Überarbeitung vom 2026-10-15
 
-**Stand:** 2026-10-15. **604 Unit-Tests grün** (590 plus 14 neue), Typprüfung, Lint und
-Produktionsbuild sauber. Keine Migration, keine neuen Pakete, kein Serverweg berührt — alles in
+**Stand:** 2026-10-15, nachgeschärft am selben Abend. **610 Unit-Tests grün** (590 plus 20 neue),
+Typprüfung, Lint und Produktionsbuild sauber. Keine Migration, keine neuen Pakete, kein Serverweg berührt — alles in
 `unit-config-form.tsx` und einer reinen Funktion daneben.
 
 ### Was gebaut ist
@@ -1031,44 +1044,66 @@ Produktionsbuild sauber. Keine Migration, keine neuen Pakete, kein Serverweg ber
   einen über „Zurück zum Generator" mitgebrachten Stand. Ersetzt den Schalter `touched`, der sich
   nur merkte, *dass* etwas angefasst wurde
 - **Gezählt wird der eigene Stand**, auch während der Weg „Standard" gewählt ist — er ist
-  aufgehoben, und ein Gruppenwechsel würfe ihn trotzdem weg (Edge Case vom 2026-10-15)
-- **Nachfragen:** „Auf Standard zurücksetzen" (neu), Muster wählen oder „Auf Stundenmuster
-  setzen" (wie bisher) und Gruppenwechsel (neu auch ohne Muster) laufen über denselben Dialog
-  „Bisherigen Zeitverlauf ersetzen?". Der Text sagt je Fall, was passiert: zurückgesetzt, für die
-  neue Gruppe neu aufgebaut, Muster frisch angewendet, Muster ersetzt. Die Meldung „Auf Standard
-  zurückgesetzt" kommt erst nach „Ersetzen". Das Umschalten auf den Weg „Standard" fragt nicht
+  aufgehoben und kommt beim Gruppenwechsel mit
+- **Nachfragen:** „Auf Standard zurücksetzen" (neu) und Muster wählen oder „Auf Stundenmuster
+  setzen" (wie bisher) laufen über den Dialog „Bisherigen Zeitverlauf ersetzen?"; der Text sagt je
+  Fall, was passiert. Die Meldung „Auf Standard zurückgesetzt" kommt erst nach „Ersetzen". Das
+  Umschalten auf den Weg „Standard" fragt nicht
+- **Gruppenwechsel nimmt den Stand mit** *(nachgeschärft, b)* — `carryTimeline` in
+  `src/lib/units/patterns.ts`, 6 Tests: der Zeitverlauf wird wie ein Muster der alten Gruppe
+  behandelt und auf die neue angewendet (`toPatternSegments` → `applyPattern`), also mit
+  denselben Regeln für Umrechnung und Sportarten. `handleGroupChange` rechnet das vor dem
+  Wechsel aus und legt es für den Effekt bereit; der Effekt übernimmt es, setzt den Hinweis
+  „Zeitverlauf übernommen …" und hält ein gewähltes Muster als Vergleichsstand. Unverändert
+  läuft der Wechsel wie bisher (Standard bzw. Muster frisch angewendet). Passt der Stand nicht,
+  fragt ein eigener Dialog „Zeitverlauf passt nicht zur neuen Gruppe" mit beiden Zahlen und
+  „Trotzdem wechseln"; vorher wird ausgerechnet, ob das gewählte Muster auf die neue Gruppe
+  passt, damit der Text sagt, was sie stattdessen bekommt. Passt auch das Muster nicht, wird es
+  abgewählt — die Gruppe bekommt ihren Standard statt einer Maske ohne Zeitverlauf
 - **„Stundenmuster speichern" ausgegraut**, solange ein Muster geladen, nicht umgerechnet und der
   Zeitverlauf unverändert ist; darunter „Dieses Stundenmuster ist so schon gespeichert." — an
   derselben Stelle und im selben Stil wie der Hinweis zu den Minuten
 
 ### Tests
 
-- **Unit:** 14 für `sameTimeline`
-- **Browser:** drei neue in `tests/PROJ-16-verwaltung.spec.ts` (je Rechner und Handy):
-  „Auf Standard zurücksetzen" mit und ohne Änderung, auch nach Rücknahme; Gruppenwechsel ohne
-  Muster mit „Abbrechen" und „Ersetzen", dazu der Weg „Standard" ohne Nachfrage; „Stundenmuster
-  speichern" ausgegraut, nach einer Änderung frei, nach der Rücknahme wieder ausgegraut, beim
-  umgerechneten Muster frei. Jeder legt seine eigene Übung an — ohne Übung zeigt der Generator nur
-  den Leerzustand. Dasselbe nachgetragen am Test „ein ‚Kategorien verwalten' unter dem
-  Zeitverlauf", der sich bisher auf den Grundbestand verließ
+- **Unit:** 14 für `sameTimeline`, 6 für `carryTimeline`
+- **Browser:** fünf neue in `tests/PROJ-16-verwaltung.spec.ts`, je Rechner und Handy:
+  „Auf Standard zurücksetzen" mit und ohne Änderung, auch nach Rücknahme; Gruppenwechsel nimmt den
+  veränderten Zeitverlauf mit (60 → 45 Minuten, Hinweis, Arbeitsnotiz noch da), dazu der Weg
+  „Standard" ohne Nachfrage; Muster gewählt, dann „Individuell" und verändert — der Wechsel nimmt
+  den Stand mit, nicht das Muster; zu kurze Gruppe (6 Phasen, 5 Minuten) mit „Abbrechen" und
+  „Trotzdem wechseln"; „Stundenmuster speichern" ausgegraut, nach einer Änderung frei, nach der
+  Rücknahme wieder ausgegraut, beim umgerechneten Muster frei. Jeder legt seine eigene Übung an —
+  ohne Übung zeigt der Generator nur den Leerzustand. Dasselbe nachgetragen am Test „ein
+  ‚Kategorien verwalten' unter dem Zeitverlauf", der sich bisher auf den Grundbestand verließ
 
-### Was die Browser-Tests gezeigt haben — 2026-10-15
+### Was die Browser-Tests gezeigt haben — 2026-10-15/16
 
-Bei schwacher Leitung gelaufen (Supabase 0,9 s je Anfrage, zum Schluss 5–21 s; Google und die
-eigene Produktion ebenso langsam — es lag an der Verbindung dieses Rechners, nicht an Supabase).
+**Alle grün, keine Regression** — verteilt auf einen Gesamtlauf und drei Nachläufe. Die
+Leitung dieses Rechners schwankte den ganzen Abend (Supabase und Google zeitweise 1–21 s je
+Anfrage statt 0,2–0,4 s); daran lagen alle Fehlschläge, keiner wiederholte sich bei normaler
+Verbindung.
 
 | Lauf | Ergebnis |
 |---|---|
-| PROJ-6 (Generator), Stufe „chromium" | **15 von 15 grün**, keine Regression am Generator (11,5 min statt rund 2) |
-| PROJ-16, Stufe „verwaltung" (Rechner) | **die drei neuen Tests grün**, alle Muster-Tests grün; ein Fehlschlag: „ein ‚Kategorien verwalten' unter dem Zeitverlauf" — Leerzustand des Generators, weil der Grundbestand in diesem Lauf fehlte (Stufe allein gestartet). Seitdem legt der Test seine Übung selbst an; **nicht nachgelaufen** |
-| PROJ-16, Stufe „verwaltung mobil" | ein Fehlschlag bei „Verwendungen ansehen" (Reiter Kategorien, hier nicht berührt; Seite vollständig geladen) — danach brach der Block ab, **die drei neuen Tests sind in Handybreite nicht gelaufen** |
-| Erster Versuch als Gesamtlauf | nach 53 min abgebrochen, erst in der Stufe „editor mobil"; dort ein Fehlschlag (PROJ-7, Schalter der Arbeitsnotiz in der Leseansicht — nicht der Generator). Einzeln wiederholt scheiterte er schon beim Vorbereiten an „fetch failed" |
+| Gesamtlauf, 418 Tests (1,6 h) | **340 grün**, 3 fehlgeschlagen, 75 nicht gelaufen. Die drei: Live-Modus (PROJ-14), jeweils der Wechsel zwischen Einheit und `/live` über 15 s — dort wartet die App auf den Server. Die 75 sind die beiden Verwaltungsstufen, die nach einem Fehlschlag im Live-Modus übersprungen werden |
+| Die drei Live-Tests einzeln (Z. 611, 939, 1307) | **3 von 3 grün** |
+| PROJ-16, Stufe „verwaltung" (Rechner) | **37 von 37 grün**, darunter die fünf neuen |
+| PROJ-16, Stufe „verwaltung mobil" | **37 von 37 grün**, darunter die fünf neuen; BUG-27 weiter als erwarteter Fehlschlag |
+
+Damit sind auch die Fehlschläge vom Nachmittag erledigt: PROJ-7 (Schalter der Arbeitsnotiz) lief
+im Gesamtlauf grün, „Verwendungen ansehen" und „Kategorien verwalten unter dem Zeitverlauf" in
+den Verwaltungsstufen.
+
+**Eine Falle beim Nachlaufen:** `--no-deps` hebt auch die Reihenfolge „verwaltung mobil nach
+verwaltung" auf. Beide Stufen liefen dann gleichzeitig, und weil jeder Test vorher alle
+`E2E16`-Daten wegräumt, löschte die eine Stufe der anderen die Halle unter den Füßen weg (ein
+Fehlschlag im Reiter „Hallen", „Received undefined"). Nacheinander gestartet: grün.
 
 ### Nicht belegt
 
-- **In Handybreite** sind die drei neuen Tests nicht gelaufen
-- **Die beiden Fehlschläge in PROJ-16 und der in PROJ-7** sind bei guter Verbindung nicht
-  wiederholt — als Fehler der App gelten sie erst, wenn sie dann wieder scheitern
 - **Im Browser von Hand angesehen:** nichts
 - Ein Muster mit Sportarten, die die Gruppe nicht hat, ist nur über die Unit-Tests der
-  Vergleichsfunktion abgedeckt
+  Vergleichsfunktionen abgedeckt
+- Mehrmaliges Hin- und Herwechseln (Rundung beim wiederholten Umrechnen) ist nur in der Spec als
+  Grenzfall beschrieben, nicht getestet

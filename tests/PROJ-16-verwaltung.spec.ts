@@ -752,31 +752,76 @@ test.describe('PROJ-16 — G–I. Stundenmuster', () => {
     await expect(note).toHaveValue('')
   })
 
-  test('AC (2026-10-15): Gruppenwechsel ohne Muster fragt nach; der Weg „Standard" nicht', async ({ page }) => {
-    const first = await createGroup('Wechsel Eins')
-    const second = await createGroup('Wechsel Zwei')
-    await createExercise(`${TAG} Übung Wechsel`)
+  test('AC (2026-10-15, b): Gruppenwechsel nimmt den veränderten Zeitverlauf mit, umgerechnet und ohne Nachfrage', async ({ page }) => {
+    const first = await createGroup('Mitnehmen Eins', { unitDuration: 60 })
+    const second = await createGroup('Mitnehmen Zwei', { unitDuration: 45 })
+    await createExercise(`${TAG} Übung Mitnehmen`)
     await page.goto(`/units/new?group=${first.id}`)
     await page.getByRole('radio', { name: 'Individuell' }).click()
     const note = page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt')
-    const confirm = page.getByRole('alertdialog')
-    await note.fill('Nur für diese Gruppe')
+    await note.fill('Nimmt die neue Gruppe mit')
 
     // Umschalten auf „Standard" verliert nichts und fragt nicht.
     await page.getByRole('radio', { name: 'Standard' }).click()
-    await expect(confirm).toHaveCount(0)
+    await expect(page.getByRole('radio', { name: 'Standard' })).toBeChecked()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
     await page.getByRole('radio', { name: 'Individuell' }).click()
-    await expect(note).toHaveValue('Nur für diese Gruppe')
+    await expect(note).toHaveValue('Nimmt die neue Gruppe mit')
 
     await chooseGroup(page, second.name)
-    await expect(confirm).toContainText('Der Zeitverlauf wird für die neue Gruppe neu aufgebaut')
+    await expect(page.getByText('Zeitverlauf übernommen und von 60 auf 45 Minuten umgerechnet.')).toBeVisible()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(page.getByRole('radio', { name: 'Individuell' })).toBeChecked()
+    await page.getByRole('button', { name: /Aufwärmen/ }).first().click()
+    await expect(note).toHaveValue('Nimmt die neue Gruppe mit')
+  })
+
+  test('AC (2026-10-15, b): Muster gewählt, dann „Individuell" und verändert — der Gruppenwechsel nimmt den Stand mit, nicht das Muster', async ({ page }) => {
+    const first = await createGroup('Muster Mitnehmen Eins', { unitDuration: 60 })
+    const second = await createGroup('Muster Mitnehmen Zwei', { unitDuration: 60 })
+    const name = `${TAG} Mitnehmen Muster`
+    await createPattern(name, 60, [patternSegment('Ankommen', 20), patternSegment('Hauptteil', 40)])
+    await createExercise(`${TAG} Übung Muster Mitnehmen`)
+
+    await page.goto(`/units/new?group=${first.id}`)
+    await page.getByRole('radio', { name: 'Stundenmuster' }).click()
+    await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
+    await page.getByRole('option', { name: new RegExp(name) }).click()
+    await page.getByRole('radio', { name: 'Individuell' }).click()
+    await page.getByRole('button', { name: /Ankommen/ }).first().click()
+    const note = page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt')
+    await note.fill('Eigene Begrüßung')
+
+    await chooseGroup(page, second.name)
+    await expect(page.getByText('Zeitverlauf übernommen.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await page.getByRole('button', { name: /Ankommen/ }).first().click()
+    await expect(note).toHaveValue('Eigene Begrüßung')
+    // Das Muster bleibt der Vergleichsstand: der Stand weicht ab, Speichern ist frei.
+    await expect(page.getByRole('button', { name: 'Stundenmuster speichern' })).toBeEnabled()
+  })
+
+  test('AC (2026-10-15, b): passt der Zeitverlauf nicht auf die neue Gruppe, fragt die App mit beiden Zahlen', async ({ page }) => {
+    const first = await createGroup('Zu kurz Eins', { unitDuration: 60 })
+    const short = await createGroup('Zu kurz Zwei', { unitDuration: 5 })
+    await createExercise(`${TAG} Übung Zu kurz`)
+    await page.goto(`/units/new?group=${first.id}`)
+    await page.getByRole('radio', { name: 'Individuell' }).click()
+    // Drei Phasen dazu: sechs Phasen passen nicht in fünf Minuten.
+    for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Phase hinzufügen' }).click()
+
+    await chooseGroup(page, short.name)
+    const confirm = page.getByRole('alertdialog')
+    await expect(confirm).toContainText('Zeitverlauf passt nicht zur neuen Gruppe')
+    await expect(confirm).toContainText('6 Phasen')
+    await expect(confirm).toContainText('5 Minuten')
     await confirm.getByRole('button', { name: 'Abbrechen' }).click()
     await expect(page.getByRole('combobox', { name: 'Gruppe' })).toContainText(first.name)
-    await expect(note).toHaveValue('Nur für diese Gruppe')
+    await expect(page.getByRole('radio', { name: 'Individuell' })).toBeChecked()
 
-    await chooseGroup(page, second.name)
-    await confirm.getByRole('button', { name: 'Ersetzen' }).click()
-    await expect(page.getByRole('combobox', { name: 'Gruppe' })).toContainText(second.name)
+    await chooseGroup(page, short.name)
+    await confirm.getByRole('button', { name: 'Trotzdem wechseln' }).click()
+    await expect(page.getByRole('combobox', { name: 'Gruppe' })).toContainText(short.name)
     await expect(page.getByRole('radio', { name: 'Standard' })).toBeChecked()
   })
 

@@ -37,6 +37,7 @@ import {
   setSegmentMinutes,
   sumMinutes,
 } from '@/lib/units/timeline'
+import { MIN_SEGMENT_MINUTES } from '@/lib/types/unit'
 import type { EditorState, SegmentConfig, UnitMode } from '@/lib/types/unit'
 import type { Group } from '@/lib/types/group'
 import {
@@ -60,6 +61,7 @@ import { manageHref } from '@/lib/manage/tabs'
 import { SavePatternDialog } from './save-pattern-dialog'
 import {
   applyPattern,
+  carryTimeline,
   patternOptionLabel,
   patternTooLongMessage,
   sortPatterns,
@@ -76,7 +78,16 @@ type FormMode = UnitMode | 'pattern'
 type PendingReplace =
   | { kind: 'pattern'; id: string }
   | { kind: 'standard' }
-  | { kind: 'group'; groupId: string }
+  /** Nur wenn der veränderte Zeitverlauf nicht auf die neue Gruppe passt. */
+  | {
+      kind: 'group'
+      groupId: string
+      groupName: string
+      segmentCount: number
+      totalMinutes: number
+      /** Was die neue Gruppe stattdessen bekommt: ihren Standard oder das gewählte Muster. */
+      fallback: 'standard' | 'pattern'
+    }
   | null
 
 interface UnitConfigFormProps {
@@ -147,6 +158,17 @@ export function UnitConfigForm({
   // gegen den „von Hand verändert" gemessen wird. Ohne Muster gilt der Standard
   // der Gruppe, auch für einen über „Zurück zum Generator" mitgebrachten Stand.
   const [patternBaseline, setPatternBaseline] = React.useState<SegmentConfig[] | null>(null)
+  // Der veränderte Zeitverlauf, umgerechnet für die Gruppe, zu der gerade
+  // gewechselt wird. Der Effekt beim Gruppenwechsel übernimmt ihn.
+  const carried = React.useRef<{
+    groupId: string
+    segments: SegmentConfig[]
+    convertedFrom: number | null
+  } | null>(null)
+  /** Gesetzt, wenn der Zeitverlauf beim Gruppenwechsel mitgenommen wurde. */
+  const [carryNotice, setCarryNotice] = React.useState<{ convertedFrom: number | null } | null>(
+    null
+  )
   const [pendingReplace, setPendingReplace] = React.useState<PendingReplace>(null)
   const [saveOpen, setSaveOpen] = React.useState(false)
   // Phasen, die in diesem Formular neu eingetippt wurden — nur sie kommen
@@ -181,8 +203,9 @@ export function UnitConfigForm({
   const group = groups.find((g) => g.id === groupId) ?? null
   const totalMinutes = group?.unitDuration ?? 0
 
-  // Beim Gruppenwechsel alles zurücksetzen — Einheitsdauer und Sportarten
-  // der neuen Gruppe sind andere, ein alter Bearbeitungsstand passt nicht mehr.
+  // Beim Gruppenwechsel kommt der aktuelle Stand mit: ein veränderter
+  // Zeitverlauf umgerechnet (siehe `handleGroupChange`), ein unveränderter frisch
+  // für die neue Gruppe aufgebaut — ihr Standard oder das gewählte Muster.
   React.useEffect(() => {
     if (!group) {
       setClassicSegments([])
@@ -205,9 +228,36 @@ export function UnitConfigForm({
     lastGroupId.current = group.id
     setSelectedId(null)
 
-    // Ein geladenes Stundenmuster bleibt gewählt und wird für die neue Gruppe
-    // frisch angewendet — mit deren Dauer und deren Sportarten.
     const pattern = patternsRef.current.find((p) => p.id === patternIdRef.current)
+    const carry = carried.current?.groupId === group.id ? carried.current : null
+    carried.current = null
+
+    // Der veränderte Stand kommt mit. Ein gewähltes Muster bleibt der
+    // Vergleichsstand, so wie es auf die neue Gruppe angewendet würde.
+    if (carry) {
+      setCustomSegments(carry.segments)
+      setCarryNotice({ convertedFrom: carry.convertedFrom })
+      setBlocked(null)
+      const applied = pattern ? applyPattern(pattern, patternTarget(group)) : null
+      if (applied?.ok) {
+        setPatternBaseline(applied.segments)
+        setConvertedFrom(applied.convertedFrom)
+        return
+      }
+      // Ohne Muster — oder eines, das auf diese Gruppe nicht anwendbar ist.
+      if (pattern) {
+        patternIdRef.current = null
+        setPatternId(null)
+        setMode((current) => (current === 'pattern' ? 'custom' : current))
+      }
+      setPatternBaseline(null)
+      setConvertedFrom(null)
+      return
+    }
+    setCarryNotice(null)
+
+    // Unverändert: ein gewähltes Stundenmuster bleibt gewählt und wird für die
+    // neue Gruppe frisch angewendet — mit deren Dauer und deren Sportarten.
     if (pattern) {
       const result = applyPattern(pattern, patternTarget(group))
       if (result.ok) {
@@ -264,7 +314,7 @@ export function UnitConfigForm({
   // Von Hand verändert: der eigene Stand weicht vom geladenen Muster ab, ohne
   // Muster vom Standard der Gruppe. Verglichen wird der Inhalt — eine
   // zurückgenommene Änderung ist keine. Der eigene Stand zählt auch, während
-  // „Standard" gewählt ist: ein Gruppenwechsel würfe ihn trotzdem weg.
+  // „Standard" gewählt ist: ein Gruppenwechsel nimmt ihn mit.
   const changed =
     customSegments !== null && !sameTimeline(customSegments, patternBaseline ?? classicSegments)
   // Steht genau so schon als Muster da — Speichern legte nur ein Doppel an.
@@ -295,12 +345,14 @@ export function UnitConfigForm({
     selectPattern(id)
     setBlocked(null)
     setConvertedFrom(result.convertedFrom)
+    setCarryNotice(null)
     setSelectedId(null)
     setFormError(null)
   }
 
-  // Wer Handarbeit wegwirft, wird vorher gefragt — beim Muster, beim
-  // Zurücksetzen und beim Gruppenwechsel gleich.
+  // Wer Handarbeit wegwirft, wird vorher gefragt — beim Muster und beim
+  // Zurücksetzen. Der Gruppenwechsel wirft nichts weg, außer der Stand passt
+  // nicht auf die neue Gruppe.
 
   /** Lädt ein Muster — fragt vorher, wenn dabei Handarbeit verloren ginge. */
   function requestPattern(id: string) {
@@ -315,15 +367,41 @@ export function UnitConfigForm({
 
   function handleGroupChange(next: string) {
     if (next === groupId) return
-    if (changed) setPendingReplace({ kind: 'group', groupId: next })
-    else setGroupId(next)
+    carried.current = null
+    const nextGroup = groups.find((g) => g.id === next)
+    if (!changed || !group || !nextGroup || !customSegments) {
+      setGroupId(next)
+      return
+    }
+
+    const result = carryTimeline(customSegments, patternTarget(group), patternTarget(nextGroup))
+    if (!result.ok) {
+      const patternFits =
+        loadedPattern !== null && applyPattern(loadedPattern, patternTarget(nextGroup)).ok
+      setPendingReplace({
+        kind: 'group',
+        groupId: next,
+        groupName: nextGroup.name,
+        segmentCount: result.segmentCount,
+        totalMinutes: result.totalMinutes,
+        fallback: patternFits ? 'pattern' : 'standard',
+      })
+      return
+    }
+    carried.current = { groupId: next, segments: result.segments, convertedFrom: result.convertedFrom }
+    setGroupId(next)
   }
 
   function confirmReplace() {
     if (!pendingReplace) return
     if (pendingReplace.kind === 'pattern') loadPattern(pendingReplace.id)
     else if (pendingReplace.kind === 'standard') resetToStandard()
-    else setGroupId(pendingReplace.groupId)
+    else {
+      // Ein Muster, das auch nicht passt, wird abgewählt — sonst stünde die
+      // neue Gruppe ohne Zeitverlauf da statt mit ihrem Standard.
+      if (pendingReplace.fallback === 'standard') selectPattern(null)
+      setGroupId(pendingReplace.groupId)
+    }
     setPendingReplace(null)
   }
 
@@ -392,6 +470,7 @@ export function UnitConfigForm({
     selectPattern(null)
     setPatternBaseline(null)
     setConvertedFrom(null)
+    setCarryNotice(null)
     // Ohne gewähltes Muster zeigt der Weg „Stundenmuster" keinen Zeitverlauf.
     if (mode === 'pattern') setMode('custom')
     toast({ title: 'Auf Standard zurückgesetzt' })
@@ -638,7 +717,15 @@ export function UnitConfigForm({
                 </p>
               )}
 
-              {loadedPattern && convertedFrom !== null && (
+              {carryNotice && (
+                <p className="rounded-md bg-muted px-3 py-2 text-sm" role="status">
+                  {carryNotice.convertedFrom !== null
+                    ? `Zeitverlauf übernommen und von ${carryNotice.convertedFrom} auf ${totalMinutes} Minuten umgerechnet.`
+                    : 'Zeitverlauf übernommen.'}
+                </p>
+              )}
+
+              {!carryNotice && loadedPattern && convertedFrom !== null && (
                 <p className="rounded-md bg-muted px-3 py-2 text-sm" role="status">
                   Muster von {convertedFrom} auf {totalMinutes} Minuten umgerechnet.
                 </p>
@@ -763,14 +850,18 @@ export function UnitConfigForm({
           >
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Bisherigen Zeitverlauf ersetzen?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {replaceDescription(pendingReplace, loadedPattern !== null)}
-                </AlertDialogDescription>
+                <AlertDialogTitle>
+                  {pendingReplace?.kind === 'group'
+                    ? 'Zeitverlauf passt nicht zur neuen Gruppe'
+                    : 'Bisherigen Zeitverlauf ersetzen?'}
+                </AlertDialogTitle>
+                <AlertDialogDescription>{replaceDescription(pendingReplace)}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmReplace}>Ersetzen</AlertDialogAction>
+                <AlertDialogAction onClick={confirmReplace}>
+                  {pendingReplace?.kind === 'group' ? 'Trotzdem wechseln' : 'Ersetzen'}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -781,13 +872,19 @@ export function UnitConfigForm({
 }
 
 /** Was die Nachfrage sagt — je nachdem, was den Zeitverlauf ersetzen würde. */
-function replaceDescription(pending: PendingReplace, patternLoaded: boolean): string {
+function replaceDescription(pending: PendingReplace): string {
   const lost = 'Was du am Zeitverlauf von Hand geändert hast, geht dabei verloren.'
   if (pending?.kind === 'standard') return `Der Zeitverlauf wird auf Standard zurückgesetzt. ${lost}`
   if (pending?.kind === 'group') {
-    return patternLoaded
-      ? `Das Stundenmuster wird für die neue Gruppe frisch angewendet. ${lost}`
-      : `Der Zeitverlauf wird für die neue Gruppe neu aufgebaut. ${lost}`
+    const instead =
+      pending.fallback === 'pattern'
+        ? 'Beim Wechsel wird das gewählte Stundenmuster für sie frisch angewendet.'
+        : 'Beim Wechsel bekommt sie ihren Standard.'
+    return (
+      `Dein Zeitverlauf hat ${pending.segmentCount} Phasen, „${pending.groupName}" aber nur ` +
+      `${pending.totalMinutes} Minuten — jede Phase braucht mindestens ${MIN_SEGMENT_MINUTES} Minute. ` +
+      `${instead} ${lost}`
+    )
   }
   return `Das Stundenmuster ersetzt den Zeitverlauf. ${lost}`
 }

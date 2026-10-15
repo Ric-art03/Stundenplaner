@@ -127,6 +127,19 @@ export function applyPattern(
   }
 }
 
+/**
+ * Nimmt einen Zeitverlauf beim Gruppenwechsel mit — wie ein Muster der alten
+ * Gruppe, auf die neue angewendet: Minuten umgerechnet, Sportarten „wie die
+ * Gruppe" werden die der neuen, bewusste Abweichungen bleiben.
+ */
+export function carryTimeline(
+  segments: SegmentConfig[],
+  from: Pick<PatternTarget, 'sports' | 'primarySport'>,
+  to: PatternTarget
+): ApplyPatternResult {
+  return applyPattern({ segments: toPatternSegments(segments, from) }, to)
+}
+
 /** Die Meldung, wenn ein Muster nicht in die Einheitsdauer der Gruppe passt. */
 export function patternTooLongMessage(segmentCount: number, totalMinutes: number): string {
   if (segmentCount === 0) return 'Dieses Stundenmuster hat keine Phasen.'

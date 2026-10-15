@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyPattern,
+  carryTimeline,
   findPatternByName,
   patternNameError,
   patternOptionLabel,
@@ -256,5 +257,69 @@ describe('Texte und Namen', () => {
   it('sortiert alphabetisch ohne Rücksicht auf Groß-/Kleinschreibung', () => {
     const sorted = sortPatterns([pattern([], 'zirkel'), pattern([], 'Ärobic'), pattern([], 'Ball')])
     expect(sorted.map((p) => p.name)).toEqual(['Ärobic', 'Ball', 'zirkel'])
+  })
+})
+
+describe('carryTimeline', () => {
+  const TURNEN = { totalMinutes: 45, sports: ['Turnen'], primarySport: null }
+
+  it('rechnet auf die Dauer der neuen Gruppe um und sagt, von wie viel', () => {
+    const result = carryTimeline(
+      [segment('Aufwärmen', 15), segment('Hauptteil', 30), segment('Spiel', 15)],
+      VOLLEYBALL,
+      TURNEN
+    )
+    if (!result.ok) throw new Error('sollte passen')
+    expect(sumMinutes(result.segments)).toBe(45)
+    expect(result.convertedFrom).toBe(60)
+    expect(result.segments.map((s) => s.name)).toEqual(['Aufwärmen', 'Hauptteil', 'Spiel'])
+  })
+
+  it('Segmente „wie die Gruppe" tragen die Sportarten der neuen Gruppe', () => {
+    const result = carryTimeline([segment('Hauptteil', 60)], VOLLEYBALL, TURNEN)
+    if (!result.ok) throw new Error('sollte passen')
+    expect(result.segments[0].sports).toEqual(['Turnen'])
+  })
+
+  it('bewusst abweichende Sportarten bleiben', () => {
+    const own = segment('Aufwärmen', 60, { sports: ['Laufspiele'], primarySport: null })
+    const result = carryTimeline([own], VOLLEYBALL, TURNEN)
+    if (!result.ok) throw new Error('sollte passen')
+    expect(result.segments[0].sports).toEqual(['Laufspiele'])
+  })
+
+  it('Phase, Füllart, Schwierigkeit, Organisationsform und Arbeitsnotiz bleiben', () => {
+    const own = segment('Spiel', 60, {
+      fillMode: 'empty',
+      difficulties: ['Schwer'],
+      organizationForms: ['Kreis'],
+      notes: 'Bälle bereitlegen',
+    })
+    const result = carryTimeline([own], VOLLEYBALL, TURNEN)
+    if (!result.ok) throw new Error('sollte passen')
+    const [carried] = result.segments
+    expect(carried).toMatchObject({
+      name: 'Spiel',
+      fillMode: 'empty',
+      difficulties: ['Schwer'],
+      organizationForms: ['Kreis'],
+      notes: 'Bälle bereitlegen',
+      minutes: 45,
+    })
+  })
+
+  it('bei gleicher Dauer wird nichts umgerechnet', () => {
+    const result = carryTimeline([segment('Hauptteil', 60)], VOLLEYBALL, { ...TURNEN, totalMinutes: 60 })
+    if (!result.ok) throw new Error('sollte passen')
+    expect(result.convertedFrom).toBeNull()
+  })
+
+  it('passt nicht, wenn die neue Gruppe weniger Minuten als Phasen hat', () => {
+    const six = ['A', 'B', 'C', 'D', 'E', 'F'].map((letter) => segment(`Phase ${letter}`, 10))
+    expect(carryTimeline(six, VOLLEYBALL, { ...TURNEN, totalMinutes: 5 })).toEqual({
+      ok: false,
+      segmentCount: 6,
+      totalMinutes: 5,
+    })
   })
 })
