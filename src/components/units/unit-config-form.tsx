@@ -33,6 +33,7 @@ import {
   addSegment,
   buildClassicSegments,
   removeSegment,
+  sameTimeline,
   setSegmentMinutes,
   sumMinutes,
 } from '@/lib/units/timeline'
@@ -74,6 +75,7 @@ type FormMode = UnitMode | 'pattern'
 
 type PendingReplace =
   | { kind: 'pattern'; id: string }
+  | { kind: 'standard' }
   | { kind: 'group'; groupId: string }
   | null
 
@@ -141,9 +143,10 @@ export function UnitConfigForm({
   )
   /** Die ursprüngliche Dauer, wenn das geladene Muster umgerechnet wurde. */
   const [convertedFrom, setConvertedFrom] = React.useState<number | null>(null)
-  // Von Hand verändert seit Standard bzw. dem zuletzt geladenen Muster. Ein
-  // über „Zurück zum Generator" mitgebrachter Stand gilt als verändert.
-  const [touched, setTouched] = React.useState(!!initialSegments)
+  // Das geladene Muster, so wie es auf die Gruppe angewendet wurde — der Stand,
+  // gegen den „von Hand verändert" gemessen wird. Ohne Muster gilt der Standard
+  // der Gruppe, auch für einen über „Zurück zum Generator" mitgebrachten Stand.
+  const [patternBaseline, setPatternBaseline] = React.useState<SegmentConfig[] | null>(null)
   const [pendingReplace, setPendingReplace] = React.useState<PendingReplace>(null)
   const [saveOpen, setSaveOpen] = React.useState(false)
   // Phasen, die in diesem Formular neu eingetippt wurden — nur sie kommen
@@ -201,7 +204,6 @@ export function UnitConfigForm({
 
     lastGroupId.current = group.id
     setSelectedId(null)
-    setTouched(false)
 
     // Ein geladenes Stundenmuster bleibt gewählt und wird für die neue Gruppe
     // frisch angewendet — mit deren Dauer und deren Sportarten.
@@ -210,6 +212,7 @@ export function UnitConfigForm({
       const result = applyPattern(pattern, patternTarget(group))
       if (result.ok) {
         setCustomSegments(result.segments)
+        setPatternBaseline(result.segments)
         setConvertedFrom(result.convertedFrom)
         setBlocked(null)
         return
@@ -222,6 +225,7 @@ export function UnitConfigForm({
       // Gewählt bleiben — eine andere Gruppe kann es übernehmen.
       setBlocked({ segmentCount: result.segmentCount, totalMinutes: result.totalMinutes })
       setCustomSegments(null)
+      setPatternBaseline(null)
       setConvertedFrom(null)
       setMode('pattern')
       return
@@ -229,6 +233,7 @@ export function UnitConfigForm({
 
     patternIdRef.current = null
     setPatternId(null)
+    setPatternBaseline(null)
     setBlocked(null)
     setConvertedFrom(null)
     setCustomSegments(null)
@@ -256,6 +261,15 @@ export function UnitConfigForm({
   const showTimeline =
     mode === 'custom' || (mode === 'pattern' && patternId !== null && blocked === null)
   const segments = mode === 'standard' ? classicSegments : (customSegments ?? classicSegments)
+  // Von Hand verändert: der eigene Stand weicht vom geladenen Muster ab, ohne
+  // Muster vom Standard der Gruppe. Verglichen wird der Inhalt — eine
+  // zurückgenommene Änderung ist keine. Der eigene Stand zählt auch, während
+  // „Standard" gewählt ist: ein Gruppenwechsel würfe ihn trotzdem weg.
+  const changed =
+    customSegments !== null && !sameTimeline(customSegments, patternBaseline ?? classicSegments)
+  // Steht genau so schon als Muster da — Speichern legte nur ein Doppel an.
+  // Ein umgerechnetes Muster ist ein neuer Stand und bleibt speicherbar.
+  const alreadySaved = loadedPattern !== null && convertedFrom === null && !changed
 
   function selectPattern(id: string | null) {
     patternIdRef.current = id
@@ -277,29 +291,38 @@ export function UnitConfigForm({
     }
 
     setCustomSegments(result.segments)
+    setPatternBaseline(result.segments)
     selectPattern(id)
     setBlocked(null)
     setConvertedFrom(result.convertedFrom)
-    setTouched(false)
     setSelectedId(null)
     setFormError(null)
   }
 
+  // Wer Handarbeit wegwirft, wird vorher gefragt — beim Muster, beim
+  // Zurücksetzen und beim Gruppenwechsel gleich.
+
   /** Lädt ein Muster — fragt vorher, wenn dabei Handarbeit verloren ginge. */
   function requestPattern(id: string) {
-    if (touched) setPendingReplace({ kind: 'pattern', id })
+    if (changed) setPendingReplace({ kind: 'pattern', id })
     else loadPattern(id)
+  }
+
+  function requestStandard() {
+    if (changed) setPendingReplace({ kind: 'standard' })
+    else resetToStandard()
   }
 
   function handleGroupChange(next: string) {
     if (next === groupId) return
-    if (patternId && touched) setPendingReplace({ kind: 'group', groupId: next })
+    if (changed) setPendingReplace({ kind: 'group', groupId: next })
     else setGroupId(next)
   }
 
   function confirmReplace() {
     if (!pendingReplace) return
     if (pendingReplace.kind === 'pattern') loadPattern(pendingReplace.id)
+    else if (pendingReplace.kind === 'standard') resetToStandard()
     else setGroupId(pendingReplace.groupId)
     setPendingReplace(null)
   }
@@ -309,7 +332,8 @@ export function UnitConfigForm({
     setPatterns(next)
     patternsRef.current = next
     selectPattern(saved.id)
-    setTouched(false)
+    // Gespeichert ist, was dasteht — von hier an wird dagegen verglichen.
+    setPatternBaseline(segments)
     setConvertedFrom(null)
     toast({
       title: `Stundenmuster „${saved.name}" gespeichert`,
@@ -353,7 +377,6 @@ export function UnitConfigForm({
   /** Bearbeitungen landen immer im individuellen Stand, nie in der Standardvorlage. */
   function applySegments(next: SegmentConfig[]) {
     setCustomSegments(next)
-    setTouched(true)
   }
 
   function resetToStandard() {
@@ -367,8 +390,8 @@ export function UnitConfigForm({
     setCustomSegments(fresh)
     setSelectedId(fresh[0]?.id ?? null)
     selectPattern(null)
+    setPatternBaseline(null)
     setConvertedFrom(null)
-    setTouched(false)
     // Ohne gewähltes Muster zeigt der Weg „Stundenmuster" keinen Zeitverlauf.
     if (mode === 'pattern') setMode('custom')
     toast({ title: 'Auf Standard zurückgesetzt' })
@@ -571,7 +594,7 @@ export function UnitConfigForm({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={resetToStandard}>
+                <Button type="button" variant="outline" size="sm" onClick={requestStandard}>
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Auf Standard zurücksetzen
                 </Button>
@@ -597,7 +620,7 @@ export function UnitConfigForm({
                   variant="outline"
                   size="sm"
                   onClick={() => setSaveOpen(true)}
-                  disabled={minutesMismatch}
+                  disabled={minutesMismatch || alreadySaved}
                 >
                   <Save className="mr-2 h-4 w-4" />
                   Stundenmuster speichern
@@ -607,6 +630,11 @@ export function UnitConfigForm({
                 <p className="text-xs text-muted-foreground">
                   „Stundenmuster speichern“ geht erst, wenn die Phasen zusammen {totalMinutes}{' '}
                   Minuten ergeben.
+                </p>
+              )}
+              {alreadySaved && (
+                <p className="text-xs text-muted-foreground">
+                  Dieses Stundenmuster ist so schon gespeichert.
                 </p>
               )}
 
@@ -737,9 +765,7 @@ export function UnitConfigForm({
               <AlertDialogHeader>
                 <AlertDialogTitle>Bisherigen Zeitverlauf ersetzen?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {pendingReplace?.kind === 'group'
-                    ? 'Das Stundenmuster wird für die neue Gruppe frisch angewendet. Was du am Zeitverlauf von Hand geändert hast, geht dabei verloren.'
-                    : 'Das Stundenmuster ersetzt den Zeitverlauf. Was du von Hand geändert hast, geht dabei verloren.'}
+                  {replaceDescription(pendingReplace, loadedPattern !== null)}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -752,6 +778,18 @@ export function UnitConfigForm({
       )}
     </form>
   )
+}
+
+/** Was die Nachfrage sagt — je nachdem, was den Zeitverlauf ersetzen würde. */
+function replaceDescription(pending: PendingReplace, patternLoaded: boolean): string {
+  const lost = 'Was du am Zeitverlauf von Hand geändert hast, geht dabei verloren.'
+  if (pending?.kind === 'standard') return `Der Zeitverlauf wird auf Standard zurückgesetzt. ${lost}`
+  if (pending?.kind === 'group') {
+    return patternLoaded
+      ? `Das Stundenmuster wird für die neue Gruppe frisch angewendet. ${lost}`
+      : `Der Zeitverlauf wird für die neue Gruppe neu aufgebaut. ${lost}`
+  }
+  return `Das Stundenmuster ersetzt den Zeitverlauf. ${lost}`
 }
 
 function patternTarget(group: Group): PatternTarget {

@@ -226,6 +226,36 @@ export function reorderSegments(
   return result
 }
 
+function sameSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false
+  const set = new Set(a)
+  return b.every((value) => set.has(value))
+}
+
+/**
+ * Gleicher Inhalt, unabhängig von den Kennungen der Segmente. „Von Hand
+ * verändert" heißt: anderer Inhalt — wer eine Änderung zurücknimmt, hat nichts
+ * verändert. Sportarten, Schwierigkeiten und Organisationsformen sind Auswahlen,
+ * ihre Reihenfolge zählt nicht; die der Segmente schon.
+ */
+export function sameTimeline(a: SegmentConfig[], b: SegmentConfig[]): boolean {
+  if (a.length !== b.length) return false
+  return a.every((left, index) => {
+    const right = b[index]
+    return (
+      left.name === right.name &&
+      left.minutes === right.minutes &&
+      left.fillMode === right.fillMode &&
+      left.notes === right.notes &&
+      sameSet(left.sports, right.sports) &&
+      resolvePrimarySport(left.sports, left.primarySport) ===
+        resolvePrimarySport(right.sports, right.primarySport) &&
+      sameSet(left.difficulties, right.difficulties) &&
+      sameSet(left.organizationForms, right.organizationForms)
+    )
+  })
+}
+
 /** Passt bestehende Segmente an eine neue Einheitsdauer an (Gruppenwechsel). */
 export function rescaleSegments(segments: SegmentConfig[], total: number): SegmentConfig[] {
   const current = sumMinutes(segments)

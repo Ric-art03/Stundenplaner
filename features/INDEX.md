@@ -282,7 +282,9 @@ Eines bleibt daraus: **die Verwaltung ist in der Produktion noch nicht von Hand 
 
 Reine Oberfläche: keine Migration, keine neuen Pakete.
 
-**Nächster Schritt:** `/frontend PROJ-16` für die Überarbeitung. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec. Die 40 Testübungen in der Datenbank sind Rohmasse dafür.
+**Die Überarbeitung ist am 2026-10-15 gebaut** — Abschnitt „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-15" in der Spec. **604 Unit-Tests grün** (590 plus 14 neue), Typprüfung, Lint und Build sauber. Der Vergleich nach Inhalt ist eine reine Funktion (`sameTimeline` in `src/lib/units/timeline.ts`) und ersetzt den Schalter, der sich nur merkte, ob etwas angefasst wurde. Drei neue Browser-Tests (je Rechner und Handy) — **am Rechner grün, in Handybreite nicht gelaufen**; PROJ-6 15 von 15 grün. Die Leitung dieses Rechners war am Abend so langsam (bis 21 s je Anfrage, auch bei Google), dass der Gesamtlauf abgebrochen wurde; drei Fehlschläge an nicht berührten Stellen (zwei in PROJ-16, einer in PROJ-7) sind bei guter Verbindung noch nicht wiederholt. Von Hand im Browser angesehen ist nichts.
+
+**Nächster Schritt:** `/qa PROJ-16` für die Überarbeitung, danach `/deploy`. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec. Die 40 Testübungen in der Datenbank sind Rohmasse dafür.
 
 ## Features
 
@@ -302,7 +304,7 @@ Reine Oberfläche: keine Migration, keine neuen Pakete.
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Deployed | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
-| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
+| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | In Progress | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
 
 <!-- Add features above this line -->

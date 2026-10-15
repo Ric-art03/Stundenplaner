@@ -11,6 +11,7 @@ import {
   reorderSegments,
   rescaleSegments,
   resolvePrimarySport,
+  sameTimeline,
 } from './timeline'
 import type { DifficultyLevel } from '@/lib/types/exercise'
 
@@ -246,6 +247,73 @@ describe('rescaleSegments', () => {
   it('trifft auch beim Verkleinern die Gesamtdauer exakt', () => {
     const segments = buildClassicSegments(90, SPORTS, DIFFICULTIES)
     expect(sumMinutes(rescaleSegments(segments, 25))).toBe(25)
+  })
+})
+
+describe('sameTimeline', () => {
+  const VOLLEYBALL = ['Volleyball', 'Allgemeine Fitness']
+  const base = () => buildClassicSegments(60, VOLLEYBALL, DIFFICULTIES, 'Volleyball')
+
+  it('gleicher Inhalt mit anderen Kennungen ist gleich', () => {
+    const a = base()
+    const b = base()
+    expect(a[0].id).not.toBe(b[0].id)
+    expect(sameTimeline(a, b)).toBe(true)
+  })
+
+  it('eine zurückgenommene Änderung ist keine', () => {
+    const original = base()
+    const renamed = original.map((s, i) => (i === 0 ? { ...s, name: 'Spiel' } : s))
+    const back = renamed.map((s, i) => (i === 0 ? { ...s, name: original[0].name } : s))
+    expect(sameTimeline(renamed, original)).toBe(false)
+    expect(sameTimeline(back, original)).toBe(true)
+  })
+
+  it('andere Minuten sind eine Änderung', () => {
+    const original = base()
+    const changed = setSegmentMinutes(original, original[0].id, 20, 60)
+    expect(sameTimeline(changed, original)).toBe(false)
+  })
+
+  it('die Reihenfolge der Auswahlen zählt nicht', () => {
+    const original = base()
+    const shuffled = original.map((s) => ({
+      ...s,
+      sports: [...s.sports].reverse(),
+      difficulties: [...s.difficulties].reverse(),
+    }))
+    expect(sameTimeline(shuffled, original)).toBe(true)
+  })
+
+  it('die Reihenfolge der Segmente zählt', () => {
+    const original = base()
+    expect(sameTimeline(reorderSegments(original, 0, 2), original)).toBe(false)
+  })
+
+  it.each([
+    ['Phase', { name: 'Spiel' }],
+    ['Füllart', { fillMode: 'empty' as const }],
+    ['Arbeitsnotiz', { notes: 'Bälle bereitlegen' }],
+    ['Sportartenauswahl', { sports: ['Volleyball'] }],
+    ['Hauptsportart', { primarySport: 'Allgemeine Fitness' }],
+    ['Schwierigkeit', { difficulties: ['Leicht'] as DifficultyLevel[] }],
+    ['Organisationsform', { organizationForms: ['Kreis'] }],
+  ])('eine andere %s ist eine Änderung', (_label, change) => {
+    const original = base()
+    const changed = original.map((s, i) => (i === 1 ? { ...s, ...change } : s))
+    expect(sameTimeline(changed, original)).toBe(false)
+  })
+
+  it('eine Hauptsportart ohne Bedeutung ist keine Änderung', () => {
+    const single = buildClassicSegments(60, ['Turnen'], DIFFICULTIES, null)
+    const withPrimary = single.map((s) => ({ ...s, primarySport: 'Turnen' }))
+    expect(sameTimeline(withPrimary, single)).toBe(true)
+  })
+
+  it('ein Segment mehr ist eine Änderung', () => {
+    const original = base()
+    const more = addSegment(original, 'Hauptteil', VOLLEYBALL, DIFFICULTIES, 'Volleyball')
+    expect(sameTimeline(more, original)).toBe(false)
   })
 })
 

@@ -265,6 +265,9 @@ test.describe('PROJ-16 — A. Seite „Verwaltung" und ihr Zugang', () => {
 
   test('AC (2026-10-14): Generator — ein „Kategorien verwalten" unter dem Zeitverlauf, nicht je Segment', async ({ page }) => {
     const group = await createGroup('Links')
+    // Ohne Übung zeigt der Generator nur seinen Leerzustand; nicht auf den
+    // Grundbestand verlassen, der läuft nicht mit, wenn die Stufe allein läuft.
+    await createExercise(`${TAG} Übung Links`)
     await page.goto(`/units/new?group=${group.id}`)
     await page.getByRole('radio', { name: 'Individuell' }).click()
     await expect(page.getByText('Zeitverlauf', { exact: true })).toBeVisible()
@@ -717,6 +720,99 @@ test.describe('PROJ-16 — G–I. Stundenmuster', () => {
     await page.getByRole('combobox', { name: 'Gruppe' }).click()
     await page.getByRole('option').first().click()
     await expect(page.getByRole('radio', { name: 'Standard' })).toBeChecked()
+  })
+
+  test('AC (2026-10-15): „Auf Standard zurücksetzen" fragt nur nach, wenn der Zeitverlauf verändert ist', async ({ page }) => {
+    const group = await createGroup('Zurücksetzen')
+    // Ohne Übung zeigt der Generator nur seinen Leerzustand.
+    await createExercise(`${TAG} Übung Zurücksetzen`)
+    await page.goto(`/units/new?group=${group.id}`)
+    await page.getByRole('radio', { name: 'Individuell' }).click()
+    const note = page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt')
+    const reset = page.getByRole('button', { name: 'Auf Standard zurücksetzen' })
+    const confirm = page.getByRole('alertdialog')
+
+    // Verändert: erst nach „Ersetzen" wird zurückgesetzt.
+    await note.fill('Bälle bereitlegen')
+    await reset.click()
+    await expect(confirm).toContainText('Bisherigen Zeitverlauf ersetzen?')
+    await expect(confirm).toContainText('Der Zeitverlauf wird auf Standard zurückgesetzt')
+    await confirm.getByRole('button', { name: 'Abbrechen' }).click()
+    await expect(note).toHaveValue('Bälle bereitlegen')
+
+    // Zurückgenommen ist unverändert: keine Nachfrage.
+    await note.fill('')
+    await reset.click()
+    await expect(page.getByText('Auf Standard zurückgesetzt', { exact: true })).toBeVisible()
+    await expect(confirm).toHaveCount(0)
+
+    await note.fill('Bälle bereitlegen')
+    await reset.click()
+    await confirm.getByRole('button', { name: 'Ersetzen' }).click()
+    await expect(note).toHaveValue('')
+  })
+
+  test('AC (2026-10-15): Gruppenwechsel ohne Muster fragt nach; der Weg „Standard" nicht', async ({ page }) => {
+    const first = await createGroup('Wechsel Eins')
+    const second = await createGroup('Wechsel Zwei')
+    await createExercise(`${TAG} Übung Wechsel`)
+    await page.goto(`/units/new?group=${first.id}`)
+    await page.getByRole('radio', { name: 'Individuell' }).click()
+    const note = page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt')
+    const confirm = page.getByRole('alertdialog')
+    await note.fill('Nur für diese Gruppe')
+
+    // Umschalten auf „Standard" verliert nichts und fragt nicht.
+    await page.getByRole('radio', { name: 'Standard' }).click()
+    await expect(confirm).toHaveCount(0)
+    await page.getByRole('radio', { name: 'Individuell' }).click()
+    await expect(note).toHaveValue('Nur für diese Gruppe')
+
+    await chooseGroup(page, second.name)
+    await expect(confirm).toContainText('Der Zeitverlauf wird für die neue Gruppe neu aufgebaut')
+    await confirm.getByRole('button', { name: 'Abbrechen' }).click()
+    await expect(page.getByRole('combobox', { name: 'Gruppe' })).toContainText(first.name)
+    await expect(note).toHaveValue('Nur für diese Gruppe')
+
+    await chooseGroup(page, second.name)
+    await confirm.getByRole('button', { name: 'Ersetzen' }).click()
+    await expect(page.getByRole('combobox', { name: 'Gruppe' })).toContainText(second.name)
+    await expect(page.getByRole('radio', { name: 'Standard' })).toBeChecked()
+  })
+
+  test('AC (2026-10-15): „Stundenmuster speichern" ist ausgegraut, solange das geladene Muster unverändert ist', async ({ page }) => {
+    const group = await createGroup('Ausgegraut', { unitDuration: 60 })
+    const same = `${TAG} Sechzig`
+    const longer = `${TAG} Neunzig umgerechnet`
+    await createPattern(same, 60, [patternSegment('Ankommen', 20), patternSegment('Hauptteil', 40)])
+    await createPattern(longer, 90, [patternSegment('Ankommen', 30), patternSegment('Hauptteil', 60)])
+    await createExercise(`${TAG} Übung Ausgegraut`)
+
+    await page.goto(`/units/new?group=${group.id}`)
+    await page.getByRole('radio', { name: 'Stundenmuster' }).click()
+    await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
+    await page.getByRole('option', { name: new RegExp(same) }).click()
+
+    const save = page.getByRole('button', { name: 'Stundenmuster speichern' })
+    const reason = page.getByText('Dieses Stundenmuster ist so schon gespeichert.')
+    await expect(save).toBeDisabled()
+    await expect(reason).toBeVisible()
+
+    // Eine Änderung macht den Knopf frei, ihre Rücknahme graut ihn wieder aus.
+    await page.getByRole('button', { name: /Ankommen/ }).first().click()
+    const note = page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt')
+    await note.fill('Begrüßung im Kreis')
+    await expect(save).toBeEnabled()
+    await expect(reason).toBeHidden()
+    await note.fill('')
+    await expect(save).toBeDisabled()
+
+    // Ein umgerechnetes Muster ist ein neuer Stand.
+    await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
+    await page.getByRole('option', { name: new RegExp(longer) }).click()
+    await expect(page.getByText('Muster von 90 auf 60 Minuten umgerechnet.')).toBeVisible()
+    await expect(save).toBeEnabled()
+    await expect(reason).toBeHidden()
   })
 
   test('AC: ein Muster umbenennen und löschen', async ({ page }) => {

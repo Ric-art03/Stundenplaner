@@ -1,11 +1,11 @@
 # PROJ-16: Verwaltung (Hallen, Stundenmuster, eigene Kategorien)
 
-## Status: Deployed
+## Status: In Progress
 **Created:** 2026-10-04
 **Last Updated:** 2026-10-15
 
-> **Am 2026-10-15 überarbeitet (`/refine`), nach dem Durchspielen in der Produktion — noch nicht
-> gebaut.** Zwei Punkte im Generator: **wer Handarbeit am Zeitverlauf wegwirft, wird vorher
+> **Am 2026-10-15 überarbeitet (`/refine`), nach dem Durchspielen in der Produktion — am selben
+> Tag gebaut**, siehe „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-15". Zwei Punkte im Generator: **wer Handarbeit am Zeitverlauf wegwirft, wird vorher
 > gefragt** — jetzt auch bei „Auf Standard zurücksetzen" und beim Gruppenwechsel ohne Muster, nicht
 > nur beim Laden eines Musters; und **„Stundenmuster speichern" ist ausgegraut**, solange der
 > Zeitverlauf genau dem geladenen Muster entspricht. Dazu ein Begriff von „verändert" für beides:
@@ -1011,3 +1011,64 @@ die neuen Funktionen.
 Eine Folge des Zurückrollens: dort tragen Übung, Gruppe und Halle beim Speichern wieder alles
 Nicht-Vordefinierte in die Auswahllisten ein. Ein in der Verwaltung gelöschter Begriff, der noch
 in einer Übung steht, käme beim nächsten Speichern dieser Übung zurück.
+
+## Implementation Notes (Frontend) — Überarbeitung vom 2026-10-15
+
+**Stand:** 2026-10-15. **604 Unit-Tests grün** (590 plus 14 neue), Typprüfung, Lint und
+Produktionsbuild sauber. Keine Migration, keine neuen Pakete, kein Serverweg berührt — alles in
+`unit-config-form.tsx` und einer reinen Funktion daneben.
+
+### Was gebaut ist
+
+- **„Verändert" heißt anderer Inhalt** — `sameTimeline` in `src/lib/units/timeline.ts`, 14 Tests.
+  Vergleicht Segment für Segment Phase, Minuten, Füllart, Arbeitsnotiz, Sportarten, wirksame
+  Hauptsportart, Schwierigkeiten und Organisationsformen; die Kennungen der Segmente und die
+  Reihenfolge innerhalb einer Auswahl zählen nicht, die Reihenfolge der Segmente schon. Eine
+  Hauptsportart ohne Bedeutung (nur eine Sportart gewählt) ist keine Änderung
+- **Der Vergleichsstand** (`patternBaseline`): ist ein Muster geladen, das Muster so, wie es auf
+  die Gruppe angewendet wurde — gesetzt beim Laden, beim Gruppenwechsel mit Muster und nach dem
+  Speichern (dann der gespeicherte Stand). Ohne Muster der Standard der Gruppe; das gilt auch für
+  einen über „Zurück zum Generator" mitgebrachten Stand. Ersetzt den Schalter `touched`, der sich
+  nur merkte, *dass* etwas angefasst wurde
+- **Gezählt wird der eigene Stand**, auch während der Weg „Standard" gewählt ist — er ist
+  aufgehoben, und ein Gruppenwechsel würfe ihn trotzdem weg (Edge Case vom 2026-10-15)
+- **Nachfragen:** „Auf Standard zurücksetzen" (neu), Muster wählen oder „Auf Stundenmuster
+  setzen" (wie bisher) und Gruppenwechsel (neu auch ohne Muster) laufen über denselben Dialog
+  „Bisherigen Zeitverlauf ersetzen?". Der Text sagt je Fall, was passiert: zurückgesetzt, für die
+  neue Gruppe neu aufgebaut, Muster frisch angewendet, Muster ersetzt. Die Meldung „Auf Standard
+  zurückgesetzt" kommt erst nach „Ersetzen". Das Umschalten auf den Weg „Standard" fragt nicht
+- **„Stundenmuster speichern" ausgegraut**, solange ein Muster geladen, nicht umgerechnet und der
+  Zeitverlauf unverändert ist; darunter „Dieses Stundenmuster ist so schon gespeichert." — an
+  derselben Stelle und im selben Stil wie der Hinweis zu den Minuten
+
+### Tests
+
+- **Unit:** 14 für `sameTimeline`
+- **Browser:** drei neue in `tests/PROJ-16-verwaltung.spec.ts` (je Rechner und Handy):
+  „Auf Standard zurücksetzen" mit und ohne Änderung, auch nach Rücknahme; Gruppenwechsel ohne
+  Muster mit „Abbrechen" und „Ersetzen", dazu der Weg „Standard" ohne Nachfrage; „Stundenmuster
+  speichern" ausgegraut, nach einer Änderung frei, nach der Rücknahme wieder ausgegraut, beim
+  umgerechneten Muster frei. Jeder legt seine eigene Übung an — ohne Übung zeigt der Generator nur
+  den Leerzustand. Dasselbe nachgetragen am Test „ein ‚Kategorien verwalten' unter dem
+  Zeitverlauf", der sich bisher auf den Grundbestand verließ
+
+### Was die Browser-Tests gezeigt haben — 2026-10-15
+
+Bei schwacher Leitung gelaufen (Supabase 0,9 s je Anfrage, zum Schluss 5–21 s; Google und die
+eigene Produktion ebenso langsam — es lag an der Verbindung dieses Rechners, nicht an Supabase).
+
+| Lauf | Ergebnis |
+|---|---|
+| PROJ-6 (Generator), Stufe „chromium" | **15 von 15 grün**, keine Regression am Generator (11,5 min statt rund 2) |
+| PROJ-16, Stufe „verwaltung" (Rechner) | **die drei neuen Tests grün**, alle Muster-Tests grün; ein Fehlschlag: „ein ‚Kategorien verwalten' unter dem Zeitverlauf" — Leerzustand des Generators, weil der Grundbestand in diesem Lauf fehlte (Stufe allein gestartet). Seitdem legt der Test seine Übung selbst an; **nicht nachgelaufen** |
+| PROJ-16, Stufe „verwaltung mobil" | ein Fehlschlag bei „Verwendungen ansehen" (Reiter Kategorien, hier nicht berührt; Seite vollständig geladen) — danach brach der Block ab, **die drei neuen Tests sind in Handybreite nicht gelaufen** |
+| Erster Versuch als Gesamtlauf | nach 53 min abgebrochen, erst in der Stufe „editor mobil"; dort ein Fehlschlag (PROJ-7, Schalter der Arbeitsnotiz in der Leseansicht — nicht der Generator). Einzeln wiederholt scheiterte er schon beim Vorbereiten an „fetch failed" |
+
+### Nicht belegt
+
+- **In Handybreite** sind die drei neuen Tests nicht gelaufen
+- **Die beiden Fehlschläge in PROJ-16 und der in PROJ-7** sind bei guter Verbindung nicht
+  wiederholt — als Fehler der App gelten sie erst, wenn sie dann wieder scheitern
+- **Im Browser von Hand angesehen:** nichts
+- Ein Muster mit Sportarten, die die Gruppe nicht hat, ist nur über die Unit-Tests der
+  Vergleichsfunktion abgedeckt
