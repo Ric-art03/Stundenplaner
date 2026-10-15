@@ -274,7 +274,15 @@ Neu offen, nicht entschieden: ob das Gruppen-Formular bei „Keine Halle" sagen 
 
 Eines bleibt daraus: **die Verwaltung ist in der Produktion noch nicht von Hand durchgespielt** — alles von PROJ-16 liegt hinter der Anmeldung. Einmal anmelden, die Seite „Verwaltung" mit allen drei Reitern öffnen, ein Stundenmuster speichern und im Generator anwenden. Offen aus der QA: **BUG-27** (niedrig).
 
-**Nächster Schritt:** `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec. Die 40 Testübungen in der Datenbank sind Rohmasse dafür.
+**PROJ-16 ist am 2026-10-15 nach dem Durchspielen überarbeitet** (`/refine`) — zwei Punkte im Generator, in der Spec mit dem Vermerk *(2026-10-15)*, **noch nicht gebaut**:
+
+- **Wer Handarbeit am Zeitverlauf wegwirft, wird vorher gefragt.** „Auf Standard zurücksetzen" verwarf bisher still, während „Auf Stundenmuster setzen" daneben nachfragte. Jetzt fragen beide — und auch der **Gruppenwechsel ohne Muster**, der seit PROJ-6 still verwarf (am Code aufgefallen, vom Nutzer mitgenommen). Der Weg „Standard" oben fragt bewusst nicht: dort geht nichts verloren
+- **„Stundenmuster speichern" ist ausgegraut**, solange der Zeitverlauf genau dem geladenen Muster entspricht, mit dem Satz „Dieses Stundenmuster ist so schon gespeichert." Ein umgerechnetes Muster bleibt speicherbar
+- **„Verändert" heißt künftig: anderer Inhalt**, nicht „angefasst" — für den Knopf und alle Nachfragen gleich. Eine zurückgenommene Änderung ist keine
+
+Reine Oberfläche: keine Migration, keine neuen Pakete.
+
+**Nächster Schritt:** `/frontend PROJ-16` für die Überarbeitung. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec. Die 40 Testübungen in der Datenbank sind Rohmasse dafür.
 
 ## Features
 

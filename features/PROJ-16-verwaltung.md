@@ -4,6 +4,14 @@
 **Created:** 2026-10-04
 **Last Updated:** 2026-10-15
 
+> **Am 2026-10-15 überarbeitet (`/refine`), nach dem Durchspielen in der Produktion — noch nicht
+> gebaut.** Zwei Punkte im Generator: **wer Handarbeit am Zeitverlauf wegwirft, wird vorher
+> gefragt** — jetzt auch bei „Auf Standard zurücksetzen" und beim Gruppenwechsel ohne Muster, nicht
+> nur beim Laden eines Musters; und **„Stundenmuster speichern" ist ausgegraut**, solange der
+> Zeitverlauf genau dem geladenen Muster entspricht. Dazu ein Begriff von „verändert" für beides:
+> verglichen wird der Inhalt, eine zurückgenommene Änderung ist keine. Betroffen sind G, H, Edge
+> Cases und das Decision Log; die Kriterien tragen den Vermerk *(2026-10-15)*.
+
 > **Am 2026-10-14 überarbeitet (`/refine`), nach der Durchsicht durch den Nutzer — am selben Tag
 > gebaut**, siehe „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-14". Vier Punkte: „Verwaltung" steht am Rechner als vierter Menüpunkt in der Kopfzeile;
 > Löschen einer Halle erklärt seine Folgen, und Material, das aus einer Halle wegfällt, wird beim
@@ -76,6 +84,8 @@ Dieses Feature bringt drei Dinge:
 - **Stundenmuster oder Kategorien teilen** — PROJ-12 (Community)
 - **Neue Funktionen an den Hallen** — die Hallenverwaltung zieht um, so wie sie ist; dazu kommen nur die Erklärung beim Löschen und die Nachfrage zum Material (2026-10-14). Dokumente an Hallen bleiben PROJ-15
 - **Durchführungen nachträglich umschreiben** — was eine Durchführung (PROJ-14) festgehalten hat, bleibt beim Umbenennen stehen; sie ist eine Aufzeichnung
+- **Erkennen, dass ein Zeitverlauf einem anderen, nicht geladenen Muster gleicht** — „so schon gespeichert" heißt: gleich dem Muster, das gerade geladen ist. Wer unter „Individuell" zufällig ein vorhandenes Muster nachbaut, kann es ein zweites Mal ablegen; der Name muss ohnehin ein anderer sein (2026-10-15)
+- **Ein „Rückgängig" im Generator** — die Nachfragen schützen vor dem Verlust, ein Verlauf der Schritte ist nicht Teil dieses Features (2026-10-15)
 
 ## Acceptance Criteria
 
@@ -183,6 +193,10 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 - [ ] Angenommen es gibt schon ein Muster mit diesem Namen (Groß-/Kleinschreibung ohne Unterschied), dann fragt die App, ob es überschrieben werden soll, und speichert erst nach der Bestätigung
 - [ ] Angenommen der Zeitverlauf stammt aus einem geladenen Muster, wenn der Nutzer „Stundenmuster speichern" wählt, dann bietet der Dialog zwei Wege: „‚[Name]' überschreiben" und „Als neues Muster speichern" mit Namensfeld
 - [ ] Angenommen die Minuten der Segmente ergeben nicht die Einheitsdauer, dann ist „Stundenmuster speichern" nicht ausführbar und sagt, warum
+- [ ] *(2026-10-15)* Angenommen ein Muster ist geladen und der Zeitverlauf entspricht ihm genau (im Sinne von „verändert" unter H), dann ist „Stundenmuster speichern" ausgegraut, und unter den Knöpfen steht: „Dieses Stundenmuster ist so schon gespeichert."
+- [ ] *(2026-10-15)* Angenommen das geladene Muster wurde auf die Dauer der Gruppe umgerechnet, dann gilt der Zeitverlauf als abweichend und „Stundenmuster speichern" bleibt ausführbar — so lässt sich die umgerechnete Fassung als neues Muster ablegen
+- [ ] *(2026-10-15)* Angenommen der Nutzer ändert am geladenen Muster etwas und nimmt es wieder zurück, dann ist der Knopf wieder ausgegraut
+- [ ] *(2026-10-15)* Angenommen der Nutzer hat das Muster gerade gespeichert (überschrieben oder neu), dann ist dieses Muster das geladene und der Knopf ausgegraut, bis sich am Zeitverlauf wieder etwas ändert
 - [ ] Angenommen das Muster ist gespeichert, dann sagt eine Meldung es mit Namen, der Zeitverlauf bleibt unverändert stehen und das Muster steht sofort in der Auswahl des Generators und in der Verwaltung
 - [ ] Angenommen der Nutzer hat bereits 100 Stundenmuster, wenn er ein weiteres neu speichern will, dann wird es abgelehnt mit dem Hinweis auf die Grenze und auf die Verwaltung; Überschreiben bleibt möglich
 
@@ -200,9 +214,13 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 - [ ] Angenommen ein Segment des Musters trägt eigene Sportarten, dann stehen nach dem Laden genau diese, auch wenn keine davon zur Gruppe gehört
 - [ ] Angenommen der Nutzer ändert nach dem Laden etwas am Zeitverlauf, dann bleibt das Muster selbst unverändert, bis er „Stundenmuster speichern" und „überschreiben" wählt
 - [ ] Angenommen der Zeitverlauf ist sichtbar und es gibt Muster, dann steht dort neben „Auf Standard zurücksetzen" der Knopf „Auf Stundenmuster setzen", der dieselbe Auswahlliste öffnet
+- [ ] *(2026-10-15)* **„Von Hand verändert"** heißt: der Zeitverlauf, wie er dasteht, weicht vom Standard der Gruppe ab — oder, wenn ein Muster geladen ist, von diesem Muster, wie es auf die Gruppe angewendet wurde. Verglichen wird der Inhalt (Segmente in ihrer Reihenfolge mit Phase, Minuten, „generieren oder frei lassen", Schwierigkeit, Sportarten, Organisationsform, Arbeitsnotiz der Phase), nicht ob etwas angefasst wurde: eine zurückgenommene Änderung ist keine. Dieser eine Begriff gilt für alle Nachfragen hier und für „Stundenmuster speichern" unter G
 - [ ] Angenommen der Nutzer hat den Zeitverlauf von Hand verändert, wenn er ein Muster wählt oder „Auf Stundenmuster setzen" benutzt, dann fragt die App vorher nach, weil der bisherige Stand ersetzt wird
+- [ ] *(2026-10-15)* Angenommen der Nutzer hat den Zeitverlauf von Hand verändert, wenn er „Auf Standard zurücksetzen" wählt, dann fragt die App mit derselben Nachfrage vorher nach („Bisherigen Zeitverlauf ersetzen?"); erst nach „Ersetzen" wird zurückgesetzt und die Meldung „Auf Standard zurückgesetzt" erscheint. Ist der Zeitverlauf unverändert, wird ohne Nachfrage zurückgesetzt
+- [ ] *(2026-10-15)* Angenommen der Nutzer hat den Zeitverlauf von Hand verändert, wenn er oben auf den Weg „Standard" umschaltet, dann fragt die App **nicht** nach — die Änderungen gehen dabei nicht verloren und stehen beim Zurückschalten auf „Individuell" wieder da
 - [ ] Angenommen der Zeitverlauf ist unverändert gegenüber Standard oder dem zuletzt geladenen Muster, wenn der Nutzer ein Muster wählt, dann wird es ohne Nachfrage geladen
 - [ ] Angenommen ein Muster ist geladen, wenn der Nutzer die Gruppe wechselt, dann bleibt das Muster gewählt und wird für die neue Gruppe frisch angewendet (Umrechnung und Sportarten der neuen Gruppe); war der Zeitverlauf von Hand verändert, fragt die App vorher nach
+- [ ] *(2026-10-15)* Angenommen kein Muster ist geladen und der Zeitverlauf ist von Hand verändert, wenn der Nutzer die Gruppe wechselt, dann fragt die App vorher nach: der Zeitverlauf wird für die neue Gruppe neu aufgebaut, was von Hand geändert wurde, geht verloren. Bei „Abbrechen" bleiben Gruppe und Zeitverlauf, wie sie waren. Das erweitert das Verhalten aus PROJ-6, wo der Wechsel still verwarf
 - [ ] Angenommen der Nutzer hat mit einem Muster generiert, wenn er von der Einheit „Zurück zum Generator" wählt, dann steht der Zeitverlauf so da, wie er ihn verlassen hat
 - [ ] Angenommen eine Einheit ist aus einem Muster entstanden, wenn das Muster danach überschrieben, umbenannt oder gelöscht wird, dann ändert sich an der Einheit nichts
 - [ ] Angenommen ein Muster trägt eine eigene Phase, die inzwischen gelöscht wurde, dann wird das Muster trotzdem vollständig geladen und das Segment trägt die Phase weiter
@@ -251,6 +269,11 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 - **Material entfernen, das nur eine Variante braucht** *(2026-10-14)* — die Grundübung bleibt einplanbar, nur die Variante fällt weg. Die Nachfrage zählt sie trotzdem mit, als „Übung oder Variante"; ob sie beides getrennt nennt, entscheidet der Entwurf
 - **Material entfernen, das „Kein Material" heißt** — kann an einer Halle nicht stehen; die Hallenliste bietet es nicht an
 - **„Im Generator öffnen", während der Generator in einem anderen Tab mit eigenen Änderungen offen ist** *(2026-10-14)* — die beiden Tabs sind getrennt; der neue beginnt frisch, der alte bleibt unberührt
+- **Weg „Standard" gewählt, Änderungen unter „Individuell" aufgehoben, dann Gruppenwechsel** *(2026-10-15)* — die App fragt nach, obwohl die Änderungen gerade nicht zu sehen sind: beim Gruppenwechsel gingen sie verloren, und dass sie beim Zurückschalten wieder dastehen, ist versprochen
+- **Mit „Zurück zum Generator" mitgebrachter Zeitverlauf** *(2026-10-15)* — die Einheit merkt sich kein Muster, verglichen wird deshalb mit dem Standard der Gruppe. Gleicht er ihm, wird ohne Nachfrage ersetzt; sonst wird gefragt. „Stundenmuster speichern" ist aktiv, weil kein Muster geladen ist
+- **Muster geladen, dann zurück auf Standard gesetzt** *(2026-10-15)* — danach ist kein Muster mehr geladen; verglichen wird mit dem Standard, „Stundenmuster speichern" ist wieder aktiv
+- **Muster geladen, Gruppe gewechselt, auf die neue Gruppe umgerechnet** *(2026-10-15)* — verglichen wird mit dem Muster, wie es auf die neue Gruppe angewendet wurde; ohne weitere Änderung fragt der nächste Wechsel nicht nach. „Stundenmuster speichern" ist aktiv, wenn umgerechnet wurde, sonst ausgegraut
+- **Muster in einem anderen Tab überschrieben, während es hier geladen ist** *(2026-10-15)* — verglichen wird mit dem Stand, der hier geladen wurde; der Knopf bleibt ausgegraut, bis sich hier etwas ändert. Erst beim Überschreiben von hier aus gilt wie bisher das Zuletzt-Gespeicherte
 
 ## Technical Requirements
 - **Sicherheit:** Anmeldung erforderlich; jeder Lese- und Schreibweg wirkt nur auf Einträge des angemeldeten Nutzers, auf dem Server geprüft und in der Datenbank abgesichert
@@ -298,6 +321,11 @@ Halle, prüft er das Material gar nicht. Beides war bisher nirgends gesagt.
 | Einen Materialbegriff in der Verwaltung zu löschen bleibt ohne Folgen für den Generator | Am Code nachgesehen: Übungen und Hallen behalten das Material, der Generator vergleicht weiter über den Namen. Die Frage des Nutzers „ist das abgesichert?" ist damit beantwortet; der Löschdialog sagt es künftig ausdrücklich | 2026-10-14 |
 | Ein „Kategorien verwalten"-Link je Bildschirm, unter dem letzten Kategorie-Feld | Vom Nutzer gewählt. Fünf gleiche Links im Schritt „Einordnung" und einer je Segment im Generator wirkten wie Lärm; der Link ist ein seltener Weg und braucht einen festen Platz, nicht jede Gelegenheit. Ersetzt die Abweichung aus dem Frontend („ein Link pro Formular-Abschnitt") | 2026-10-14 |
 | „Im Generator öffnen" am Stundenmuster, Gruppe danach wählen | Wunsch des Nutzers; kehrt die Entscheidung vom 2026-10-12 um, diesen Knopf nicht zu bauen. Das Muster ist vorgewählt und wird beim Wählen der Gruppe angewendet — der Weg „Muster zuerst, dann Gruppe" ist der, aus dem der Nutzer in der Verwaltung kommt | 2026-10-14 |
+| „Auf Standard zurücksetzen" fragt nach, wenn der Zeitverlauf von Hand verändert ist — wie „Auf Stundenmuster setzen" | Rückmeldung des Nutzers nach dem Durchspielen: zwei gleich aussehende Knöpfe nebeneinander, der eine fragt, der andere verwirft still und meldet es erst danach | 2026-10-15 |
+| Der Weg „Standard" oben fragt nicht nach | Vom Nutzer gewählt. Beim Umschalten geht nichts verloren — die Änderungen stehen unter „Individuell" wieder da. Eine Nachfrage dort würde einen Verlust behaupten, den es nicht gibt | 2026-10-15 |
+| Auch der Gruppenwechsel ohne Muster fragt nach, wenn der Zeitverlauf von Hand verändert ist | Vom Nutzer gewählt, beim Durchsehen am Code aufgefallen: bisher fragte der Wechsel nur bei geladenem Muster. Damit gilt überall dieselbe Regel — wer Handarbeit wegwirft, wird vorher gefragt. Erweitert das Verhalten aus PROJ-6 | 2026-10-15 |
+| „Stundenmuster speichern" ist ausgegraut, solange der Zeitverlauf genau dem geladenen Muster entspricht; ein umgerechnetes Muster gilt als abweichend | Wunsch des Nutzers; Speichern ohne Unterschied legt nur ein Doppel an oder überschreibt mit demselben. Das umgerechnete Muster bleibt speicherbar (vom Nutzer gewählt), weil die Fassung für die andere Dauer ein echter neuer Stand ist. Der Grund steht unter dem Knopf, wie beim Hinweis zu den Minuten | 2026-10-15 |
+| „Verändert" heißt: anderer Inhalt — nicht „angefasst" | Vom Nutzer gewählt. Ein Begriff für Knopf und Nachfragen; sonst bliebe der Knopf nach einer zurückgenommenen Änderung aktiv und die App fragte nach, obwohl nichts verloren geht | 2026-10-15 |
 
 ### Technical Decisions
 <!-- Added by /architecture -->
