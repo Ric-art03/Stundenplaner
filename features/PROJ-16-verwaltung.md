@@ -1,6 +1,6 @@
 # PROJ-16: Verwaltung (Hallen, Stundenmuster, eigene Kategorien)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-04
 **Last Updated:** 2026-10-16
 
@@ -1204,3 +1204,44 @@ Dazu das Kriterium „Muster wählen fragt vorher" aus der ersten Fassung, bishe
 - **Security:** Pass — keine neue Angriffsfläche
 - **Production Ready:** YES
 - **Recommendation:** Deploy
+
+## Deployment — Überarbeitung vom 2026-10-15
+
+**Ausgeliefert:** 2026-10-16
+**Produktions-URL:** https://stundenplaner-self.vercel.app
+**Tag:** `v1.8.1-PROJ-16` · **Commit:** `63afd19`
+
+### Vorprüfung
+
+| | Ergebnis |
+|---|---|
+| Freigabe durch `/qa` | ja — 13 von 13 Kriterien, kein neuer Fehler; offen nur BUG-27 (niedrig). Die zwei Grenzfälle, die nur am Code gelesen waren, hat der Nutzer von Hand durchgespielt |
+| Produktionsbuild | sauber |
+| Lint | 0 Fehler (4 bekannte Warnungen zu `<img>` aus PROJ-3) |
+| Typprüfung | sauber |
+| Unit-Tests | 615 grün |
+| Browser-Tests | aus der QA: beide Verwaltungsstufen 45 von 45, Gesamtlauf ohne Regression |
+| Geändert seit `v1.8.0-PROJ-16` | nur `unit-config-form.tsx`, zwei reine Funktionen (`timeline.ts`, `patterns.ts`), Tests und Doku |
+| Pakete, Konfiguration, Migrationen | unverändert — kein neues Paket, `next.config.ts` und `.env.local.example` unberührt, keine Migration; die Datenbank bleibt wie sie ist |
+| Umgebungsvariablen | keine neue |
+| Geheimnisse im Diff | keine; im Repository liegen nur `.env.example` und `.env.local.example` |
+| Hochgeladen | 6 Commits, `29e353e..63afd19` |
+
+### Nachprüfung in der Produktion — 2026-10-16
+
+Von außen, ohne Anmeldung:
+
+- **Vercel** meldet die Auslieferung am Commit `63afd19` als abgeschlossen („Deployment has completed")
+- **Öffentliche Seiten** (`/`, `/login`, `/register`, `/live`, `/live-sw.js`) antworten mit 200
+- **Geschützte Seiten** (`/dashboard`, `/manage`, `/manage?tab=patterns`, `/groups/venues`, `/units/new`, `/units`, `/exercises`, `/groups`) leiten mit 307 auf `/login`
+- **Sicherheits-Kopfzeilen** liegen an `/` und `/manage` an: X-Frame-Options `DENY`, X-Content-Type-Options `nosniff`, Referrer-Policy `origin-when-cross-origin`, HSTS `max-age=31536000; includeSubDomains`
+- **Supabase-Protokolle** in dieser Runde nicht nachgesehen — das Supabase-Werkzeug war nicht verbunden. Die Überarbeitung berührt die Datenbank nicht
+
+### Was damit nicht belegt ist
+
+- **Der Generator mit den neuen Nachfragen und dem Mitnehmen beim Gruppenwechsel** liegt hinter der Anmeldung und ist in der Produktion noch nicht durchgespielt. Einmal anmelden, im Generator einen veränderten Zeitverlauf auf eine andere Gruppe mitnehmen und ein Stundenmuster laden — „Stundenmuster speichern" muss ausgegraut sein
+- **Firefox und echtes Safari**
+
+### Zurückrollen
+
+Im Vercel-Dashboard unter „Deployments" die Auslieferung von `ca89bdb` (`v1.8.0-PROJ-16`) auf „Promote to Production" setzen. Die Datenbank muss dafür nicht zurückgedreht werden — die Überarbeitung hat sie nicht geändert. Folge: der Generator verwirft beim Gruppenwechsel wieder den Zeitverlauf, und „Auf Standard zurücksetzen" fragt nicht mehr nach.

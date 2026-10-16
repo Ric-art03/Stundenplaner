@@ -288,7 +288,11 @@ Reine Oberfläche: keine Migration, keine neuen Pakete.
 
 **Die Überarbeitung ist seit dem 2026-10-16 freigegeben** — Abschnitt „QA Test Results — Überarbeitung vom 2026-10-15" in der Spec, Stand Commit `b9b9844`. **13 von 13 Kriterien bestanden, kein neuer Fehler**; offen nur BUG-27 (niedrig). Was vorher nur am Code gelesen war — Speichern und danach ausgegraut, Mitnehmen mit gewähltem Muster, Rückfall auf das Muster, „Zurück zum Generator" —, ist jetzt im Browser gelaufen: 8 neue Tests je Rechner und Handy, beide Verwaltungsstufen **45 von 45**, dazu 5 Unit-Tests für das wiederholte Umrechnen (**615 grün**). Gesamtlauf ohne Regression (378 grün; die zwei Fehlschläge waren ein falscher Knopfname im neuen Test und ein Internetausfall beim Aufräumen). Nur am Code: „Standard" gewählt beim Gruppenwechsel und ein in einem anderen Tab überschriebenes Muster. Beobachtung für einen späteren `/refine`: „Individuell" ohne Änderung springt beim Gruppenwechsel auf „Standard" (so seit PROJ-6).
 
-**Nächster Schritt:** `/deploy PROJ-16`. Daneben wartet `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec. Die 40 Testübungen in der Datenbank sind Rohmasse dafür.
+**Die Überarbeitung ist am 2026-10-16 ausgeliefert** — https://stundenplaner-self.vercel.app, Tag `v1.8.1-PROJ-16`, Commit `63afd19`. Abschnitt „Deployment — Überarbeitung vom 2026-10-15" in der Spec. Vor dem Hochladen geprüft: Build, Lint, Typprüfung, 615 Unit-Tests, kein Geheimnis, kein Paket, keine Migration, keine neue Umgebungsvariable. Nach dem Hochladen: Vercel meldet die Auslieferung als abgeschlossen, öffentliche Seiten 200, geschützte 307 auf `/login`, Sicherheits-Kopfzeilen liegen an. Die Supabase-Protokolle sind diesmal nicht nachgesehen (Werkzeug nicht verbunden); die Datenbank ist unberührt.
+
+Eines bleibt: **der Generator mit den neuen Nachfragen ist in der Produktion noch nicht von Hand durchgespielt** — er liegt hinter der Anmeldung. Offen aus der QA: **BUG-27** (niedrig).
+
+**Nächster Schritt:** `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec. Die 40 Testübungen in der Datenbank sind Rohmasse dafür.
 
 ## Features
 
@@ -308,7 +312,7 @@ Reine Oberfläche: keine Migration, keine neuen Pakete.
 | PROJ-13 | Mehrsprachigkeit (i18n) | P2 | None | Roadmap | — | 2026-09-28 |
 | PROJ-14 | Live-Modus (Stundenbegleitung) | P0 | PROJ-6, PROJ-7 | Deployed | [Spec](PROJ-14-live-modus.md) | 2026-10-01 |
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
-| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Approved | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
+| PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
 
 <!-- Add features above this line -->
