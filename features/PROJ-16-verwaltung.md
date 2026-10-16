@@ -1,8 +1,8 @@
 # PROJ-16: Verwaltung (Hallen, Stundenmuster, eigene Kategorien)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-04
-**Last Updated:** 2026-10-15
+**Last Updated:** 2026-10-16
 
 > **Am 2026-10-15 überarbeitet (`/refine`), nach dem Durchspielen in der Produktion — am selben
 > Tag gebaut**, siehe „Implementation Notes (Frontend) — Überarbeitung vom 2026-10-15". Zwei Punkte im Generator: **wer Handarbeit am Zeitverlauf wegwirft, wird vorher
@@ -1110,3 +1110,97 @@ Fehlschlag im Reiter „Hallen", „Received undefined"). Nacheinander gestartet
   Vergleichsfunktionen abgedeckt
 - Mehrmaliges Hin- und Herwechseln (Rundung beim wiederholten Umrechnen) ist nur in der Spec als
   Grenzfall beschrieben, nicht getestet
+
+## QA Test Results — Überarbeitung vom 2026-10-15
+
+**Tested:** 2026-10-16, Stand Commit `b9b9844`
+**App URL:** http://localhost:3100 (Produktionsbuild)
+**Tester:** QA Engineer (AI)
+
+### Ergebnis in einem Satz
+
+**Bereit für die Auslieferung:** alle 13 Kriterien der Überarbeitung bestanden, kein neuer
+Fehler. Was nach dem Bauen nur am Code gelesen war, ist jetzt größtenteils im Browser gelaufen.
+Offen bleibt nur BUG-27 (niedrig) aus der ersten QA.
+
+### Was gelaufen ist
+
+| | Ergebnis |
+|---|---|
+| Unit-Tests | **615 grün** (610 plus 5 neue für `carryTimeline`: hin und zurück mit eigenen Sportarten, siebenmal hin und her, 60 → 30 → 60, genau so viele Minuten wie Phasen, Ausgangsstand unberührt) |
+| Browser-Tests PROJ-16 | **8 neu**, je Rechner und Handy (siehe unten). Stufe „verwaltung" **45 von 45**, „verwaltung mobil" **45 von 45**; BUG-27 weiter als erwarteter Fehlschlag |
+| Gesamtlauf aller Features | **378 grün**, 2 fehlgeschlagen, 54 nicht gelaufen (16,6 Minuten). Beide Fehlschläge kamen vom Test bzw. von der Leitung, nicht von der App — siehe „Hinweis zur Testumgebung". **Keine Regression** in PROJ-3, -5, -6, -7 und -14 |
+| Typprüfung, Lint, Build | sauber (Lint: die 4 bekannten Warnungen zu `<img>`) |
+| Breiten | Rechner (1280 px) und Handy („iPhone 13", 390 px): die ganze Stufe läuft in beiden |
+| Browser | **nur Chromium** (Edge). Firefox und echtes Safari sind auf diesem Rechner nicht prüfbar |
+
+### Neue Browser-Tests
+
+1. Nach dem Speichern ist das Muster das geladene: ausgegraut, nach einer Änderung frei, der Dialog bietet „überschreiben", danach wieder ausgegraut; das Überschreiben steht in der Datenbank
+2. Unveränderter Zeitverlauf mit Muster, Gruppenwechsel (60 → 45 Minuten, Turnen → Volleyball): Muster frisch angewendet, kein Hinweis „übernommen", Muster bleibt gewählt, ausgegraut mit Umrechnungshinweis, die Phase trägt die Sportart der neuen Gruppe
+3. Muster gewählt und verändert, Gruppenwechsel (60 → 30): mitgenommen, Muster bleibt gewählt, Arbeitsnotiz da, Sportart der neuen Gruppe; die Rücknahme graut aus (Vergleich mit dem Muster auf der neuen Gruppe); „überschreiben" angeboten
+4. Muster mit sechs Phasen, zwei entfernt, Gruppe mit 5 Minuten: keine Nachfrage, mitgenommen, Muster abgewählt, Weg „Individuell", Speichern frei
+5. Veränderter Stand mit sechs Phasen passt nicht, das Muster mit zwei schon: die Nachfrage sagt, dass das Muster angewendet wird; nach „Trotzdem wechseln" steht das Muster (2 / 3 Minuten)
+6. Muster geladen, „Auf Standard zurücksetzen" ohne Nachfrage: kein Muster mehr geladen, Speichern frei
+7. Muster wählen bei verändertem Zeitverlauf: Nachfrage; „Abbrechen" lässt die Arbeitsnotiz stehen, „Ersetzen" lädt das Muster
+8. „Zurück zum Generator" aus einer Einheit im Standard-Aufbau: Speichern frei, Zurücksetzen ohne Nachfrage; nach einer Änderung fragt es nach
+
+### Akzeptanzkriterien der Überarbeitung
+
+13 Kriterien mit dem Vermerk *(2026-10-15)*, *(2026-10-15, b)* oder *(2026-10-16)*. **Durchgefallen: keines.**
+
+| Kriterium | Ergebnis | Wie belegt |
+|---|---|---|
+| G: ausgegraut, solange das geladene Muster unverändert ist | ✅ | Browser |
+| G: nur umgerechnet ist auch ausgegraut, mit Hinweis auf die Umrechnung *(2026-10-16)* | ✅ | Browser (Tests 2, 3 und der bestehende) |
+| G: Änderung zurückgenommen → wieder ausgegraut | ✅ | Browser |
+| G: nach dem Speichern (neu oder überschrieben) ausgegraut | ✅ | Browser (Test 1) |
+| H: „verändert" heißt anderer Inhalt | ✅ | 14 Unit-Tests `sameTimeline`, im Browser über die Rücknahme |
+| H: „Auf Standard zurücksetzen" fragt nur bei Änderung | ✅ | Browser |
+| H: der Weg „Standard" fragt nicht | ✅ | Browser |
+| H (b): der Gruppenwechsel nimmt mit, ohne Nachfrage | ✅ | Browser |
+| H (b): unverändert → frisch aufgebaut, Muster bleibt gewählt | ✅ | Browser mit Muster (Test 2); ohne Muster unverändert aus PROJ-6, nur am Code |
+| H (b): verändert → umgerechnet, Sportarten der neuen Gruppe, der Rest bleibt | ✅ | Browser (Tests 3, 4) und Unit-Tests |
+| H (b): Hinweis „Zeitverlauf übernommen …" in beiden Fassungen | ✅ | Browser. Dass er beim Laden eines Musters und beim Zurücksetzen verschwindet: nur am Code |
+| H (b): das Muster bleibt Vergleichsstand, „überschreiben" möglich | ✅ | Browser (Test 3) |
+| H (b): passt nicht → Nachfrage mit beiden Zahlen, beide Ausgänge | ✅ | Browser: Rückfall auf den Standard (bestehender Test) und auf das Muster (Test 5) |
+
+Dazu das Kriterium „Muster wählen fragt vorher" aus der ersten Fassung, bisher nur am Code: jetzt im Browser (Test 7).
+
+### Grenzfälle der Überarbeitung
+
+- [ ] „Standard" gewählt, Änderungen unter „Individuell", dann Gruppenwechsel — **nur am Code**: der bestehende Test schaltet vor dem Wechsel zurück auf „Individuell"
+- [x] Mit „Zurück zum Generator" mitgebracht — Browser (Test 8)
+- [x] Muster geladen, dann zurück auf Standard — Browser (Test 6)
+- [x] Muster geladen, Gruppe gewechselt, umgerechnet — Browser (Test 2)
+- [x] Mehrmals hin und her — Unit-Tests: die Summe stimmt jedes Mal, keine Phase unter einer Minute, über 60 → 30 → 60 höchstens 2 Minuten Verschiebung je Phase
+- [x] Muster zu lang, veränderter Stand passt — Browser (Test 4)
+- [ ] Muster in einem anderen Tab überschrieben — **nur am Code**: verglichen wird mit dem hier geladenen Stand
+
+### Sicherheit (Red Team)
+
+- **Keine neue Angriffsfläche.** Die Überarbeitung berührt keinen Serverweg, keine Datenbank-Funktion und keine Zugriffsregel; geändert sind nur `unit-config-form.tsx` und zwei reine Funktionen. Gespeichert wird über denselben Serverweg wie zuvor, mit derselben Prüfung
+- Die Datenbank ist in dieser Runde **nicht** neu nachgesehen — das Supabase-Werkzeug war nicht verbunden. Seit der ersten QA ist dort nichts geändert worden; keine neue Migration im Code
+
+### Bugs Found
+
+**Keine neuen.** Offen aus der ersten QA: **BUG-27** (niedrig).
+
+### Beobachtungen ohne Fehler
+
+- **„Individuell" ohne Änderung, dann Gruppenwechsel: der Weg springt auf „Standard"**, und der Zeitverlauf klappt zu. Mit verändertem Stand bleibt „Individuell" stehen. So entschieden in PROJ-6 und durch das Kriterium „ohne Muster ihr Standard" gedeckt. Wirkt aber uneinheitlich, wenn man nur nachsehen wollte — eine Frage für einen späteren `/refine`, kein Fehler
+- **Der Zeitbalken ist ein Ziehfeld.** Ein automatischer Klick auf ein schmales Segment wurde einmal als Ziehen gewertet und wählte nichts aus. Die Tests klicken deshalb auf die Überschrift in der Liste darunter. Von Hand ist das nicht aufgefallen
+
+### Hinweis zur Testumgebung
+
+- **Gesamtlauf, 2 Fehlschläge, beide nicht an der App:** (1) Test 1 suchte im Dialog den Knopf „Speichern" — beim Überschreiben heißt er „Überschreiben"; im Test berichtigt. (2) Das Aufräumen am Ende brach mit „fetch failed" ab — die Internetverbindung des Rechners war in dem Moment weg; nachgelaufen und grün. Die 54 nicht gelaufenen Tests sind die Stufe „verwaltung mobil", die nach einem Fehlschlag übersprungen wird
+- **Nachläufe:** Test 4 scheiterte je einmal am Rechner und am Handy, einzeln lief er grün. Ursache im Test: erst der Klick auf das Ziehfeld (siehe oben), dann am Handy ein Tipp auf „Phase entfernen" während der Aufklapp-Animation, der auf der Überschrift darunter landete. Der Test wartet jetzt auf den aufgeklappten Bereich der Phase. Danach beide Stufen nacheinander: 45 von 45 und 45 von 45
+- Die Latenz zu Supabase lag am Anfang bei 0,6–0,7 s je Anfrage, bei den Nachläufen wieder bei 0,2–0,4 s
+
+### Summary
+- **Acceptance Criteria (Überarbeitung):** 13/13 passed (alle im Browser ausgeführt, eines davon nur für den Fall mit Muster)
+- **Edge Cases (Überarbeitung):** 5 von 7 im Browser oder über Unit-Tests belegt, 2 nur am Code
+- **Bugs Found:** 0 neue (offen: BUG-27, niedrig)
+- **Security:** Pass — keine neue Angriffsfläche
+- **Production Ready:** YES
+- **Recommendation:** Deploy

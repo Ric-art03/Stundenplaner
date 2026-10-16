@@ -865,6 +865,286 @@ test.describe('PROJ-16 — G–I. Stundenmuster', () => {
     await expect(save).toBeEnabled()
   })
 
+  // ---- QA 2026-10-16: was bis dahin nur am Code gelesen war ----
+
+  test('AC (2026-10-15): nach dem Speichern ist das Muster das geladene — ausgegraut bis zur nächsten Änderung, dann „überschreiben"', async ({ page }) => {
+    const group = await createGroup('Nach Speichern', { unitDuration: 60 })
+    await createExercise(`${TAG} Übung Nach Speichern`)
+    const name = `${TAG} Frisch gespeichert`
+
+    await page.goto(`/units/new?group=${group.id}`)
+    await page.getByRole('radio', { name: 'Individuell' }).click()
+    const note = page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt')
+    await note.fill('Erst im Kreis')
+    const save = page.getByRole('button', { name: 'Stundenmuster speichern' })
+    await save.click()
+    const dialog = page.getByRole('dialog', { name: 'Stundenmuster speichern' })
+    await dialog.getByLabel('Name').fill(name)
+    await dialog.getByRole('button', { name: 'Speichern' }).click()
+    await expect(dialog).toBeHidden()
+
+    await expect(save).toBeDisabled()
+    await expect(page.getByText('Dieses Stundenmuster ist so schon gespeichert.')).toBeVisible()
+
+    // Eine Änderung macht ihn frei — der Dialog bietet jetzt „überschreiben".
+    await note.fill('Erst im Kreis, dann Laufspiel')
+    await expect(save).toBeEnabled()
+    await save.click()
+    await expect(dialog.getByText(`„${name}“ überschreiben`)).toBeVisible()
+    await expect(dialog.getByText('Als neues Muster speichern')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Überschreiben' }).click()
+    await expect(dialog).toBeHidden()
+    await expect(save).toBeDisabled()
+    await expect
+      .poll(async () => {
+        const { data } = await admin.from('unit_patterns').select('segments').eq('user_id', userId).eq('name', name)
+        return (data?.[0]?.segments as { notes: string }[] | undefined)?.[0]?.notes
+      })
+      .toBe('Erst im Kreis, dann Laufspiel')
+  })
+
+  test('AC (2026-10-15, b): unveränderter Zeitverlauf mit Muster — der Gruppenwechsel wendet das Muster frisch an', async ({ page }) => {
+    const first = await createGroup('Frisch Eins', { unitDuration: 60 })
+    const second = await createGroup('Frisch Zwei', { unitDuration: 45, sports: ['Volleyball'] })
+    const name = `${TAG} Frisch angewendet`
+    await createPattern(name, 60, [patternSegment('Ankommen', 20), patternSegment('Hauptteil', 40)])
+    await createExercise(`${TAG} Übung Frisch`)
+
+    await page.goto(`/units/new?group=${first.id}`)
+    await page.getByRole('radio', { name: 'Stundenmuster' }).click()
+    await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
+    await page.getByRole('option', { name: new RegExp(name) }).click()
+
+    await chooseGroup(page, second.name)
+    await expect(page.getByText('Muster von 60 auf 45 Minuten umgerechnet.')).toBeVisible()
+    await expect(page.getByText(/Zeitverlauf übernommen/)).toHaveCount(0)
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(page.getByRole('combobox', { name: 'Stundenmuster' })).toContainText(name)
+    await expect(page.getByRole('button', { name: 'Stundenmuster speichern' })).toBeDisabled()
+    await expect(
+      page.getByText('Dieses Stundenmuster ist so schon gespeichert — hier auf 45 Minuten umgerechnet.')
+    ).toBeVisible()
+    // „Wie die Gruppe": die Phase trägt jetzt die Sportart der neuen Gruppe.
+    await page.getByRole('button', { name: /Ankommen/ }).first().click()
+    const region = page.getByRole('region').filter({ hasText: 'Sportart(en)' })
+    await expect(region).toContainText('Volleyball')
+    await expect(region).not.toContainText('Turnen')
+  })
+
+  test('AC (2026-10-15, b): Muster gewählt und verändert — mitgenommen, Muster bleibt gewählt und Vergleichsstand', async ({ page }) => {
+    const first = await createGroup('Vergleich Eins', { unitDuration: 60 })
+    const second = await createGroup('Vergleich Zwei', { unitDuration: 30, sports: ['Volleyball'] })
+    const name = `${TAG} Vergleichsstand`
+    await createPattern(name, 60, [patternSegment('Ankommen', 20), patternSegment('Hauptteil', 40)])
+    await createExercise(`${TAG} Übung Vergleich`)
+
+    await page.goto(`/units/new?group=${first.id}`)
+    await page.getByRole('radio', { name: 'Stundenmuster' }).click()
+    await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
+    await page.getByRole('option', { name: new RegExp(name) }).click()
+    await page.getByRole('button', { name: /Ankommen/ }).first().click()
+    const note = page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt')
+    await note.fill('Namen sagen')
+
+    await chooseGroup(page, second.name)
+    await expect(page.getByText('Zeitverlauf übernommen und von 60 auf 30 Minuten umgerechnet.')).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Stundenmuster' })).toBeChecked()
+    await expect(page.getByRole('combobox', { name: 'Stundenmuster' })).toContainText(name)
+    const save = page.getByRole('button', { name: 'Stundenmuster speichern' })
+    await expect(save).toBeEnabled()
+
+    await page.getByRole('button', { name: /Ankommen/ }).first().click()
+    await expect(note).toHaveValue('Namen sagen')
+    const region = page.getByRole('region').filter({ hasText: 'Sportart(en)' })
+    await expect(region).toContainText('Volleyball')
+
+    // Zurückgenommen gleicht der Stand dem Muster, wie es auf diese Gruppe angewendet würde.
+    await note.fill('')
+    await expect(save).toBeDisabled()
+    await expect(
+      page.getByText('Dieses Stundenmuster ist so schon gespeichert — hier auf 30 Minuten umgerechnet.')
+    ).toBeVisible()
+
+    // „Überschreiben" bleibt möglich.
+    await note.fill('Namen sagen')
+    await save.click()
+    await expect(
+      page.getByRole('dialog', { name: 'Stundenmuster speichern' }).getByText(`„${name}“ überschreiben`)
+    ).toBeVisible()
+  })
+
+  test('Edge (2026-10-15, b): Muster zu lang für die neue Gruppe, der veränderte Stand passt — Muster abgewählt, Weg „Individuell"', async ({ page }) => {
+    const first = await createGroup('Abgewählt Eins', { unitDuration: 60 })
+    const short = await createGroup('Abgewählt Zwei', { unitDuration: 5 })
+    const name = `${TAG} Sechs Phasen`
+    await createPattern(
+      name,
+      60,
+      ['A', 'B', 'C', 'D', 'E', 'F'].map((letter) => patternSegment(`Teil ${letter}`, 10))
+    )
+    await createExercise(`${TAG} Übung Abgewählt`)
+
+    await page.goto(`/units/new?group=${first.id}`)
+    await page.getByRole('radio', { name: 'Stundenmuster' }).click()
+    await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
+    await page.getByRole('option', { name: new RegExp(name) }).click()
+    // Zwei Phasen weg: vier passen in fünf Minuten, das Muster mit sechs nicht.
+    for (const letter of ['E', 'F']) {
+      // Die Überschrift in der Liste, nicht das Ziehfeld im Zeitbalken: dort
+      // wird ein Klick auf ein schmales Segment gelegentlich als Ziehen gewertet.
+      await page.locator('h3').getByRole('button', { name: new RegExp(`Teil ${letter}`) }).click()
+      // Erst im aufgeklappten Bereich dieser Phase klicken — während der
+      // Animation landete der Tipp am Handy sonst auf der Überschrift darunter.
+      await page
+        .getByRole('region', { name: new RegExp(`Teil ${letter}`) })
+        .getByRole('button', { name: 'Phase entfernen' })
+        .click()
+      await expect(page.locator('h3').getByRole('button', { name: new RegExp(`Teil ${letter}`) })).toHaveCount(0)
+    }
+
+    await chooseGroup(page, short.name)
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(page.getByText('Zeitverlauf übernommen und von 60 auf 5 Minuten umgerechnet.')).toBeVisible()
+    await expect(page.getByRole('radio', { name: 'Individuell' })).toBeChecked()
+    await expect(page.getByText(/Teil D/).first()).toBeVisible()
+    // Kein Muster mehr geladen: Speichern ist frei.
+    await expect(page.getByRole('button', { name: 'Stundenmuster speichern' })).toBeEnabled()
+  })
+
+  test('Edge (2026-10-15, b): veränderter Stand passt nicht, das Muster schon — „Trotzdem wechseln" wendet das Muster an', async ({ page }) => {
+    const first = await createGroup('Rückfall Eins', { unitDuration: 60 })
+    const short = await createGroup('Rückfall Zwei', { unitDuration: 5 })
+    const name = `${TAG} Zwei Phasen`
+    await createPattern(name, 60, [patternSegment('Ankommen', 20), patternSegment('Hauptteil', 40)])
+    await createExercise(`${TAG} Übung Rückfall`)
+
+    await page.goto(`/units/new?group=${first.id}`)
+    await page.getByRole('radio', { name: 'Stundenmuster' }).click()
+    await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
+    await page.getByRole('option', { name: new RegExp(name) }).click()
+    for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Phase hinzufügen' }).click()
+
+    await chooseGroup(page, short.name)
+    const confirm = page.getByRole('alertdialog')
+    await expect(confirm).toContainText('6 Phasen')
+    await expect(confirm).toContainText('das gewählte Stundenmuster für sie frisch angewendet')
+    await confirm.getByRole('button', { name: 'Trotzdem wechseln' }).click()
+
+    await expect(page.getByRole('combobox', { name: 'Gruppe' })).toContainText(short.name)
+    await expect(page.getByRole('combobox', { name: 'Stundenmuster' })).toContainText(name)
+    await expect(page.getByText('Muster von 60 auf 5 Minuten umgerechnet.')).toBeVisible()
+    await expect(page.getByText(/Zeitverlauf übernommen/)).toHaveCount(0)
+    // Das Muster (20 / 40) auf 5 Minuten: 2 / 3 — die vier Phasen von Hand sind weg.
+    await expect(page.getByText('2 Min', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('3 Min', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('1 Min', { exact: true })).toHaveCount(0)
+  })
+
+  test('Edge (2026-10-15): Muster geladen, dann auf Standard zurückgesetzt — kein Muster mehr geladen, Speichern frei', async ({ page }) => {
+    const group = await createGroup('Zurück auf Standard', { unitDuration: 60 })
+    const name = `${TAG} Vor dem Zurücksetzen`
+    await createPattern(name, 60, [patternSegment('Ankommen', 20), patternSegment('Hauptteil', 40)])
+    await createExercise(`${TAG} Übung Zurück auf Standard`)
+
+    await page.goto(`/units/new?group=${group.id}`)
+    await page.getByRole('radio', { name: 'Stundenmuster' }).click()
+    await page.getByRole('combobox', { name: 'Stundenmuster' }).click()
+    await page.getByRole('option', { name: new RegExp(name) }).click()
+    const save = page.getByRole('button', { name: 'Stundenmuster speichern' })
+    await expect(save).toBeDisabled()
+
+    // Unverändert gegenüber dem Muster: ohne Nachfrage.
+    await page.getByRole('button', { name: 'Auf Standard zurücksetzen' }).click()
+    await expect(page.getByText('Auf Standard zurückgesetzt', { exact: true })).toBeVisible()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(page.getByRole('radio', { name: 'Individuell' })).toBeChecked()
+    await expect(save).toBeEnabled()
+    await expect(page.getByText(/schon gespeichert/)).toHaveCount(0)
+  })
+
+  test('AC: Muster wählen bei verändertem Zeitverlauf fragt vorher; „Abbrechen" lässt den Stand, „Ersetzen" lädt', async ({ page }) => {
+    const group = await createGroup('Ersetzen', { unitDuration: 60 })
+    const name = `${TAG} Ersetzt`
+    await createPattern(name, 60, [patternSegment('Ankommen', 20), patternSegment('Hauptteil', 40)])
+    await createExercise(`${TAG} Übung Ersetzen`)
+
+    await page.goto(`/units/new?group=${group.id}`)
+    await page.getByRole('radio', { name: 'Individuell' }).click()
+    const note = page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt')
+    await note.fill('Handarbeit')
+
+    await page.getByRole('button', { name: 'Auf Stundenmuster setzen' }).click()
+    await page.getByRole('menuitem', { name: new RegExp(name) }).click()
+    const confirm = page.getByRole('alertdialog')
+    await expect(confirm).toContainText('Das Stundenmuster ersetzt den Zeitverlauf')
+    await confirm.getByRole('button', { name: 'Abbrechen' }).click()
+    await expect(note).toHaveValue('Handarbeit')
+
+    await page.getByRole('button', { name: 'Auf Stundenmuster setzen' }).click()
+    await page.getByRole('menuitem', { name: new RegExp(name) }).click()
+    await confirm.getByRole('button', { name: 'Ersetzen' }).click()
+    await expect(page.getByRole('button', { name: /Ankommen/ }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Stundenmuster speichern' })).toBeDisabled()
+  })
+
+  test('Edge (2026-10-15): mit „Zurück zum Generator" mitgebracht — verglichen wird mit dem Standard der Gruppe', async ({ page }) => {
+    const group = await createGroup('Zurück zum Generator', { unitDuration: 60 })
+    await createExercise(`${TAG} Übung Zurück zum Generator`)
+    // Eine Einheit im Standard-Aufbau der Gruppe (12 / 36 / 12).
+    const { data: unit, error } = await admin
+      .from('units')
+      .insert({
+        user_id: userId,
+        group_id: group.id,
+        name: `${group.name} Einheit`,
+        total_minutes: 60,
+        seed: 1,
+        saved: true,
+        editor_state: { mode: 'custom', expandedPosition: null },
+      })
+      .select('id')
+      .single()
+    if (error || !unit) throw new Error(`Einheit anlegen: ${error?.message}`)
+    const classic = [
+      ['Aufwärmen', 12],
+      ['Hauptteil', 36],
+      ['Cool-Down', 12],
+    ] as const
+    for (const [position, [name, minutes]] of classic.entries()) {
+      const { error: segError } = await admin.from('unit_segments').insert({
+        unit_id: unit.id,
+        name,
+        minutes,
+        fill_mode: 'generate',
+        sports: ['Turnen'],
+        primary_sport: null,
+        difficulties: ['Leicht', 'Mittel', 'Schwer'],
+        organization_forms: [],
+        planned_gap_minutes: 0,
+        notes: null,
+        position,
+      })
+      if (segError) throw new Error(`Segment anlegen: ${segError.message}`)
+    }
+
+    await page.goto(`/units/new?from=${unit.id}`)
+    await expect(page.getByRole('radio', { name: 'Individuell' })).toBeChecked()
+    const save = page.getByRole('button', { name: 'Stundenmuster speichern' })
+    // Kein Muster geladen: Speichern ist frei.
+    await expect(save).toBeEnabled()
+    // Gleicht dem Standard: Zurücksetzen ohne Nachfrage.
+    await page.getByRole('button', { name: 'Auf Standard zurücksetzen' }).click()
+    await expect(page.getByText('Auf Standard zurückgesetzt', { exact: true })).toBeVisible()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+
+    // Weicht er ab, fragt das Zurücksetzen nach.
+    await page.goto(`/units/new?from=${unit.id}`)
+    await page.getByRole('button', { name: /Aufwärmen/ }).first().click()
+    await page.getByPlaceholder('Hinweise für dich zu diesem Abschnitt').fill('Mitgebracht und geändert')
+    await page.getByRole('button', { name: 'Auf Standard zurücksetzen' }).click()
+    await expect(page.getByRole('alertdialog')).toContainText('Bisherigen Zeitverlauf ersetzen?')
+  })
+
   test('AC: ein Muster umbenennen und löschen', async ({ page }) => {
     const name = `${TAG} Alter Name`
     const newName = `${TAG} Neuer Name`

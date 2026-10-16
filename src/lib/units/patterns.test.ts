@@ -322,4 +322,59 @@ describe('carryTimeline', () => {
       totalMinutes: 5,
     })
   })
+
+  // QA 2026-10-16: Grenzfälle, die die Spec beschreibt, aber bisher nicht prüfte.
+
+  it('hin und zurück: Sportarten „wie die Gruppe" kehren zur alten Gruppe zurück, eigene bleiben', () => {
+    const own = segment('Spiel', 20, { sports: ['Laufspiele'], primarySport: null })
+    const start = [segment('Aufwärmen', 10), segment('Hauptteil', 30), own]
+    const there = carryTimeline(start, VOLLEYBALL, TURNEN)
+    if (!there.ok) throw new Error('sollte passen')
+    const back = carryTimeline(there.segments, TURNEN, { ...VOLLEYBALL, totalMinutes: 60 })
+    if (!back.ok) throw new Error('sollte passen')
+    expect(back.segments.map((s) => s.sports)).toEqual([
+      VOLLEYBALL.sports,
+      VOLLEYBALL.sports,
+      ['Laufspiele'],
+    ])
+    expect(back.segments[0].primarySport).toBe('Volleyball')
+  })
+
+  it('mehrmals hin und her: die Summe stimmt jedes Mal, keine Phase fällt unter eine Minute', () => {
+    let current = [segment('A', 7), segment('B', 41), segment('C', 1), segment('D', 11)]
+    for (const total of [30, 60, 5, 60, 45, 4, 90]) {
+      const result = carryTimeline(current, VOLLEYBALL, { ...VOLLEYBALL, totalMinutes: total })
+      if (!result.ok) throw new Error(`sollte auf ${total} Minuten passen`)
+      expect(sumMinutes(result.segments)).toBe(total)
+      expect(result.segments.every((s) => s.minutes >= 1)).toBe(true)
+      current = result.segments
+    }
+  })
+
+  it('über 60 → 30 → 60 dürfen sich einzelne Minuten verschieben, die Reihenfolge der Phasen nicht', () => {
+    const start = [segment('Aufwärmen', 13), segment('Hauptteil', 35), segment('Cool-Down', 12)]
+    const half = carryTimeline(start, VOLLEYBALL, { ...VOLLEYBALL, totalMinutes: 30 })
+    if (!half.ok) throw new Error('sollte passen')
+    const full = carryTimeline(half.segments, VOLLEYBALL, { ...VOLLEYBALL, totalMinutes: 60 })
+    if (!full.ok) throw new Error('sollte passen')
+    expect(full.segments.map((s) => s.name)).toEqual(['Aufwärmen', 'Hauptteil', 'Cool-Down'])
+    expect(sumMinutes(full.segments)).toBe(60)
+    full.segments.forEach((s, i) => expect(Math.abs(s.minutes - start[i].minutes)).toBeLessThanOrEqual(2))
+  })
+
+  it('genau so viele Minuten wie Phasen: jede Phase bekommt eine Minute', () => {
+    const four = [segment('A', 30), segment('B', 10), segment('C', 10), segment('D', 10)]
+    const result = carryTimeline(four, VOLLEYBALL, { ...TURNEN, totalMinutes: 4 })
+    if (!result.ok) throw new Error('sollte passen')
+    expect(result.segments.map((s) => s.minutes)).toEqual([1, 1, 1, 1])
+  })
+
+  it('vergibt frische Kennungen und lässt den Ausgangsstand unverändert', () => {
+    const start = [segment('Hauptteil', 60)]
+    const before = structuredClone(start)
+    const result = carryTimeline(start, VOLLEYBALL, TURNEN)
+    if (!result.ok) throw new Error('sollte passen')
+    expect(result.segments[0].id).not.toBe(start[0].id)
+    expect(start).toEqual(before)
+  })
 })
