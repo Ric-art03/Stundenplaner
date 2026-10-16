@@ -1169,13 +1169,13 @@ Dazu das Kriterium „Muster wählen fragt vorher" aus der ersten Fassung, bishe
 
 ### Grenzfälle der Überarbeitung
 
-- [ ] „Standard" gewählt, Änderungen unter „Individuell", dann Gruppenwechsel — **nur am Code**: der bestehende Test schaltet vor dem Wechsel zurück auf „Individuell"
+- [x] „Standard" gewählt, Änderungen unter „Individuell", dann Gruppenwechsel — **vom Nutzer am 2026-10-16 von Hand im Browser durchgespielt**: keine Nachfrage, „Standard" bleibt, unter „Individuell" Hinweis, Notiz und umgerechnete Minuten
 - [x] Mit „Zurück zum Generator" mitgebracht — Browser (Test 8)
 - [x] Muster geladen, dann zurück auf Standard — Browser (Test 6)
 - [x] Muster geladen, Gruppe gewechselt, umgerechnet — Browser (Test 2)
 - [x] Mehrmals hin und her — Unit-Tests: die Summe stimmt jedes Mal, keine Phase unter einer Minute, über 60 → 30 → 60 höchstens 2 Minuten Verschiebung je Phase
 - [x] Muster zu lang, veränderter Stand passt — Browser (Test 4)
-- [ ] Muster in einem anderen Tab überschrieben — **nur am Code**: verglichen wird mit dem hier geladenen Stand
+- [x] Muster in einem anderen Tab überschrieben — **vom Nutzer am 2026-10-16 von Hand durchgespielt**: der Knopf bleibt ausgegraut, nach einer Änderung frei; das zuletzt Überschriebene gilt
 
 ### Sicherheit (Red Team)
 
@@ -1199,7 +1199,7 @@ Dazu das Kriterium „Muster wählen fragt vorher" aus der ersten Fassung, bishe
 
 ### Summary
 - **Acceptance Criteria (Überarbeitung):** 13/13 passed (alle im Browser ausgeführt, eines davon nur für den Fall mit Muster)
-- **Edge Cases (Überarbeitung):** 5 von 7 im Browser oder über Unit-Tests belegt, 2 nur am Code
+- **Edge Cases (Überarbeitung):** 7 von 7 belegt — 5 über Browser- oder Unit-Tests, 2 vom Nutzer von Hand
 - **Bugs Found:** 0 neue (offen: BUG-27, niedrig)
 - **Security:** Pass — keine neue Angriffsfläche
 - **Production Ready:** YES
