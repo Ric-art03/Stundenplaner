@@ -27,7 +27,7 @@ In derselben Auslieferung gehärtet:
 
 1. ~~**BUG-16**~~ — am 2026-10-08 mit dem Backend von PROJ-7 behoben, siehe unten
 2. **Prüfung in echtem WebKit** — braucht eine Ordner-Ausnahme für `%LOCALAPPDATA%\ms-playwright`, und die muss in **Avast** stehen: Windows Defender ist auf diesem Rechner abgeschaltet, eine Ausnahme im Windows-Sicherheitscenter wirkt nicht
-3. **Die 40 Testübungen** stecken weiter in der Datenbank — Rohmasse für PROJ-4, erst übernehmen, dann löschen
+3. **Die 40 Testübungen** stecken weiter in der Datenbank — Rohmasse für PROJ-4, erst übernehmen, dann löschen. *Seit dem 2026-10-17 in der Spec von PROJ-4 geregelt (es sind 39): erst als Block sichern, dann das ganze Konto leeren*
 
 ### Am 2026-10-06 abgeräumt
 
@@ -292,7 +292,18 @@ Reine Oberfläche: keine Migration, keine neuen Pakete.
 
 Eines bleibt: **der Generator mit den neuen Nachfragen ist in der Produktion noch nicht von Hand durchgespielt** — er liegt hinter der Anmeldung. Offen aus der QA: **BUG-27** (niedrig).
 
-**Nächster Schritt:** `/write-spec PROJ-4` (Starter-Datenbank) — das letzte P0-Feature ohne Spec. Die 40 Testübungen in der Datenbank sind Rohmasse dafür.
+**PROJ-4 (Starter-Datenbank) hat seit dem 2026-10-17 eine Spec** — [PROJ-4-starter-datenbank.md](PROJ-4-starter-datenbank.md), vom Nutzer am selben Tag abgenommen. Ein gemeinsamer, kuratierter Bestand von 50–100 Übungen, aus dem der Nutzer **einzeln oder gesammelt übernimmt** — am schnellsten über **„Passt zu Gruppe"**, das alles vorauswählt, was der Generator für die Gruppe sofort einplanen würde, und bei Material oder Teilnehmerzahl den Grund nennt. Die Kopie gehört danach dem Nutzer und wird nie überschrieben.
+
+- **Die Seite „Übungen" bekommt zwei Reiter: „Meine Übungen" und „Übungsdatenbank".** „Übungsdatenbank" meint künftig nur noch die öffentliche Sammlung (langfristig auch PROJ-12); alle Stellen, an denen der Begriff heute den eigenen Ordner meint, sind in Abschnitt A der Spec erfasst — acht Texte und ein Browser-Test
+- **Gepflegt wird der Bestand ohne Admin-Seite:** Claude entwirft Blöcke aus Quellen, die der Nutzer zeigt, als Tabelle; der Nutzer bearbeitet sie; beim Einlesen wird jede Zeile geprüft; ein Block ist erst als Entwurf nur für den Entwickler sichtbar, dann freigegeben für alle
+- **Urheberrecht:** feste Regeln (eigene Worte, Quellen mischen, keine Bilder, Herkunft vermerkt), rechtliche Durchsicht in der Pre-Launch-Checkliste des PRD
+
+**Vor dem Bau zwei Vorarbeiten**, Reihenfolge vom Nutzer festgelegt:
+
+1. **PROJ-19 (Grundstock der Kategorien)** — welche vordefinierten Begriffe es gibt, vor allem Sportarten, und dass sie überall in derselben Reihenfolge stehen. Neu in der Tabelle, noch ohne Spec
+2. **Rohmasse sichern, dann das Konto des Nutzers leeren** — die 39 Testübungen (nicht 40) bereinigt als ersten Block sichern; danach alles außer der Anmeldung löschen, auch Gruppen, Hallen, Einheiten und Durchführungen, damit das Konto aussieht wie bei einem neuen Nutzer. Nur mit ausdrücklicher Zustimmung
+
+**Nächster Schritt:** `/write-spec PROJ-19` (Grundstock der Kategorien), danach `/architecture` für PROJ-4.
 
 ## Features
 
@@ -301,7 +312,7 @@ Eines bleibt: **der Generator mit den neuen Nachfragen ist in der Produktion noc
 | PROJ-1 | Supabase Infrastructure Setup | P0 | None | Deployed | [Spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-09-28 |
 | PROJ-2 | Benutzerregistrierung & Login | P0 | PROJ-1 | Deployed | [Spec](PROJ-2-benutzerregistrierung-login.md) | 2026-09-28 |
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
-| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3 | Roadmap | — | 2026-09-28 |
+| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | Planned | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Deployed | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
@@ -314,12 +325,13 @@ Eines bleibt: **der Generator mit den neuen Nachfragen ist in der Produktion noc
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
+| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Roadmap | — | 2026-10-17 |
 
 <!-- Add features above this line -->
 
 **PROJ-17 (Stundenmuster) ist am 2026-10-12 in PROJ-16 aufgegangen** und steht deshalb nicht mehr in der Tabelle. Die Nummer wird nicht neu vergeben; Verweise auf PROJ-17 in den Specs von PROJ-6 und PROJ-7 meinen PROJ-16.
 
-## Next Available ID: PROJ-19
+## Next Available ID: PROJ-20
 
 ## Empfohlene Build-Reihenfolge (MVP)
 
@@ -327,7 +339,7 @@ Eines bleibt: **der Generator mit den neuen Nachfragen ist in der Produktion noc
 2. **PROJ-2** — Benutzerregistrierung & Login (Nutzerdaten brauchen Auth)
 3. **PROJ-3** — Übungsdatenbank (Kernfunktion: Übungen erfassen)
 4. **PROJ-5** — Gruppenprofile (parallel zu oder direkt nach PROJ-3)
-5. **PROJ-4** — Starter-Datenbank (Inhalte einfüllen + Import in eigene DB)
+5. **PROJ-4** — Starter-Datenbank (Inhalte einfüllen + Import in eigene DB) — braucht vorher **PROJ-19** (Grundstock der Kategorien)
 6. **PROJ-6** — Einheiten-Generator (Herzstück der App)
 7. **PROJ-7** — Einheiten-Editor (Feinschliff der generierten Einheiten)
 8. **PROJ-14** — Live-Modus (Stundenbegleitung während der Durchführung)

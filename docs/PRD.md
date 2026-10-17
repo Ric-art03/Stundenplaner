@@ -36,6 +36,7 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 | P0 (MVP) | Einheiten-Editor (Phasen anpassen, tauschen, Lücken) | Deployed |
 | P0 (MVP) | Live-Modus (Stundenbegleitung) | Deployed |
 | P0 (MVP) | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | Deployed |
+| P0 (MVP) | Grundstock der Kategorien (Begriffe und Reihenfolge) | Planned |
 | P1 | Kalenderansicht & Langzeitplanung | Planned |
 | P1 | Übungsrotation (Abwechslung über Wochen) | Planned |
 | P1 | PWA (Homescreen-Installation) | Planned |
@@ -58,6 +59,7 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 
 ## Pre-Launch Checklist
 - [ ] **E-Mail-Templates anpassen** — Supabase erfordert Custom SMTP (z.B. Resend, kostenlos bis 3.000 Mails/Monat). Dann: Absendername auf "Stundenplaner" ändern, Bestätigungs- und Reset-E-Mails auf Deutsch umschreiben. Ort: Supabase Dashboard → Authentication → Email Templates.
+- [ ] **Rechtliche Durchsicht der Übungsdatenbank** — die Starter-Übungen werden aus fremden Quellen gewonnen (Webseiten, PDFs). Die Regeln dafür stehen in PROJ-4, Abschnitt H: eigene Worte, mehrere Quellen mischen, keine Bilder, Herkunft je Übung vermerkt. Das ist eine Einschätzung, keine Rechtsberatung — vor der Marktreife einmal von einer Fachperson ansehen lassen, vor allem das Recht des Datenbankherstellers bei Übungssammlungen.
 - [ ] **Schutz gegen geleakte Passwörter** — braucht den **Pro-Plan**, auf dem kostenlosen Plan ist der Schalter nicht benutzbar. Supabase prüft Passwörter dann gegen HaveIBeenPwned und weist bekannte ab. Eine Tarif-, keine Umsetzungsfrage: vor der Marktreife zu entscheiden, ob echte Nutzerkonten das rechtfertigen. Ort: Authentication → Sign In / Providers → Email. Was ohne Pro geht, ist am 2026-10-06 gesetzt — erhöhte Mindestlänge und erforderliche Zeichenarten. Solange der Schutz aus ist, meldet `get_advisors` erwartungsgemäß einen Sicherheitshinweis; der ist kein Versäumnis.
 
 ## Non-Goals (v1)
