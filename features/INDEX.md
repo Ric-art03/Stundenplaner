@@ -329,7 +329,15 @@ Drei Dinge warten auf `/backend`: der Filter „Ohne Material" wird vom Server n
 
 Am lebenden System mit dem Testkonto nachgewiesen, dreizehn Fälle, nichts zurückgeblieben. **Die Browser-Tests sind nicht gelaufen** (Entwicklungsserver lief nebenher) und gehören in `/qa`, die Übungsübersicht eingeschlossen.
 
-**Nächster Schritt:** `/qa` für PROJ-19, dann `/architecture` für PROJ-4.
+**PROJ-19 ist seit dem 2026-10-18 freigegeben** — Abschnitt „QA Test Results" in der Spec. **33 von 36 Akzeptanzkriterien bestanden**, 2 nicht bestanden (je ein Fehler, keiner hoch), 1 entfällt (Generator ohne Gruppe zeigt keine Segmente). Kein Befund zur Sicherheit. **468 von 468 Browser-Tests grün in einem Zug** (15,3 Minuten), darunter 34 neue für PROJ-19 in einer eigenen Stufe „grundstock" / „grundstock mobil" nach der Verwaltung; 645 Unit-Tests grün.
+
+- **BUG-28 (mittel):** der Satz zum Markieren benachbarter Sportarten steht nur bei einem **ganz leeren** Segment, nicht bei einem teilweise gefüllten — der Generator schlüsselt die Ursachen nur im ersten Fall auf
+- **BUG-29 (niedrig):** Stundenverlauf und aktueller Schritt im Live-Modus sagen bei einer Variante „Ohne Material" nur „kein Material" statt „Kein Material nötig"
+- **BUG-30 (niedrig):** die Material-Wahl einer Variante rutscht nach dem Löschen einer anderen Variante eine Stelle weiter (nur Anzeige, nur am Code gefunden)
+
+Nicht belegt: Firefox und Safari; ein scheiterndes Aufgehen (vom Nutzer zurückgestellt); „Mehr laden" mit Materialfilter über 50 Übungen.
+
+**Nächster Schritt:** BUG-28 beheben (empfohlen), dann `/deploy` für PROJ-19 — danach `/architecture` für PROJ-4.
 
 ## Features
 
@@ -351,7 +359,7 @@ Am lebenden System mit dem Testkonto nachgewiesen, dreizehn Fälle, nichts zurü
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
-| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | In Progress | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
+| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Approved | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
 | PROJ-20 | Hilfe & Tutorial (die App bringt die richtige Nutzung bei) | P0 | PROJ-3, PROJ-5, PROJ-6 | Roadmap | — | 2026-10-18 |
 
 <!-- Add features above this line -->

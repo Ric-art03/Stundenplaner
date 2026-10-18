@@ -59,6 +59,13 @@ const LIVE_TESTS = /PROJ-14-(?!.*\.anon\.).*\.spec\.ts/
  * laufen nacheinander: beide räumen vor jedem Test alles Eigene weg.
  */
 const MANAGE_TESTS = /PROJ-16-(?!.*\.anon\.).*\.spec\.ts/
+/**
+ * Die Tests des Grundstocks (PROJ-19) — eine eigene Stufe **nach** der
+ * Verwaltung. Sie legen eigene Begriffe an, die in jeder Auswahlliste oben
+ * stünden, und lassen eigene Begriffe im Grundstock aufgehen. Rechner und
+ * Handy laufen nacheinander.
+ */
+const GRUNDSTOCK_TESTS = /PROJ-19-.*\.spec\.ts/
 const baseURL = `http://localhost:${port}`
 
 export default defineConfig({
@@ -119,6 +126,7 @@ export default defineConfig({
         EDITOR_TESTS,
         LIVE_TESTS,
         MANAGE_TESTS,
+        GRUNDSTOCK_TESTS,
       ],
       use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
@@ -140,6 +148,7 @@ export default defineConfig({
         EDITOR_TESTS,
         LIVE_TESTS,
         MANAGE_TESTS,
+        GRUNDSTOCK_TESTS,
       ],
       use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
@@ -192,6 +201,20 @@ export default defineConfig({
       dependencies: ['verwaltung'],
     },
 
+    // Der Grundstock (PROJ-19), nach der Verwaltung — siehe `GRUNDSTOCK_TESTS`.
+    {
+      name: 'grundstock',
+      testMatch: GRUNDSTOCK_TESTS,
+      use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
+      dependencies: ['verwaltung mobil'],
+    },
+    {
+      name: 'grundstock mobil',
+      testMatch: GRUNDSTOCK_TESTS,
+      use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
+      dependencies: ['grundstock'],
+    },
+
     // Tests, die den Bestand des Testkontos leerräumen und deshalb niemanden
     // neben sich dulden. Über `dependencies` laufen sie garantiert erst,
     // wenn alle übrigen Projekte durch sind.
@@ -209,6 +232,8 @@ export default defineConfig({
         'live mobil',
         'verwaltung',
         'verwaltung mobil',
+        'grundstock',
+        'grundstock mobil',
       ],
     },
   ],

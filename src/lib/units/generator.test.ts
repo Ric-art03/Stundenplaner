@@ -201,6 +201,23 @@ describe('Material-Kriterium', () => {
     expect(result.segments[0].gapDetail?.blockedBy).toEqual([{ criterion: 'material', count: 1 }])
   })
 
+  it('nimmt eine Variante „Ohne Material" in jeder Halle, auch wenn die Hauptübung Material braucht (PROJ-19)', () => {
+    // So kommt der Kandidat einer Variante „Ohne Material" aus `effectiveMaterials`.
+    const result = run({
+      group: group({ venueMaterials: [] }),
+      segments: [segment({ minutes: 10 })],
+      candidates: [
+        candidate({ exerciseId: 'grund', materials: [{ name: 'Reifen', quantity: 6, mode: 'insgesamt' }] }),
+        candidate({
+          exerciseId: 'ohne',
+          variantId: 'v-ohne',
+          materials: [{ name: 'Kein Material', quantity: 1, mode: 'insgesamt' }],
+        }),
+      ],
+    })
+    expect(usedIds(result)).toEqual(['ohne'])
+  })
+
   it('rechnet „pro Teilnehmer" mit der Teilnehmerzahl der Gruppe', () => {
     const result = run({
       group: group({ venueMaterials: venue, participants: 20 }),

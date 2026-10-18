@@ -1,6 +1,6 @@
 # PROJ-19: Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-10-17
 **Last Updated:** 2026-10-18
 
@@ -653,7 +653,182 @@ laden" mit Materialfilter über 50 Übungen hinaus), dazu das Verhalten, wenn da
 scheitert.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Getestet:** 2026-10-18, Stand Commit `af80706` plus die Tests dieser QA
+**Umgebung:** Produktionsbuild auf Port 3100, Edge (Chromium) am Rechner und in Handybreite
+(iPhone 13, Chromium-Motor), Testkonto
+**Tester:** QA Engineer (AI)
+
+### Überblick
+- **Akzeptanzkriterien:** 33 von 36 bestanden, **2 nicht bestanden** (beide wegen eines Fehlers,
+  keiner hoch), 1 entfällt
+- **Fehler:** 3 — 0 kritisch, 0 hoch, 1 mittel, 2 niedrig
+- **Sicherheit:** kein Befund
+- **Regression:** keine — **468 von 468 Browser-Tests grün in einem Zug** (15,3 Minuten, zwei
+  Arbeiter, kein Entwicklungsserver), darunter 34 neue für PROJ-19; **645 Unit-Tests grün**
+  (1 neu)
+- **Bereit für die Auslieferung:** ja — kein kritischer oder hoher Fehler
+
+**Neue Browser-Tests:** `tests/PROJ-19-grundstock.spec.ts`, 17 Tests je Rechner und Handy, als
+eigene Stufe „grundstock" und danach „grundstock mobil", nach der Verwaltung. Sie legen eigene
+Begriffe an, die sonst in den Auswahllisten anderer Tests stünden, und einer lässt eigene
+Begriffe im Grundstock aufgehen. Die Listen des Grundstocks stehen dort aus Abschnitt A
+abgeschrieben, nicht aus dem Programm importiert. Alle Fehlschläge beim Schreiben lagen an den
+Tests (falsch erwartete Folge „Bank" vor „Weichbodenmatte", Namensvergleich ohne Groß/Klein in
+Playwright, die vom Filterfenster ausgeblendete Seite), keiner an der App.
+
+**Neuer Unit-Test:** im Generator, dass eine Variante „Ohne Material" in einer Halle ohne jedes
+Material eingeplant wird und die Hauptübung mit Material nicht.
+
+Legende: **E2E** = im Browser ausgeführt, **Unit** = über Unit-Tests, **Code** = nur am Code
+gelesen, **Live** = am lebenden System (Backend-Nachweis vom selben Tag).
+
+### A. Der Grundstock
+- [x] Genau die Begriffe aus Abschnitt A, keiner mehr, keiner weniger — Sportarten,
+  Altersgruppen, Phasen, Organisationsformen und Material im Übungsformular (E2E)
+- [x] Ohne eigene Sportarten von „Krabbelgruppe" bis „Teambuilding" (E2E)
+- [x] Die acht weggefallenen Schreibweisen stehen in keiner der Listen (E2E)
+- [x] „Volleyballnetz" und „Stufenbarren" in der Hallenausstattung (E2E); der Generator prüft sie
+  wie jedes Material, er vergleicht Text mit Text (Code)
+
+### B. Eine Reihenfolge überall
+- [x] Eigene Sportarten oben, alphabetisch, danach der Grundstock — im Übungsformular und im Filter
+  identisch (E2E); Gruppenformular über denselben Baustein (Code)
+- [x] Kleingeschriebenes eigenes „e2e19 aerobic" steht alphabetisch zwischen den eigenen (E2E)
+- [x] Gewählte Sportarten in Listenfolge in Detailansicht und Liste (E2E), Karte über dieselbe
+  geordnete Liste (Code)
+- [x] Eigene Altersgruppe bei Varianten, ganz oben (E2E)
+- [x] Eigene Organisationsform bei Varianten, ganz oben (E2E)
+- [x] Generator: „Sportarten der Gruppe" oben, darunter „Weitere" mit eigenen, dann dem
+  Grundstock (E2E)
+- [—] **Entfällt:** Generator ohne gewählte Gruppe. Ohne Gruppe zeigt der Generator keine
+  Segmente; der Fall ist in der Oberfläche nicht herstellbar. Der Codeweg (ohne oberen Block die
+  gewöhnliche Liste mit den eigenen Begriffen) ist derselbe wie unter „Weitere"
+- [x] Klick-Reihenfolge der Gruppe „Volleyball, Kinderturnen" erscheint als „Kinderturnen,
+  Volleyball" (E2E)
+- [x] Verwaltung, Reiter „Kategorien": eigene Begriffe alphabetisch wie bisher (Code; die
+  Verwaltungstests laufen unverändert grün)
+- [x] Material auf dem Bereitschaftsbild in Listenfolge (Unit)
+- [x] Materialzeilen bleiben beim Bearbeiten in Eingabefolge, auch beim Ändern der Menge; nach dem
+  Speichern zeigt die Detailansicht die Listenfolge (E2E)
+- [x] Filterlisten in derselben Folge wie das Übungsformular (E2E)
+
+### C. „Ohne Material"
+- [x] „Kein Material" steht nicht in der Materialliste an Übung und Halle (E2E); die Variante
+  benutzt dieselbe Materialeingabe (Code)
+- [x] Drei Wahlen an der Variante, Voreinstellung „Wie die Hauptübung" (E2E)
+- [x] Bei „Ohne Material" lässt sich kein Material hinzufügen, erst nach „Eigenes Material" (E2E)
+- [x] Der Generator plant eine Variante „Ohne Material" in jeder Halle ein (Unit, neu)
+- [ ] **Nicht bestanden — BUG-29:** „Kein Material nötig" steht in der Detailansicht (E2E) und in
+  „Danach" des Live-Modus (Code), im Stundenverlauf und beim aktuellen Schritt des Live-Modus aber
+  nur „kein Material" — derselbe Text wie für jede Übung ohne Material. Einen Materialeintrag
+  zeigt keine der Stellen
+- [x] „Wie die Hauptübung" nimmt das Material der Hauptübung (Unit)
+- [x] Filter „Ohne Material" findet genau die Übungen ohne Materialzeile — eine Übung mit Material,
+  deren Variante „Ohne Material" ist, nicht (E2E, Live)
+- [x] „Ohne Material" und „Ball" zusammen wirken als „oder" (E2E, Live)
+
+### D. Kein Begriff zweimal
+- [x] „gymnastik " wird „Gymnastik", mit „„Gymnastik" gibt es schon — ausgewählt." (E2E)
+- [x] Erneut eingetippt: „„Gymnastik" ist schon ausgewählt.", nichts ändert sich (E2E)
+- [x] „ZUMBA" wählt das eigene „Zumba", kein zweiter Chip (E2E)
+- [x] Dasselbe bei Altersgruppen, Phasen und Material (E2E), Organisationsformen über dasselbe
+  Auswahlfeld (Code); „Kein Material" lässt sich nicht als Material anlegen (E2E)
+- [x] Verwaltung: „gymnastik" meldet den mitgelieferten Begriff und legt nichts an (E2E)
+- [x] Eigenes „stufenbarren" ist nach dem Öffnen der Verwaltung dort verschwunden und steht in der
+  Materialliste genau einmal, an Stelle 21 (E2E)
+- [x] Eigene Sportart „gymnastik" an einer Übung: die Übung trägt danach „Gymnastik" (E2E, Live);
+  der Generator findet sie, weil er Text mit Text vergleicht (Code)
+
+### E. Richtiges Markieren
+- [x] Satz unter Sportart, ohne Aufklappen (E2E)
+- [x] Satz unter Altersgruppe (E2E)
+- [x] Schnell-Anlegen: der Satz steht an der übernommenen Liste, weil das Schnell-Anlegen keine
+  Felder für Sportart und Altersgruppe hat — **abweichend vom Wortlaut**, in den Implementation
+  Notes (Frontend) begründet (Code)
+- [ ] **Nicht bestanden — BUG-28:** der Zusatzsatz steht nur, wenn das Segment **ganz leer**
+  bleibt. Wird es teilweise gefüllt, kommt der Satz nie, auch wenn die Sportart Übungen ausschließt
+- [x] Liegt es nicht an der Sportart, fehlt der Satz (Code)
+
+### Edge Cases
+- [x] Weggefallener Begriff an einer Übung: bleibt stehen, wird angezeigt, ordnet sich wie ein
+  eigener ein (Code, Unit)
+- [x] Variante mit „Kein Material" aus der Zeit vor PROJ-19: gilt als „Ohne Material", ohne
+  Fehler (E2E über den Filter-Test, Unit)
+- [x] Eigener Begriff in anderer Schreibweise geht trotzdem auf (E2E: „gymnastik", „stufenbarren")
+- [x] Umbenennen auf einen mitgelieferten Begriff ist Zusammenführen wie in PROJ-16 (Code;
+  Verwaltungstests grün)
+- [x] Gleicher Name in einer anderen Art ist kein Doppel (Unit)
+- [x] Nur Leerzeichen: nichts wird angelegt (Code)
+- [x] Gruppe mit einer weggefallenen Sportart: sie steht trotzdem oben (Code)
+- [x] Viele eigene Begriffe: hingenommen laut Spec
+- [x] Bildschirm 375 px: der Satz zum Markieren und die Blöcke im Generator ohne waagerechtes
+  Scrollen (E2E, Handybreite)
+
+### Sicherheit
+- [x] **Keine neue Schnittstelle von außen.** Der Serverbaustein `custom-store.ts` ist keine
+  Server-Aktion und lässt sich aus dem Browser nicht aufrufen
+- [x] **Aufgehen nur am eigenen Konto:** gelesen wird mit `user_id` des Angemeldeten,
+  `rename_category` läuft mit den Rechten des Aufrufers und prüft selbst `auth.uid()`; an fremden
+  Kennungen meldet die Funktion `category_not_found` (in PROJ-16 am lebenden System nachgewiesen)
+- [x] **Materialfilter:** die Werte gehen als Parameter an `in(...)`; Komma, Klammern und Schrägstrich
+  laufen ohne Fehler und ohne Treffer durch (Live). „Ohne Material" wird nur bei `true` gesetzt.
+  Die eingebetteten Materialzeilen unterliegen weiter den Zugriffsregeln
+- [x] **Keine Schreiblast von außen:** das Aufgehen ruft die Datenbank nur auf, wenn es einen
+  passenden eigenen Begriff gibt, je Begriff einmal
+- [x] **Meldungen** werden als Text gesetzt, nicht als HTML
+
+### Fehler
+
+#### BUG-28: Der Satz zum Markieren benachbarter Sportarten fehlt bei teilweise gefülltem Segment
+- **Schwere:** Mittel
+- **Schritte:**
+  1. Gruppe mit der Sportart „Turnen", zwei Übungen „Turnen" und mehrere Übungen „Kinderturnen"
+     für dieselbe Phase
+  2. Ein Segment generieren, das länger ist als die beiden Turnen-Übungen zusammen
+  3. Erwartet: in der Begründung „Übungen passen oft auch zu benachbarten Sportarten …"
+  4. Tatsächlich: „Alle 2 passenden Übungen … sind schon eingeplant", ohne den Satz
+- **Ursache:** `generator.ts` füllt `blockedBy` nur, wenn **keine** Übung übrig bleibt
+  („all-filtered"). Bei „exhausted" und „too-short" ist die Liste leer, `gap-notice.tsx` sieht
+  die Sportart deshalb nie. Der Entwurf ging davon aus, dass die Aufschlüsselung das „heute schon
+  weiß" — das stimmt nur für ein ganz leeres Segment
+- **Warum mittel:** Das ist der häufigere Fall und genau der, den Abschnitt E meint (zu wenige
+  Übungen, weil sie nicht überall markiert sind). Nichts geht kaputt, es fehlt nur der Hinweis
+- **Priorität:** vor der Auslieferung beheben, wenn möglich; kein Hindernis
+
+#### BUG-29: „Kein Material nötig" fehlt im Stundenverlauf und beim aktuellen Schritt des Live-Modus
+- **Schwere:** Niedrig
+- **Schritte:** Variante auf „Ohne Material" setzen, in eine Einheit übernehmen, Stundenverlauf und
+  Live-Modus ansehen
+- **Erwartet:** „Kein Material nötig"
+- **Tatsächlich:** „kein Material" aus der Übungszeile (`exercise-facts-row.tsx`) — derselbe Text
+  wie für eine Übung, die einfach keine Materialzeile hat. Detailansicht und „Danach" sagen
+  „Kein Material nötig", die Hauptübung in der Detailansicht „Kein Material benötigt"
+- **Priorität:** schön zu haben; ein Wortlaut für alle Stellen wäre einfacher
+
+#### BUG-30: Die Material-Wahl einer Variante rutscht nach dem Löschen einer anderen Variante weiter
+- **Schwere:** Niedrig
+- **Schritte:**
+  1. Übung mit zwei Varianten bearbeiten, an der ersten „Eigenes Material" wählen
+  2. Die erste Variante löschen
+  3. Erwartet: die verbliebene Variante zeigt „Wie die Hauptübung"
+  4. Tatsächlich: sie zeigt „Eigenes Material" mit leerer Liste
+- **Ursache:** `variant-input.tsx` merkt sich die Wahl je **Position** (`chosenMode[index]`) und
+  rückt beim Löschen nicht nach — dasselbe Muster wie bei „Abweichende Bedingungen" daneben
+- **Folge:** nur die Anzeige. Gespeichert wird „Wie die Hauptübung", weil die Liste leer ist
+- **Nur am Code gefunden**, nicht im Browser nachgestellt
+- **Priorität:** schön zu haben
+
+### Nicht belegt
+- **Firefox und echtes Safari** — auf diesem Rechner nicht prüfbar
+- **Scheitert das Aufgehen** (Netz, Fehler), bleibt der Begriff in der Liste und wird beim
+  nächsten Laden erneut versucht — nie eigens ausgelöst. Vom Nutzer am 2026-10-18 zurückgestellt
+- **„Mehr laden" mit Materialfilter über 50 Übungen hinaus** — das Testkonto hat weniger; die
+  Gesamtzahl kommt jetzt aus der Datenbank (Live)
+- **Nebenwirkung des Aufgehens:** `rename_category` gibt den betroffenen Einheiten einen neuen
+  Änderungsstempel. Wer gerade eine Einheit im Editor offen hat, bekommt beim Speichern einmal
+  den Hinweis auf eine fremde Änderung. Am Code gelesen, nicht nachgestellt; einmal je Nutzer und
+  Erweiterung des Grundstocks
 
 ## Deployment
 _To be added by /deploy_
