@@ -17,6 +17,8 @@ import {
 import { CATEGORY_TYPES, newlyAddedCustom, type CategoryType } from '@/lib/manage/categories'
 import { orderByTerm, orderTerms } from '@/lib/categories/terms'
 import { absorbPredefinedCustoms, addCustomCategories } from '@/lib/categories/custom-store'
+import { applyExerciseFilters, exerciseSelect } from '@/lib/exercises/filter-query'
+import { groupBy, mapLink, mapMaterial, mapVariant } from '@/lib/exercises/map-rows'
 
 async function getAuthUser() {
   const supabase = await createClient()
@@ -51,6 +53,11 @@ function mapRowToExercise(
     musicRequired: row.music_required,
     musicLink: row.music_link,
     needsCompletion: row.needs_completion,
+    // Bis zur Migration aus PROJ-4 fehlen die beiden Spalten — dann gilt „nicht übernommen".
+    sourceCredit: row.source_credit ?? null,
+    libraryOrigin: row.copied_at
+      ? { libraryExerciseId: row.library_exercise_id ?? null, copiedAt: row.copied_at }
+      : null,
     images: ((row.images as unknown as ExerciseImage[]) ?? []).filter((img) => img?.path),
     materials: orderByTerm('material', materials),
     variants,
@@ -70,70 +77,14 @@ export async function getExercises(
   const { supabase, user } = await getAuthUser()
   if (!user) return { exercises: [], total: 0 }
 
-  // Der Materialfilter läuft in der Abfrage selbst, damit Seitenaufteilung und
-  // Gesamtzahl stimmen. „Ohne Material" heißt: keine Materialzeile; mit
-  // Material zusammen gilt „oder" (PROJ-19).
-  const materials = filters.materials.filter((name) => name.trim() !== '')
-  const withoutMaterial = filters.withoutMaterial === true
-  const select =
-    materials.length > 0 && withoutMaterial
-      ? '*, matched:exercise_materials(name), anymat:exercise_materials(id)'
-      : materials.length > 0
-        ? '*, matched:exercise_materials!inner(name)'
-        : withoutMaterial
-          ? '*, anymat:exercise_materials(id)'
-          : '*'
-
-  let query = supabase
-    .from('exercises')
-    .select(select, { count: 'exact' })
-    .eq('user_id', user.id)
-
-  if (materials.length > 0) query = query.in('matched.name', materials)
-  if (materials.length > 0 && withoutMaterial) {
-    query = query.or('matched.not.is.null,anymat.is.null')
-  } else if (withoutMaterial) {
-    query = query.is('anymat', null)
-  }
-
-  if (filters.search) {
-    const safe = filters.search.replace(/[,()"'\\]/g, '').trim()
-    if (safe) {
-      query = query.or(`name.ilike.%${safe}%,description.ilike.%${safe}%`)
-    }
-  }
-  if (filters.sports.length > 0) {
-    for (const sport of filters.sports) {
-      query = query.contains('sports', JSON.stringify([sport]))
-    }
-  }
-  if (filters.ageGroups.length > 0) {
-    for (const ag of filters.ageGroups) {
-      query = query.contains('age_groups', JSON.stringify([ag]))
-    }
-  }
-  if (filters.phases.length > 0) {
-    for (const phase of filters.phases) {
-      query = query.contains('phases', JSON.stringify([phase]))
-    }
-  }
-  if (filters.difficulty) {
-    query = query.eq('difficulty', filters.difficulty)
-  }
-  if (filters.organizationForms.length > 0) {
-    for (const form of filters.organizationForms) {
-      query = query.contains('organization_forms', JSON.stringify([form]))
-    }
-  }
-  if (filters.needsCompletion) {
-    query = query.eq('needs_completion', true)
-  }
-  if (filters.participantsMin != null) {
-    query = query.or(`participants_max.gte.${filters.participantsMin},participants_max.is.null`)
-  }
-  if (filters.participantsMax != null) {
-    query = query.or(`participants_min.lte.${filters.participantsMax},participants_min.is.null`)
-  }
+  // Dieselben Filter wie in der Übungsdatenbank (PROJ-4) — ein Baustein für beide.
+  let query = applyExerciseFilters(
+    supabase
+      .from('exercises')
+      .select(exerciseSelect('exercise_materials', filters), { count: 'exact' })
+      .eq('user_id', user.id),
+    filters
+  )
 
   const sortMap: Record<string, string> = {
     name: 'name',
@@ -532,43 +483,3 @@ async function saveCustomCategories(
   )
 }
 
-function groupBy<T extends Record<string, unknown>>(items: T[], key: keyof T): Record<string, T[]> {
-  const map: Record<string, T[]> = {}
-  for (const item of items) {
-    const k = String(item[key])
-    if (!map[k]) map[k] = []
-    map[k].push(item)
-  }
-  return map
-}
-
-function mapMaterial(row: MaterialRow): ExerciseMaterial {
-  return {
-    id: row.id,
-    name: row.name,
-    quantity: row.quantity,
-    mode: row.mode as 'pro Teilnehmer' | 'insgesamt',
-  }
-}
-
-function mapVariant(row: VariantRow): ExerciseVariant {
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    materials: orderByTerm('material', (row.materials as unknown as ExerciseVariant['materials']) ?? []),
-    participantsMin: row.participants_min,
-    participantsMax: row.participants_max,
-    duration: row.duration,
-    ageGroups: orderTerms('age_group', (row.age_groups as string[]) ?? []),
-    organizationForms: orderTerms('organization_form', (row.organization_forms as string[]) ?? []),
-  }
-}
-
-function mapLink(row: LinkRow): ExerciseLink {
-  return {
-    id: row.id,
-    url: row.url,
-    title: row.title ?? undefined,
-  }
-}

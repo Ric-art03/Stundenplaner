@@ -163,7 +163,7 @@ export function ExercisePickerDialog({
           <div className="space-y-3 p-6 text-center">
             <p className="text-sm font-medium">Du hast noch keine Übungen angelegt</p>
             <p className="text-xs text-muted-foreground">
-              Der Generator und der Editor schöpfen aus deiner eigenen Übungsdatenbank.
+              Der Generator und der Editor schöpfen aus deinen Übungen.
               Lege hier gleich die erste an — sie bleibt dir für die nächsten Stunden
               erhalten.
             </p>

@@ -27,20 +27,38 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { MultiSelect } from './multi-select'
 import {
   DIFFICULTY_LEVELS,
-  type ExerciseFilters, type ExerciseViewMode, type ExerciseSortField, type ExerciseSortDirection,
+  type ExerciseFilters, type ExerciseViewMode,
   EMPTY_FILTERS,
 } from '@/lib/types/exercise'
 import { NO_MATERIAL_LABEL, orderTerms, termOptions } from '@/lib/categories/terms'
+
+/** Die Sortierungen von „Meine Übungen"; die Übungsdatenbank hat eigene (PROJ-4). */
+export const OWN_SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'updatedAt-desc', label: 'Zuletzt bearbeitet' },
+  { value: 'createdAt-desc', label: 'Zuletzt erstellt' },
+  { value: 'name-asc', label: 'Name (A–Z)' },
+  { value: 'name-desc', label: 'Name (Z–A)' },
+  { value: 'duration-asc', label: 'Dauer (kurz → lang)' },
+  { value: 'duration-desc', label: 'Dauer (lang → kurz)' },
+  { value: 'difficulty-asc', label: 'Schwierigkeit (leicht → schwer)' },
+  { value: 'difficulty-desc', label: 'Schwierigkeit (schwer → leicht)' },
+]
 
 interface ExerciseToolbarProps {
   filters: ExerciseFilters
   onFiltersChange: (filters: ExerciseFilters) => void
   viewMode: ExerciseViewMode
   onViewModeChange: (mode: ExerciseViewMode) => void
-  sortField: ExerciseSortField
-  onSortChange: (field: ExerciseSortField, direction: ExerciseSortDirection) => void
-  sortDirection: ExerciseSortDirection
+  /** „Feld-Richtung", z. B. „name-asc" — eine der `sortOptions`. */
+  sortValue: string
+  sortOptions?: { value: string; label: string }[]
+  onSortValueChange: (value: string) => void
   customCategories?: Record<string, string[]>
+  /**
+   * „library": die Übungsdatenbank — ohne „Neue Übung" und ohne „noch zu
+   * ergänzen", denn beides gibt es dort nicht.
+   */
+  mode?: 'own' | 'library'
 }
 
 export function ExerciseToolbar({
@@ -48,10 +66,11 @@ export function ExerciseToolbar({
   onFiltersChange,
   viewMode,
   onViewModeChange,
-  sortField,
-  onSortChange,
-  sortDirection,
+  sortValue,
+  sortOptions = OWN_SORT_OPTIONS,
+  onSortValueChange,
   customCategories = {},
+  mode = 'own',
 }: ExerciseToolbarProps) {
   const sportsOptions = React.useMemo(() => termOptions('sport', customCategories.sport), [customCategories.sport])
   const ageGroupOptions = React.useMemo(() => termOptions('age_group', customCategories.age_group), [customCategories.age_group])
@@ -138,6 +157,7 @@ export function ExerciseToolbar({
                 </SheetTitle>
               </SheetHeader>
               <div className="space-y-6 mt-6">
+                {mode === 'own' && (<>
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-3">
                     <Label htmlFor="filter-noch-zu-ergaenzen" className="text-sm font-medium">
@@ -156,6 +176,7 @@ export function ExerciseToolbar({
                   </p>
                 </div>
                 <Separator />
+                </>)}
                 <FilterSection label="Sportart">
                   <MultiSelect
                     options={sportsOptions}
@@ -257,25 +278,14 @@ export function ExerciseToolbar({
             </SheetContent>
           </Sheet>
 
-          <Select
-            value={`${sortField}-${sortDirection}`}
-            onValueChange={(v) => {
-              const [field, dir] = v.split('-') as [ExerciseSortField, ExerciseSortDirection]
-              onSortChange(field, dir)
-            }}
-          >
+          <Select value={sortValue} onValueChange={onSortValueChange}>
             <SelectTrigger className="min-w-[9rem] flex-1 sm:w-[200px] sm:flex-none">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="updatedAt-desc">Zuletzt bearbeitet</SelectItem>
-              <SelectItem value="createdAt-desc">Zuletzt erstellt</SelectItem>
-              <SelectItem value="name-asc">Name (A–Z)</SelectItem>
-              <SelectItem value="name-desc">Name (Z–A)</SelectItem>
-              <SelectItem value="duration-asc">Dauer (kurz → lang)</SelectItem>
-              <SelectItem value="duration-desc">Dauer (lang → kurz)</SelectItem>
-              <SelectItem value="difficulty-asc">Schwierigkeit (leicht → schwer)</SelectItem>
-              <SelectItem value="difficulty-desc">Schwierigkeit (schwer → leicht)</SelectItem>
+              {sortOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -298,12 +308,14 @@ export function ExerciseToolbar({
             </Button>
           </div>
 
+          {mode === 'own' && (
           <Button asChild className="h-10 w-10 shrink-0 p-0 sm:w-auto sm:px-4">
             <Link href="/exercises/new" aria-label="Neue Übung">
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Neue Übung</span>
             </Link>
           </Button>
+          )}
         </div>
       </div>
 

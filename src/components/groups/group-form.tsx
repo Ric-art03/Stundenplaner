@@ -155,7 +155,9 @@ export function GroupForm({
       }
       toast({ title: isEdit ? 'Gruppe aktualisiert' : 'Gruppe erstellt' })
       const targetId = res.id ?? groupId
-      router.push(targetId ? `/groups/${targetId}` : '/groups')
+      // Nur nach dem Anlegen bietet die Gruppenseite passende Übungen aus der
+      // Übungsdatenbank an (PROJ-4) — beim Bearbeiten nicht.
+      router.push(targetId ? `/groups/${targetId}${isEdit ? '' : '?neu=1'}` : '/groups')
     } catch {
       toast({ variant: 'destructive', title: 'Fehler', description: 'Speichern fehlgeschlagen.' })
     } finally {

@@ -760,7 +760,7 @@ test.describe('PROJ-7 — Schnell anlegen', () => {
     // Verwerfen nimmt nur den Einsatz im Plan zurück — die Übung bleibt.
     await bar(page).getByRole('button', { name: 'Verwerfen' }).click()
     const confirm = page.getByRole('alertdialog')
-    await expect(confirm.getByText(/bleibt in deiner Übungsdatenbank/)).toBeVisible()
+    await expect(confirm.getByText(/bleibt in „Meine Übungen"/)).toBeVisible()
     await confirm.getByRole('button', { name: 'Verwerfen' }).click()
     expect(await order(page)).toEqual([fx.names.alpha])
 

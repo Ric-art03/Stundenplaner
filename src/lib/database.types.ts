@@ -51,6 +51,9 @@ export type Database = {
           image_url: string | null
           images: Json | null
           needs_completion: boolean
+          library_exercise_id: string | null
+          copied_at: string | null
+          source_credit: string | null
           created_at: string
           updated_at: string
         }
@@ -74,6 +77,9 @@ export type Database = {
           image_url?: string | null
           images?: Json | null
           needs_completion?: boolean
+          library_exercise_id?: string | null
+          copied_at?: string | null
+          source_credit?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -97,6 +103,9 @@ export type Database = {
           image_url?: string | null
           images?: Json | null
           needs_completion?: boolean
+          library_exercise_id?: string | null
+          copied_at?: string | null
+          source_credit?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -615,6 +624,192 @@ export type Database = {
         }
         Relationships: []
       }
+      library_blocks: {
+        Row: {
+          id: string
+          name: string
+          preview_user_ids: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          preview_user_ids?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          preview_user_ids?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      library_exercises: {
+        Row: {
+          id: string
+          block_id: string
+          key: string
+          name: string
+          description: string
+          notes: string | null
+          sports: Json
+          age_groups: Json
+          phases: Json
+          difficulty: string
+          organization_forms: Json
+          duration: number
+          participants_min: number | null
+          participants_max: number | null
+          music_required: boolean
+          source_credit: string | null
+          status: string
+          first_released_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          block_id: string
+          key: string
+          name: string
+          description: string
+          notes?: string | null
+          sports?: Json
+          age_groups?: Json
+          phases?: Json
+          difficulty?: string
+          organization_forms?: Json
+          duration: number
+          participants_min?: number | null
+          participants_max?: number | null
+          music_required?: boolean
+          source_credit?: string | null
+          status?: string
+          first_released_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          block_id?: string
+          key?: string
+          name?: string
+          description?: string
+          notes?: string | null
+          sports?: Json
+          age_groups?: Json
+          phases?: Json
+          difficulty?: string
+          organization_forms?: Json
+          duration?: number
+          participants_min?: number | null
+          participants_max?: number | null
+          music_required?: boolean
+          source_credit?: string | null
+          status?: string
+          first_released_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      library_exercise_materials: {
+        Row: {
+          id: string
+          exercise_id: string
+          name: string
+          quantity: number
+          mode: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          exercise_id: string
+          name: string
+          quantity: number
+          mode: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          exercise_id?: string
+          name?: string
+          quantity?: number
+          mode?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      library_exercise_variants: {
+        Row: {
+          id: string
+          exercise_id: string
+          title: string
+          description: string
+          materials: Json
+          participants_min: number | null
+          participants_max: number | null
+          duration: number | null
+          age_groups: Json
+          organization_forms: Json
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          exercise_id: string
+          title: string
+          description: string
+          materials?: Json
+          participants_min?: number | null
+          participants_max?: number | null
+          duration?: number | null
+          age_groups?: Json
+          organization_forms?: Json
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          exercise_id?: string
+          title?: string
+          description?: string
+          materials?: Json
+          participants_min?: number | null
+          participants_max?: number | null
+          duration?: number | null
+          age_groups?: Json
+          organization_forms?: Json
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      library_exercise_links: {
+        Row: {
+          id: string
+          exercise_id: string
+          url: string
+          title: string | null
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          exercise_id: string
+          url: string
+          title?: string | null
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          exercise_id?: string
+          url?: string
+          title?: string | null
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -681,6 +876,12 @@ export type Database = {
           p_new_name: string
           p_merge?: boolean
           p_predefined?: boolean
+        }
+        Returns: Json
+      }
+      copy_library_exercises: {
+        Args: {
+          p_ids: string[]
         }
         Returns: Json
       }

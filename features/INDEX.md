@@ -357,7 +357,11 @@ Gepflegt wird der Bestand über ein **Prüfprogramm auf diesem Rechner** (prüfe
 
 **Abschnitt F geändert, auf Wunsch des Nutzers:** gezählt wird je **Zielgruppe = Sportart + Alter** (3 / 5 / 3), ohne feste Liste zum Launch — der Nutzer nennt die Zielgruppen nacheinander, die wichtigsten zuerst. Die Arbeit am Bestand läuft in **eigenen Block-Sitzungen** nach dem Bau, nicht in einem Skill-Schritt (Abschnitt C2 des Entwurfs). Eine Migration, rein hinzufügend; Paket nur `exceljs` als Entwicklungspaket.
 
-**Nächster Schritt:** `/frontend` für PROJ-4.
+**Die Oberfläche von PROJ-4 steht seit dem 2026-10-18** — Abschnitt „Implementation Notes (Frontend)" in der Spec. **687 Unit-Tests grün** (35 neu), Typprüfung, Lint und Produktionsbuild sauber. Die Seite heißt jetzt „Übungen" und hat die Reiter „Meine Übungen" und „Übungsdatenbank"; dazu Leseansicht, Übernehmen einzeln und gesammelt, „Passt zu Gruppe" mit Vorauswahl und allen Gründen, die Einstiege (Leerzustände, Generator, Gruppenseite nach dem Anlegen) und alle Texte aus Abschnitt A. Die Materialprüfung des Generators sagt jetzt, *welches* Material fehlt; die Filter beider Reiter laufen über einen gemeinsamen Baustein.
+
+**Ohne Tabellen ist der neue Reiter noch leer** („gerade nicht erreichbar"), und alle Einstiege bleiben verborgen. Die Datenbank-Typen sind von Hand vorab eingetragen und legen fest, was die Migration liefern muss. Liste, Auswahlleiste und Leseansicht sind nur im Komponententest mit nachgestellten Daten gesehen; die Browser-Tests sind nicht gelaufen.
+
+**Nächster Schritt:** `/backend` für PROJ-4 — Migration, Prüfprogramm, Testblock.
 
 ## Features
 
@@ -366,7 +370,7 @@ Gepflegt wird der Bestand über ein **Prüfprogramm auf diesem Rechner** (prüfe
 | PROJ-1 | Supabase Infrastructure Setup | P0 | None | Deployed | [Spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-09-28 |
 | PROJ-2 | Benutzerregistrierung & Login | P0 | PROJ-1 | Deployed | [Spec](PROJ-2-benutzerregistrierung-login.md) | 2026-09-28 |
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
-| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | Architected | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
+| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | In Progress | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Deployed | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |

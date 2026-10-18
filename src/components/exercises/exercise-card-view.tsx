@@ -16,17 +16,28 @@ import { createClient } from '@/lib/supabase/client'
 import { ExerciseFactsRow } from './exercise-facts-row'
 import { variantFacts } from './variant-facts'
 import type { Exercise } from '@/lib/types/exercise'
+import type { ExerciseViewSlots } from './exercise-list-view'
 
-interface ExerciseCardViewProps {
+interface ExerciseCardViewProps extends ExerciseViewSlots {
   exercises: Exercise[]
   onRequestDelete?: (exercise: Exercise) => void
 }
 
-export function ExerciseCardView({ exercises, onRequestDelete }: ExerciseCardViewProps) {
+export function ExerciseCardView({
+  exercises,
+  onRequestDelete,
+  hrefFor = (exercise) => `/exercises/${exercise.id}`,
+  leading,
+  titleExtras,
+  footer,
+  actions,
+}: ExerciseCardViewProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {exercises.map((exercise) => (
-        <Card key={exercise.id} className="h-full hover:shadow-md transition-shadow relative">
+        <Card key={exercise.id} className="h-full hover:shadow-md transition-shadow relative flex flex-col">
+          {leading && <div className="absolute top-2 left-2 z-10 rounded-md bg-background/80 p-1.5 backdrop-blur-sm">{leading(exercise)}</div>}
+          {!actions && (
           <div className="absolute top-2 right-2 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -52,7 +63,8 @@ export function ExerciseCardView({ exercises, onRequestDelete }: ExerciseCardVie
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <Link href={`/exercises/${exercise.id}`}>
+          )}
+          <Link href={hrefFor(exercise)}>
             {exercise.images.find((img) => img.isCover)?.path ? (
               <CardImage storagePath={exercise.images.find((img) => img.isCover)!.path} alt={exercise.name} />
             ) : exercise.images[0]?.path ? (
@@ -73,6 +85,7 @@ export function ExerciseCardView({ exercises, onRequestDelete }: ExerciseCardVie
                     noch zu ergänzen
                   </Badge>
                 )}
+                {titleExtras?.(exercise)}
               </div>
               <div className="flex flex-wrap gap-1 mb-1.5">
                 {exercise.phases.map((phase) => (
@@ -116,6 +129,12 @@ export function ExerciseCardView({ exercises, onRequestDelete }: ExerciseCardVie
             organizationForms={exercise.organizationForms}
             variants={variantFacts(exercise.variants)}
           />
+          {(footer || actions) && (
+            <div className="mt-auto space-y-2 px-4 pb-4">
+              {footer?.(exercise)}
+              {actions?.(exercise)}
+            </div>
+          )}
         </Card>
       ))}
     </div>

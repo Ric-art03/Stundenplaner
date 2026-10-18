@@ -109,6 +109,14 @@ export interface Exercise {
    * Generator und Editor behandeln die Übung wie jede andere.
    */
   needsCompletion: boolean
+  /**
+   * Quellenangabe, wo eine Lizenz Namensnennung verlangt (PROJ-4). Kommt nur
+   * aus der Übungsdatenbank, geht beim Übernehmen mit und steht nicht im
+   * Formular — bleibt also beim Bearbeiten erhalten.
+   */
+  sourceCredit?: string | null
+  /** Gesetzt, wenn die Übung aus der Übungsdatenbank übernommen wurde (PROJ-4). */
+  libraryOrigin?: { libraryExerciseId: string | null; copiedAt: string } | null
   images: ExerciseImage[]
   materials: ExerciseMaterial[]
   variants: ExerciseVariant[]

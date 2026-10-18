@@ -29,7 +29,7 @@ export default async function DashboardPage() {
                   <ClipboardList className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Übungsdatenbank</CardTitle>
+                  <CardTitle className="text-lg">Übungen</CardTitle>
                   <CardDescription>Übungen erstellen, verwalten und durchsuchen</CardDescription>
                 </div>
               </CardHeader>

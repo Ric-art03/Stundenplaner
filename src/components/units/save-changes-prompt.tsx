@@ -126,8 +126,8 @@ export function SaveChangesPrompt({
               {quickCreated.length > 0 && mode === 'leave' && (
                 <p>
                   {quickCreated.length === 1
-                    ? `Die neu angelegte Übung „${quickCreated[0]}" bleibt in deiner Übungsdatenbank, auch wenn du verwirfst.`
-                    : `Die ${quickCreated.length} neu angelegten Übungen bleiben in deiner Übungsdatenbank, auch wenn du verwirfst.`}{' '}
+                    ? `Die neu angelegte Übung „${quickCreated[0]}" bleibt in „Meine Übungen", auch wenn du verwirfst.`
+                    : `Die ${quickCreated.length} neu angelegten Übungen bleiben in „Meine Übungen", auch wenn du verwirfst.`}{' '}
                   Verworfen wird nur ihr Einsatz im Plan.
                 </p>
               )}

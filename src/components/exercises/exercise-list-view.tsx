@@ -1,5 +1,6 @@
 'use client'
 
+import type * as React from 'react'
 import Link from 'next/link'
 import { Clock, Users, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -14,12 +15,34 @@ import { ExerciseFactsRow } from './exercise-facts-row'
 import { variantFacts } from './variant-facts'
 import type { Exercise } from '@/lib/types/exercise'
 
-interface ExerciseListViewProps {
+/**
+ * Plätze für die Übungsdatenbank (PROJ-4): Auswählen, Vermerke, „Übernehmen"
+ * und die Begründung von „Passt zu Gruppe". Ohne sie bleibt die Ansicht die
+ * von „Meine Übungen" — mit Bearbeiten und Löschen im Menü.
+ */
+export interface ExerciseViewSlots {
+  hrefFor?: (exercise: Exercise) => string
+  leading?: (exercise: Exercise) => React.ReactNode
+  titleExtras?: (exercise: Exercise) => React.ReactNode
+  footer?: (exercise: Exercise) => React.ReactNode
+  /** Ersetzt das Menü mit Bearbeiten und Löschen. */
+  actions?: (exercise: Exercise) => React.ReactNode
+}
+
+interface ExerciseListViewProps extends ExerciseViewSlots {
   exercises: Exercise[]
   onRequestDelete?: (exercise: Exercise) => void
 }
 
-export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListViewProps) {
+export function ExerciseListView({
+  exercises,
+  onRequestDelete,
+  hrefFor = (exercise) => `/exercises/${exercise.id}`,
+  leading,
+  titleExtras,
+  footer,
+  actions,
+}: ExerciseListViewProps) {
   return (
     <div className="divide-y border rounded-lg">
       {exercises.map((exercise) => (
@@ -27,10 +50,11 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
           key={exercise.id}
           className="flex items-start gap-3 p-4 hover:bg-accent/50 transition-colors"
         >
+          {leading?.(exercise)}
           {/* Die Übungszeile steht neben dem Verweis, nicht in ihm: „Varianten (n)"
               klappt auf, ohne die Detailseite zu öffnen. */}
           <div className="flex-1 min-w-0 space-y-1.5">
-          <Link href={`/exercises/${exercise.id}`} className="block space-y-1.5">
+          <Link href={hrefFor(exercise)} className="block space-y-1.5">
             <div className="flex items-center gap-2">
               <h3 className="font-medium truncate">{exercise.name}</h3>
               <DifficultyDot difficulty={exercise.difficulty} />
@@ -39,6 +63,7 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
                   noch zu ergänzen
                 </Badge>
               )}
+              {titleExtras?.(exercise)}
             </div>
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
               {exercise.phases.map((phase) => (
@@ -80,7 +105,9 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
             organizationForms={exercise.organizationForms}
             variants={variantFacts(exercise.variants)}
           />
+          {footer?.(exercise)}
           </div>
+          {actions ? actions(exercise) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -104,6 +131,7 @@ export function ExerciseListView({ exercises, onRequestDelete }: ExerciseListVie
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
       ))}
     </div>

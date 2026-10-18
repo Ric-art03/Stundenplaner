@@ -61,7 +61,7 @@ export function UnitItemCard({
             <div className="space-y-0.5">
               <p className="text-sm font-medium">Übung gelöscht</p>
               <p className="text-xs text-muted-foreground">
-                Diese Übung wurde aus deiner Datenbank entfernt. Der Platz von{' '}
+                Diese Übung wurde aus deinen Übungen gelöscht. Der Platz von{' '}
                 {item.plannedDuration} Minuten ist noch frei.
               </p>
             </div>

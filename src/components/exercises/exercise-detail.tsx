@@ -18,22 +18,36 @@ import {
 } from '@/components/ui/accordion'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
+import { format } from 'date-fns'
+import { de } from 'date-fns/locale'
 import { DeleteConfirmDialog } from './delete-confirm-dialog'
+import { LibraryCopyControl } from '@/components/library/library-copy-control'
 import { WorkNote } from './work-note'
 import type { Exercise } from '@/lib/types/exercise'
 import { realMaterials, variantMaterialMode } from '@/lib/categories/terms'
 
 interface ExerciseDetailProps {
   exercise: Exercise
-  onDelete: (id: string) => Promise<{ success?: boolean; error?: string }>
+  /** Fehlt in der Leseansicht der Übungsdatenbank — dort wird nichts gelöscht. */
+  onDelete?: (id: string) => Promise<{ success?: boolean; error?: string }>
+  /**
+   * Leseansicht einer Übung aus der Übungsdatenbank (PROJ-4): ohne Bearbeiten
+   * und Löschen, dafür mit „Übernehmen".
+   */
+  library?: {
+    backHref: string
+    isDraft: boolean
+    copiedExerciseId: string | null
+  }
 }
 
-export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
+export function ExerciseDetail({ exercise, onDelete, library }: ExerciseDetailProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [deleting, setDeleting] = React.useState(false)
 
   async function handleDelete() {
+    if (!onDelete) return
     setDeleting(true)
     try {
       const result = await onDelete(exercise.id)
@@ -56,9 +70,9 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-            <Link href="/exercises">
+            <Link href={library ? library.backHref : '/exercises'}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Alle Übungen
+              {library ? 'Zurück zur Übungsdatenbank' : 'Alle Übungen'}
             </Link>
           </Button>
           <h1 className="text-2xl font-bold">{exercise.name}</h1>
@@ -67,6 +81,18 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
               <Badge key={sport} variant="outline">{sport}</Badge>
             ))}
           </div>
+          {library?.isDraft && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              <Badge variant="outline" className="mr-1.5 border-amber-400 text-[10px] text-amber-700">Entwurf</Badge>
+              Noch nicht freigegeben — nur in deiner Vorschau sichtbar.
+            </p>
+          )}
+          {exercise.libraryOrigin && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Aus der Übungsdatenbank übernommen am{' '}
+              {format(new Date(exercise.libraryOrigin.copiedAt), 'd. MMMM yyyy', { locale: de })}
+            </p>
+          )}
           {exercise.needsCompletion && (
             <p className="mt-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="mr-1.5 text-[10px]">noch zu ergänzen</Badge>
@@ -76,6 +102,15 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
             </p>
           )}
         </div>
+        {library ? (
+          <div className="shrink-0">
+            <LibraryCopyControl
+              libraryExerciseId={exercise.id}
+              name={exercise.name}
+              initialCopiedExerciseId={library.copiedExerciseId}
+            />
+          </div>
+        ) : (
         <div className="flex flex-col sm:flex-row gap-2 shrink-0">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/exercises/${exercise.id}/edit`}>
@@ -90,6 +125,7 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
             disabled={deleting}
           />
         </div>
+        )}
       </div>
 
       <Separator />
@@ -302,6 +338,14 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
               </a>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Quellenangabe (PROJ-4) — wo eine Lizenz Namensnennung verlangt */}
+      {exercise.sourceCredit && (
+        <section>
+          <h2 className="text-sm font-medium text-muted-foreground mb-2">Quelle</h2>
+          <p className="whitespace-pre-wrap text-sm">{exercise.sourceCredit}</p>
         </section>
       )}
 

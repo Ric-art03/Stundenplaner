@@ -113,7 +113,7 @@ export function matchesAgeGroups(candidate: Candidate, groupAgeGroups: string[])
   return candidate.ageGroups.some((age) => wanted.includes(normalize(age)))
 }
 
-function matchesSports(candidate: Candidate, segmentSports: string[]): boolean {
+export function matchesSports(candidate: Pick<Candidate, 'sports'>, segmentSports: string[]): boolean {
   const wanted = segmentSports.map(normalize)
   return candidate.sports.some((sport) => wanted.includes(normalize(sport)))
 }
@@ -132,16 +132,27 @@ function matchesOrganization(candidate: Candidate, forms: string[]): boolean {
   return candidate.organizationForms.some((form) => wanted.includes(normalize(form)))
 }
 
+/** Ein Material, das die Halle nicht oder nicht in der nötigen Menge hat. */
+export interface MissingMaterial {
+  name: string
+  needed: number
+  available: number
+}
+
 /**
+ * Was der Halle für diese Übung fehlt — leer, wenn das Material reicht.
  * Pro Übung geprüft, nicht kumulativ über das Segment: Übungen laufen
- * nacheinander und konkurrieren nicht um dasselbe Material.
+ * nacheinander und konkurrieren nicht um dasselbe Material. „Passt zu Gruppe"
+ * (PROJ-4) braucht die Liste für die Begründung; der Generator nur, ob sie
+ * leer ist (`materialsAvailable`) — eine Regel, zwei Auskünfte.
  */
-export function materialsAvailable(
+export function missingMaterials(
   candidate: Pick<Candidate, 'materials'>,
   group: Pick<GeneratorGroup, 'participants' | 'venueMaterials'>
-): boolean {
-  if (group.venueMaterials === null) return true
+): MissingMaterial[] {
+  if (group.venueMaterials === null) return []
 
+  const missing: MissingMaterial[] = []
   for (const material of candidate.materials) {
     // „Ohne Material" an einer Variante ist kein Material (PROJ-19).
     if (isNoMaterial(material.name)) continue
@@ -156,10 +167,18 @@ export function materialsAvailable(
     const stock = group.venueMaterials.find(
       (entry) => normalize(entry.name) === normalize(material.name)
     )
-    if ((stock?.quantity ?? 0) < needed) return false
+    const available = stock?.quantity ?? 0
+    if (available < needed) missing.push({ name: material.name, needed, available })
   }
 
-  return true
+  return missing
+}
+
+export function materialsAvailable(
+  candidate: Pick<Candidate, 'materials'>,
+  group: Pick<GeneratorGroup, 'participants' | 'venueMaterials'>
+): boolean {
+  return missingMaterials(candidate, group).length === 0
 }
 
 export function participantsFit(candidate: Candidate, participants: number | null): boolean {

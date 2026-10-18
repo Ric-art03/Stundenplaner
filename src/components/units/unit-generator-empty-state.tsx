@@ -1,14 +1,23 @@
 import Link from 'next/link'
-import { Dumbbell, Plus, Users } from 'lucide-react'
+import { Dumbbell, Library, Plus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { libraryHref } from '@/lib/library/address'
 
 type EmptyStateVariant = 'no-groups' | 'no-exercises'
 
 interface UnitGeneratorEmptyStateProps {
   variant: EmptyStateVariant
+  /** Ob es in der Übungsdatenbank etwas zu übernehmen gibt (PROJ-4, Edge Case 11). */
+  libraryHasContent?: boolean
+  /** Die Gruppe, auf die „Passt zu Gruppe" gleich gesetzt wird. */
+  libraryGroupId?: string | null
 }
 
-export function UnitGeneratorEmptyState({ variant }: UnitGeneratorEmptyStateProps) {
+export function UnitGeneratorEmptyState({
+  variant,
+  libraryHasContent = false,
+  libraryGroupId = null,
+}: UnitGeneratorEmptyStateProps) {
   if (variant === 'no-groups') {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
@@ -34,16 +43,27 @@ export function UnitGeneratorEmptyState({ variant }: UnitGeneratorEmptyStateProp
       <Dumbbell className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
       <h2 className="mb-1 text-lg font-semibold">Noch keine Übungen vorhanden</h2>
       <p className="mx-auto mb-4 max-w-md text-sm text-muted-foreground">
-        Der Generator stellt Einheiten aus deiner eigenen Übungsdatenbank zusammen. Je mehr
-        Übungen du erfasst, desto abwechslungsreicher werden die Vorschläge. Eine kuratierte
-        Starter-Datenbank zum Übernehmen ist in Vorbereitung.
+        Der Generator stellt Einheiten aus deinen eigenen Übungen zusammen. Je mehr Übungen du
+        hast, desto abwechslungsreicher werden die Vorschläge.
+        {libraryHasContent &&
+          ' Am schnellsten geht es mit der Übungsdatenbank: Dort wählt „Passt zu Gruppe" vor, was der Generator für deine Gruppe sofort einplanen würde.'}
       </p>
-      <Button asChild>
-        <Link href="/exercises/new">
-          <Plus className="mr-2 h-4 w-4" />
-          Erste Übung anlegen
-        </Link>
-      </Button>
+      <div className="flex flex-col justify-center gap-2 sm:flex-row">
+        {libraryHasContent && (
+          <Button asChild>
+            <Link href={libraryHref({ groupId: libraryGroupId })}>
+              <Library className="mr-2 h-4 w-4" />
+              Zur Übungsdatenbank
+            </Link>
+          </Button>
+        )}
+        <Button variant={libraryHasContent ? 'outline' : 'default'} asChild>
+          <Link href="/exercises/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Erste Übung anlegen
+          </Link>
+        </Button>
+      </div>
     </div>
   )
 }

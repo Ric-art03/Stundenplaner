@@ -31,9 +31,11 @@ interface GroupDetailProps {
   group: Group
   units: UnitSummary[]
   onDelete: (id: string) => Promise<{ success?: boolean; error?: string }>
+  /** Ein Hinweis unter dem Kopf — etwa das Angebot aus der Übungsdatenbank (PROJ-4). */
+  notice?: React.ReactNode
 }
 
-export function GroupDetail({ group, units, onDelete }: GroupDetailProps) {
+export function GroupDetail({ group, units, onDelete, notice }: GroupDetailProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [deleting, setDeleting] = React.useState(false)
@@ -123,6 +125,8 @@ export function GroupDetail({ group, units, onDelete }: GroupDetailProps) {
           </AlertDialog>
         </div>
       </div>
+
+      {notice}
 
       <Separator />
 

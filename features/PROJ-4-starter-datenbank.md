@@ -1,6 +1,6 @@
 # PROJ-4: Starter-Datenbank (Übungsdatenbank zum Übernehmen)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-09-28
 **Last Updated:** 2026-10-18
 
@@ -753,6 +753,98 @@ Für die App selbst **keine neuen Pakete**.
 - Krabbelgruppe und Eltern-Kind: der Grundstock hat die Begriffe (Sportarten Krabbelgruppe und
   Eltern-Kind-Turnen, Altersgruppen 0–1 und 1–2). Technisch gibt es also kein Hindernis mehr. Ob
   sie zum Launch gehören, ist eine Inhaltsfrage
+
+## Implementation Notes (Frontend)
+
+**Stand:** 2026-10-18. **687 Unit-Tests grün** (652 plus 35 neue), Typprüfung, Lint (nur die
+vier bekannten Bild-Warnungen) und Produktionsbuild sauber. Gebaut sind die Teile 1–5 aus „Reihenfolge
+beim Bauen"; das Prüfprogramm (Teil 6) gehört zu `/backend`.
+
+### Was gebaut ist
+
+- **Seite „Übungen" mit zwei Reitern** (`/exercises`, Reiter in der Adresse) — „Meine Übungen" ist
+  die bisherige Übersicht, unverändert in `my-exercises.tsx` umgezogen; die Reiterleiste folgt dem
+  Muster der Verwaltung (`exercises-tabs.tsx`)
+- **Reiter „Übungsdatenbank"** (`components/library/library-browser.tsx`): dieselbe Werkzeugleiste
+  (ohne „Neue Übung" und ohne „noch zu ergänzen"), Sortierung „Zuletzt hinzugefügt" als
+  Voreinstellung, Liste und Karten mit Ankästchen, Vermerken „Entwurf" / „Übernommen",
+  „Übernehmen" bzw. „In Meine Übungen öffnen", „Alle auswählen", Auswahlleiste am unteren Rand.
+  Filter, Sortierung und Gruppe stehen in der Adresse und werden ohne Serverrunde nachgeführt
+- **„Passt zu Gruppe"**: Gruppenwahl, Hinweise „keine Halle" und „keine Teilnehmerzahl", je Übung
+  ein Satz „Passt zur Gruppe" / „Passt mit der Variante …" / alle Gründe; Vorauswahl beim Wählen
+  der Gruppe; ohne Gruppe Erklärung und „Gruppe anlegen"
+- **Leerzustände mit Gründen**: Bestand im Aufbau, nicht erreichbar, Filter ohne Treffer (jeder
+  Filterwert ohne Übung wird genannt, sonst „liegt an der Kombination"), Gruppe ohne Treffer
+  (Sportart, Altersgruppe, beides, eigene Begriffe, „nur nicht zusammen"), „Alles Passende hast du
+  schon übernommen"
+- **Leseansicht** `/exercises/library/[id]`: die bestehende Detailansicht im Lesemodus, mit
+  Quellenangabe, „Entwurf", „Übernehmen"; „Zurück zur Übungsdatenbank" führt in dieselbe Liste
+- **Eigene Detailansicht**: „Aus der Übungsdatenbank übernommen am …" und Quellenangabe
+- **Einstiege**: Leerzustand „Meine Übungen" und Generator verweisen in die Übungsdatenbank (der
+  Generator mit der gewählten oder einzigen Gruppe); nach dem **Anlegen** einer Gruppe zeigt ihre
+  Seite das Angebot (`?neu=1`, beim Bearbeiten nicht). Beides nur, wenn der Bestand nicht leer ist
+- **Texte aus Abschnitt A** alle ersetzt, der Browser-Test aus PROJ-7 zieht mit
+
+**Logik ohne Oberfläche, mit Tests** (`src/lib/library/`):
+
+- `group-fit.ts` — „Passt zu Gruppe" über die Kandidaten und Kriterien des Generators. Dafür liefert
+  die Materialprüfung des Generators jetzt die Fehlliste (`missingMaterials`); `materialsAvailable`
+  ist „Liste leer". `matchesSports` ist dafür exportiert
+- `filter-reasons.ts` — Gründe einer leeren Filterliste
+- `address.ts` — Adresse lesen und schreiben; ein „Zurück"-Verweis wird immer aus gelesenen Werten
+  neu gebaut, Unbekanntes fällt weg
+- `selection.ts` — Vorauswahl, Auswählbarkeit, Schrumpfen der Auswahl
+
+**Ein gemeinsamer Filter-Baustein** (`src/lib/exercises/filter-query.ts`): die Filter aus
+`getExercises` herausgelöst; „Meine Übungen" und die Übungsdatenbank bauen ihre Abfrage darüber.
+Material, Varianten und Links lesen beide über `src/lib/exercises/map-rows.ts`.
+
+**Komponententest** `library-browser.test.tsx` mit nachgestellten Serverantworten: Vermerke,
+Vorauswahl mit Gründen, Übernehmen in Listenreihenfolge, leere Zustände.
+
+### Was erst mit `/backend` trägt
+
+Die Serverwege sind geschrieben (`src/lib/actions/library.ts`), die Tabellen fehlen noch. Die
+Datenbank-Typen sind **von Hand vorab eingetragen** (wie in PROJ-16) und legen fest, was die
+Migration liefern muss:
+
+- `library_blocks` (u. a. `preview_user_ids`), `library_exercises` (u. a. `key`, `block_id`,
+  `status` mit `draft` / `released` / `withdrawn`, `first_released_at`, `source_credit`), dazu
+  `library_exercise_materials`, `_variants`, `_links` — die Kindtabellen mit der Spalte
+  **`exercise_id`**, wie bei den eigenen Übungen, damit der Filter-Baustein für beide gilt
+- an `exercises`: `library_exercise_id`, `copied_at`, `source_credit`
+- `copy_library_exercises(p_ids uuid[])` → JSON `{ copied, already, unavailable }`, je Eintrag
+  `library_id`, `exercise_id` (nicht bei `unavailable`) und `name`; bei `unavailable` wird nichts
+  geschrieben
+
+Bis dahin sagt der Reiter „Die Übungsdatenbank ist gerade nicht erreichbar", und alle Einstiege
+bleiben verborgen, weil der Bestand als leer gilt.
+
+### Entscheidungen beim Bauen
+
+- **Das Angebot nach dem Anlegen zählt, was vorausgewählt würde** — also was der Generator sofort
+  einplanen würde und noch nicht übernommen ist. Übungen, die nur an Material oder Teilnehmerzahl
+  scheitern, zählen nicht mit; „passen 23 Übungen" soll stimmen
+- **Die Auswahl springt nur beim Wechsel der Gruppe um.** Filter danach lassen sie stehen, nehmen
+  aber heraus, was nicht mehr in der Liste steht — es wird nie etwas Unsichtbares mit übernommen.
+  Dieselbe Gruppe noch einmal zu wählen rechnet nicht neu (die Auswahlliste meldet keine Änderung);
+  dafür eine andere wählen oder neu laden
+- **„Alle auswählen"** in der Zeile mit der Anzahl — für Edge Case 10 (alle 100 übernehmen)
+- **Gründe je Übung**: die der Grundform; passt nur eine Variante zu Sportart und Alter, die dieser
+  Variante (mit ihrem Titel davor)
+- **Eine Gruppe aus der Adresse, die es nicht mehr gibt**: Hinweis, dann alle Übungen
+- **Vorschau-Konten dürfen Entwürfe übernehmen** (Tech Design); die Leseansicht sagt bei einem
+  Entwurf „nur in deiner Vorschau sichtbar"
+
+### Nicht belegt
+
+- **Die Liste der Übungsdatenbank im Browser** — ohne Tabellen nicht darstellbar. Angesehen sind
+  bei 375 und 1280 px am Produktionsbuild: beide Reiter (Zustand „nicht erreichbar"), Startseite,
+  Generator; nirgends waagerechtes Scrollen. Liste, Karten, Auswahlleiste und Leseansicht nur im
+  Komponententest
+- Das Angebot auf der Gruppenseite und der Weg aus dem Generator sind ungesehen
+- **Die Browser-Tests sind nicht gelaufen** — gehören in `/qa`, auch PROJ-3 (die Übersicht ist
+  umgezogen) und PROJ-7 (geänderter Text)
 
 ## QA Test Results
 _To be added by /qa_

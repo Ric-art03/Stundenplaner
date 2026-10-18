@@ -50,8 +50,8 @@ export function DiscardChangesDialog({
               {quickCreated.length > 0 && (
                 <p>
                   {quickCreated.length === 1
-                    ? `Die neu angelegte Übung „${quickCreated[0]}" bleibt in deiner Übungsdatenbank.`
-                    : `Die ${quickCreated.length} neu angelegten Übungen bleiben in deiner Übungsdatenbank.`}
+                    ? `Die neu angelegte Übung „${quickCreated[0]}" bleibt in „Meine Übungen".`
+                    : `Die ${quickCreated.length} neu angelegten Übungen bleiben in „Meine Übungen".`}
                 </p>
               )}
             </div>

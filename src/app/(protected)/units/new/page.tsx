@@ -5,6 +5,7 @@ import { getGroups } from '@/lib/actions/groups'
 import { getCustomCategories, getExercises } from '@/lib/actions/exercises'
 import { getUnit } from '@/lib/actions/units'
 import { getPatterns } from '@/lib/actions/patterns'
+import { hasLibraryContent } from '@/lib/actions/library'
 import { EMPTY_FILTERS } from '@/lib/types/exercise'
 import { UnitConfigForm } from '@/components/units/unit-config-form'
 import { UnitGeneratorEmptyState } from '@/components/units/unit-generator-empty-state'
@@ -17,12 +18,13 @@ interface NewUnitPageProps {
 export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
   const { group: groupParam, from: fromUnitId, pattern: patternParam } = await searchParams
 
-  const [groups, categories, patterns, exerciseResult] = await Promise.all([
+  const [groups, categories, patterns, exerciseResult, libraryHasContent] = await Promise.all([
     getGroups(),
     getCustomCategories(),
     getPatterns(),
     // Nur die Gesamtzahl interessiert hier — deshalb ein Limit von 1.
     getExercises(EMPTY_FILTERS, 'name', 'asc', 0, 1),
+    hasLibraryContent(),
   ])
 
   // „Zurück zum Generator" aus einer Einheit: deren Konfiguration wird wieder
@@ -67,7 +69,7 @@ export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
         <p className="text-muted-foreground">
           {source
             ? 'Deine Einstellungen aus dem letzten Durchlauf sind geladen — passe an, was du ändern willst.'
-            : 'Der Generator stellt eine strukturierte Einheit aus deiner Übungsdatenbank zusammen.'}
+            : 'Der Generator stellt eine strukturierte Einheit aus deinen Übungen zusammen.'}
         </p>
       </div>
 
@@ -75,7 +77,12 @@ export default async function NewUnitPage({ searchParams }: NewUnitPageProps) {
         {groups.length === 0 ? (
           <UnitGeneratorEmptyState variant="no-groups" />
         ) : exerciseResult.total === 0 ? (
-          <UnitGeneratorEmptyState variant="no-exercises" />
+          <UnitGeneratorEmptyState
+            variant="no-exercises"
+            libraryHasContent={libraryHasContent}
+            // Die gewählte Gruppe — oder die einzige — gleich für „Passt zu Gruppe".
+            libraryGroupId={initialGroupId ?? (groups.length === 1 ? groups[0].id : null)}
+          />
         ) : (
           <UnitConfigForm
             groups={groups}
