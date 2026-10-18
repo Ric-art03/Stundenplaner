@@ -47,6 +47,26 @@ festgelegt:
 Stand 2026-10-17: Im Konto stehen 45 Übungen (39 davon Testdaten), 25 Einheiten — alle mit
 Testübungen — und 8 Durchführungen.
 
+**Schritt 1 erledigt** (PROJ-19 am 2026-10-18 ausgeliefert). **Schritt 3 erledigt am 2026-10-18**,
+auf ausdrücklichen Wunsch des Nutzers. **Schritt 2 nur zur Hälfte:** gesichert ist das **ganze
+Konto im Rohzustand**, die bereinigte Tabelle (der erste Block) steht noch aus, weil ihr Format
+erst beim ersten Block entschieden wird (offene Frage unten). Die Sicherung enthält alles, was
+dafür nötig ist.
+
+- **Sicherung:** `Appentwicklung -  STUNDENPLANER APP\Sicherung Konto 2026-10-18\` auf dem
+  Desktop, **außerhalb des Projektordners** — das GitHub-Repository ist öffentlich lesbar, die
+  Übungstexte gehören nicht hinein. Darin `konto-sicherung.json` (alle Tabellen des Kontos,
+  lesbar nachgeprüft) und `bilder\` (7 Bilder, 7,8 MB, Größen Byte für Byte gegen den Speicher
+  geprüft)
+- **Gelöscht:** 46 Übungen (mit 11 Varianten, 38 Materialzeilen), 7 Bilder, 25 Einheiten (mit 81
+  Segmenten, 147 Einträgen, 8 Durchführungen mit 48 Schritten, 143 Verwendungsnachweisen),
+  2 Gruppen (3 Stundenzeiten), 7 Hallen (26 Materialzeilen), 5 eigene Kategorien, 4 Stundenmuster.
+  Es waren 46 Übungen statt 45 — die Zahl der Testübungen darunter ist beim Bereinigen neu
+  festzustellen
+- **Geblieben:** Anmeldung und Profil
+- **Nachgeprüft:** in allen Tabellen nichts mehr am Konto, keine verwaisten Zeilen in den
+  abhängigen Tabellen, kein Bild im Speicher
+
 ## Dependencies
 - Requires: PROJ-3 (Übungsdatenbank) — eine übernommene Übung ist eine normale eigene Übung; Liste, Filter, Detailansicht und Übungszeile werden wiederverwendet
 - Requires: PROJ-5 (Gruppenprofile) — für „passt zu Gruppe" und das Angebot nach dem Anlegen einer Gruppe

@@ -343,7 +343,11 @@ Nicht belegt: Firefox und Safari; ein scheiterndes Aufgehen (vom Nutzer zurückg
 
 Eines bleibt: **in der Produktion noch nicht von Hand durchgespielt** — Übungsformular, Variante „Ohne Material", Filter „Ohne Material", Generator mit Gruppe. Offen aus der QA: **BUG-29** und **BUG-30** (beide niedrig).
 
-**Nächster Schritt:** `/architecture` für PROJ-4 (Starter-Datenbank). Vorher steht die zweite Vorarbeit an: Rohmasse sichern, dann das Konto des Nutzers leeren — nur mit ausdrücklicher Zustimmung.
+**Das Konto des Nutzers ist am 2026-10-18 geleert** — auf seinen ausdrücklichen Wunsch, als Vorarbeit für PROJ-4. Vorher ist das **ganze Konto im Rohzustand gesichert** (JSON plus 7 Bilder, beides nachgeprüft), außerhalb des Projektordners unter `Appentwicklung -  STUNDENPLANER APP\Sicherung Konto 2026-10-18\` — das Repository ist öffentlich lesbar. Gelöscht: 46 Übungen, 7 Bilder, 25 Einheiten mit 8 Durchführungen, 2 Gruppen, 7 Hallen, 5 eigene Kategorien, 4 Stundenmuster. Geblieben: Anmeldung und Profil. In allen Tabellen nachgeprüft, nichts zurückgeblieben. Einzelheiten in der Spec von PROJ-4, „Reihenfolge der Arbeit".
+
+**Offen aus der Vorarbeit:** die bereinigte Rohmasse als erster Block — wartet auf die Entscheidung über das Tabellenformat; die Sicherung enthält alles dafür.
+
+**Nächster Schritt:** `/architecture` für PROJ-4 (Starter-Datenbank).
 
 ## Features
 
