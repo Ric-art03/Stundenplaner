@@ -572,7 +572,7 @@ oder „Gymnastik" statt „Allgemeinsport"
 - **Auch in der Verwaltung** lassen sich „Kein Material" und „Ohne Material" nicht als Material
   anlegen (folgt aus der technischen Entscheidung „interner Name reserviert")
 
-**Wartet auf `/backend`**
+**Wartet auf `/backend`** *(am 2026-10-18 erledigt, siehe „Implementation Notes (Backend)")*
 - **Filter „Ohne Material"** wird vom Server noch nicht ausgewertet; bis dahin wirkt das Häkchen
   nicht
 - **Aufgehen eigener Begriffe beim Laden**: bis dahin blendet die Oberfläche den Doppel aus
@@ -586,6 +586,71 @@ Browser-Testdaten von „Kreis / Sitzkreis" auf „Kreis" umgestellt. Typprüfun
 Produktionsbuild sauber. Browser-Tests der Stufe „chromium" (Übungen, Gruppen, Generator am
 Rechner) **53 von 53 grün**; die übrigen Stufen (Handy, Editor, Live-Modus, Verwaltung) sind nicht
 gelaufen und gehören in `/qa`. Im Browser von Hand angesehen ist noch nichts.
+
+## Implementation Notes (Backend)
+
+Gebaut am 2026-10-18. **Keine Migration, keine neue Zugriffsregel, keine neuen Pakete**: alle
+drei offenen Stellen aus „Wartet auf `/backend`" sind geschlossen, mit vorhandenen Tabellen und
+der Funktion `rename_category` aus PROJ-16.
+
+**Aufgehen eigener Begriffe beim Laden**
+- Neuer Serverbaustein `src/lib/categories/custom-store.ts`, bewusst keine Server-Aktion (aus dem
+  Browser nicht aufrufbar). `absorbPredefinedCustoms` sucht eigene Begriffe, die ohne Groß/Klein
+  einem mitgelieferten gleichen (`predefinedDuplicates` in `src/lib/manage/categories.ts`), und
+  führt sie über `rename_category` mit `p_predefined` in den mitgelieferten über — in dessen
+  Schreibweise, an allen Stellen, die PROJ-16 abdeckt
+- Angeschlossen an **beide** Stellen, die eigene Begriffe lesen: `getCustomCategories` (Übungs-
+  und Gruppenformular, Generator, Übungsübersicht, Verwaltung) und `getManagedCategories`
+  (Reiter „Kategorien"). In der Verwaltung wird erst aufgegangen, dann gezählt — die Zählung
+  lief vorher parallel und hätte den verschwundenen Begriff noch gezählt
+- Ein Begriff, dessen Aufgehen scheitert, bleibt in der Liste und wird beim nächsten Laden erneut
+  versucht. Meldet der Aufruf `category_not_found` (ein anderer Tab war schneller), zählt das als
+  erledigt
+- Ohne passenden Begriff kostet es **keine zusätzliche Anfrage**; mit einem eine je Begriff
+
+**Vergleich beim Speichern**
+- `newlyAddedCustom` vergleicht jetzt ohne Rand-Leerzeichen und ohne Groß/Klein, mit dem
+  Grundstock **und** mit dem, was der Eintrag vorher trug; zwei Schreibweisen im selben Speichern
+  werden einmal gemeldet, in der ersten. „Kein Material" und „Ohne Material" werden nie als
+  Material eingetragen
+- Neu: `addCustomCategories` prüft vor dem Eintragen gegen die vorhandenen eigenen Begriffe,
+  ebenfalls ohne Groß/Klein (`withoutKnownCustoms`) — die Datenbank weist nur genau Gleiches ab.
+  Lässt sich der Bestand nicht lesen, wird wie vor PROJ-19 eingetragen. Alle vier Eintragstellen
+  laufen darüber: Übung, Gruppe, Halle, Phasen im Generator (dort fiel der genaue Vergleich mit
+  `PHASES` weg)
+- **Bewusst nicht:** die Begriffe an der Übung selbst werden beim Speichern nicht auf die
+  Schreibweise des Grundstocks gebracht. Schickt jemand am Auswahlfeld vorbei „gymnastik", trägt
+  die Übung „gymnastik", aber es entsteht kein eigener Begriff. Die Oberfläche lässt den Fall
+  nicht entstehen
+
+**Filter „Ohne Material"** — und eine Korrektur am Materialfilter
+- `withoutMaterial` wird ausgewertet: allein „Übungen ohne Materialzeile", mit Material zusammen
+  „oder"
+- **Der Materialfilter läuft jetzt in der Datenbankabfrage**, über eingebettete Filter auf
+  `exercise_materials`. Vorher wurde erst nach der Seitenaufteilung (50 je Seite) gefiltert: ab
+  der 51. Übung fehlten Treffer, und die Gesamtzahl war die Zahl der Treffer auf der Seite. Mit
+  PROJ-4 (50–100 Übungen) wäre das sichtbar geworden. Besteht seit PROJ-3; behoben, weil
+  „Ohne Material" sonst denselben Fehler geerbt hätte
+
+**Am lebenden System nachgewiesen** (Testkonto, mit Markierung angelegt und danach aufgeräumt,
+nichts zurückgeblieben), dreizehn Fälle:
+- Filter als angemeldeter Testnutzer: „Ohne Material" allein; „Ball" allein; „Ball oder Bank" —
+  eine Übung mit beidem erscheint einmal; „Ohne Material oder Ball"; dasselbe zusammen mit dem
+  „oder" der Teilnehmerzahl; Werte mit Schrägstrich, Komma und Klammern ohne Fehler; die
+  Gesamtzahl stimmt in jedem Fall
+- Aufgehen mit genau den Parametern des Bausteins: „gymnastik" → „Gymnastik" (die Übung trägt
+  danach „Gymnastik"), „STUFENBARREN" → „Stufenbarren" (auch als Materialzeile); der zweite
+  Versuch meldet `category_not_found`; beide eigenen Begriffe sind aus der Liste verschwunden
+
+**Tests:** 644 Unit-Tests grün (638 plus 6; einer umgestellt — er hielt fest, dass „pezzi" und
+„Pezzi" zwei Begriffe sind, was PROJ-19 aufhebt). Typprüfung, Lint und Produktionsbuild sauber.
+**Browser-Tests nicht gelaufen** — der Entwicklungsserver lief nebenher. Sie gehören in `/qa`;
+`getExercises` hat sich geändert, die Übungsübersicht muss also mitgeprüft werden.
+
+**Nicht belegt und für `/qa`:** der ganze Weg im Browser (eigener Begriff aus der Zeit vor
+PROJ-19 verschwindet aus der Verwaltung, Filter „Ohne Material" in der Übungsübersicht, „Mehr
+laden" mit Materialfilter über 50 Übungen hinaus), dazu das Verhalten, wenn das Aufgehen
+scheitert.
 
 ## QA Test Results
 _To be added by /qa_

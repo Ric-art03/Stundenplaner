@@ -8,10 +8,12 @@ import {
   groupUsages,
   isCategoryType,
   newlyAddedCustom,
+  predefinedDuplicates,
   renameFailure,
   sortCategories,
   totalUsage,
   usageSummary,
+  withoutKnownCustoms,
 } from './categories'
 
 const NONE = { exercises: 0, groups: 0, venues: 0, units: 0, patterns: 0 }
@@ -133,9 +135,78 @@ describe('newlyAddedCustom', () => {
     ])
   })
 
-  it('unterscheidet Groß- und Kleinschreibung wie die Datenbank', () => {
-    expect(newlyAddedCustom('material', ['reifen'], ['Pezzi', 'reifen'])).toEqual(['Pezzi'])
-    expect(newlyAddedCustom('material', ['pezzi'], ['Pezzi'])).toEqual(['Pezzi'])
+  it('vergleicht ohne Groß/Klein, auch mit dem Grundstock (PROJ-19)', () => {
+    expect(newlyAddedCustom('material', ['reifen'], ['Pezzi', 'Reifen'])).toEqual(['Pezzi'])
+    expect(newlyAddedCustom('material', ['pezzi'], ['Pezzi'])).toEqual([])
+    expect(newlyAddedCustom('sport', [], ['gymnastik ', 'VOLLEYBALL', 'Zumba'])).toEqual(['Zumba'])
+  })
+
+  it('meldet einen Begriff in zwei Schreibweisen einmal, in der ersten', () => {
+    expect(newlyAddedCustom('sport', [], ['Zumba', 'ZUMBA', 'zumba'])).toEqual(['Zumba'])
+  })
+
+  it('trägt „Kein Material" und „Ohne Material" nie als Material ein', () => {
+    expect(newlyAddedCustom('material', [], ['Kein Material', 'ohne material', 'Pezzi'])).toEqual([
+      'Pezzi',
+    ])
+    // Als Sportart wäre es ein gewöhnlicher Begriff.
+    expect(newlyAddedCustom('sport', [], ['Ohne Material'])).toEqual(['Ohne Material'])
+  })
+})
+
+describe('predefinedDuplicates', () => {
+  it('findet eigene Begriffe, die der Grundstock mitliefert, mit dessen Schreibweise', () => {
+    expect(
+      predefinedDuplicates([
+        { id: '1', category_type: 'sport', name: 'gymnastik' },
+        { id: '2', category_type: 'material', name: 'Stufenbarren' },
+        { id: '3', category_type: 'sport', name: 'Zumba' },
+        { id: '4', category_type: 'age_group', name: 'Senioren (75+) ' },
+      ])
+    ).toEqual([
+      { id: '1', type: 'sport', name: 'gymnastik', spelling: 'Gymnastik' },
+      { id: '2', type: 'material', name: 'Stufenbarren', spelling: 'Stufenbarren' },
+      { id: '4', type: 'age_group', name: 'Senioren (75+) ', spelling: 'Senioren (75+)' },
+    ])
+  })
+
+  it('vergleicht nur innerhalb einer Art und übergeht unbekannte Arten', () => {
+    expect(
+      predefinedDuplicates([
+        { id: '1', category_type: 'sport', name: 'Ball' },
+        { id: '2', category_type: 'unbekannt', name: 'Ball' },
+      ])
+    ).toEqual([])
+  })
+})
+
+describe('withoutKnownCustoms', () => {
+  it('lässt weg, was es als eigenen Begriff derselben Art schon gibt — ohne Groß/Klein', () => {
+    expect(
+      withoutKnownCustoms(
+        [
+          { category_type: 'sport', name: 'ZUMBA' },
+          { category_type: 'material', name: 'Zumba' },
+          { category_type: 'sport', name: 'Parkour' },
+        ],
+        [{ category_type: 'sport', name: 'Zumba' }]
+      )
+    ).toEqual([
+      { category_type: 'material', name: 'Zumba' },
+      { category_type: 'sport', name: 'Parkour' },
+    ])
+  })
+
+  it('meldet jeden Begriff einmal', () => {
+    expect(
+      withoutKnownCustoms(
+        [
+          { category_type: 'phase', name: 'Spiel' },
+          { category_type: 'phase', name: 'spiel' },
+        ],
+        []
+      )
+    ).toEqual([{ category_type: 'phase', name: 'Spiel' }])
   })
 })
 

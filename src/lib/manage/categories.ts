@@ -1,6 +1,9 @@
 import {
+  isPredefinedTerm,
   isReservedMaterialName,
   NO_MATERIAL_LABEL,
+  normalizeTerm,
+  predefinedSpelling,
   PREDEFINED_TERMS,
 } from '@/lib/categories/terms'
 
@@ -137,21 +140,65 @@ export function conflictMessage(conflict: NameConflict): string {
  * nur sie werden in die Auswahllisten eingetragen. Was der Eintrag schon trug,
  * wird nicht erneut gemeldet: sonst käme ein in der Verwaltung gelöschter
  * Begriff beim nächsten Speichern von selbst zurück.
+ *
+ * Verglichen wird wie überall (PROJ-19): ohne Rand-Leerzeichen und ohne
+ * Groß/Klein. „gymnastik" ist der mitgelieferte Begriff, kein eigener.
  */
 export function newlyAddedCustom(
   type: CategoryType,
   before: readonly string[],
   after: readonly string[]
 ): string[] {
-  const known = new Set(before)
-  const predefined = PREDEFINED_CATEGORIES[type] as readonly string[]
-  return [
-    ...new Set(
-      after
-        .map((name) => name.trim())
-        .filter((name) => name !== '' && !known.has(name) && !predefined.includes(name))
-    ),
-  ]
+  const seen = new Set(before.map(normalizeTerm))
+  const result: string[] = []
+  for (const raw of after) {
+    const name = raw.trim()
+    const key = normalizeTerm(name)
+    if (key === '' || seen.has(key)) continue
+    seen.add(key)
+    if (isPredefinedTerm(type, name)) continue
+    if (type === 'material' && isReservedMaterialName(name)) continue
+    result.push(name)
+  }
+  return result
+}
+
+export interface CategoryRow {
+  id: string
+  category_type: string
+  name: string
+}
+
+/**
+ * Die eigenen Begriffe, die der Grundstock inzwischen mitliefert — mit der
+ * Schreibweise des Grundstocks. Sie gehen beim Laden im mitgelieferten auf
+ * (PROJ-19, Abschnitt D).
+ */
+export function predefinedDuplicates(
+  rows: readonly CategoryRow[]
+): { id: string; type: CategoryType; name: string; spelling: string }[] {
+  return rows.flatMap((row) => {
+    if (!isCategoryType(row.category_type)) return []
+    const spelling = predefinedSpelling(row.category_type, row.name)
+    return spelling ? [{ id: row.id, type: row.category_type, name: row.name, spelling }] : []
+  })
+}
+
+/**
+ * Was davon noch nicht als eigener Begriff derselben Art besteht — auch nicht
+ * in anderer Schreibweise. Die Datenbank prüft beim Eintragen nur genau.
+ */
+export function withoutKnownCustoms<T extends { category_type: string; name: string }>(
+  entries: readonly T[],
+  existing: readonly { category_type: string; name: string }[]
+): T[] {
+  const seen = new Set(existing.map((row) => `${row.category_type}:${normalizeTerm(row.name)}`))
+  return entries.filter((entry) => {
+    const key = `${entry.category_type}:${normalizeTerm(entry.name)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 /** Die Zeilen von `category_usages`, nach Sorte gegliedert und nach Namen sortiert. */

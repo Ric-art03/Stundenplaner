@@ -9,6 +9,7 @@ import {
   type ScheduleType,
 } from '@/lib/types/group'
 import { newlyAddedCustom } from '@/lib/manage/categories'
+import { addCustomCategories } from '@/lib/categories/custom-store'
 import { orderByTerm, orderTerms } from '@/lib/categories/terms'
 import {
   materialImpacts,
@@ -608,14 +609,12 @@ async function saveCustomMaterials(
 ) {
   if (!before) return
 
-  const customs = newlyAddedCustom('material', before, materialNames)
-    .map((name) => ({ user_id: userId, category_type: 'material', name }))
-
-  if (customs.length > 0) {
-    await supabase
-      .from('custom_categories')
-      .upsert(customs, { onConflict: 'user_id,category_type,name', ignoreDuplicates: true })
-  }
+  await addCustomCategories(
+    supabase,
+    userId,
+    newlyAddedCustom('material', before, materialNames)
+      .map((name) => ({ category_type: 'material' as const, name })),
+  )
 }
 
 async function saveGroupCustomCategories(
@@ -626,18 +625,12 @@ async function saveGroupCustomCategories(
 ) {
   if (!before) return
 
-  const customs = [
+  await addCustomCategories(supabase, userId, [
     ...newlyAddedCustom('sport', before.sports, data.sports)
-      .map((name) => ({ user_id: userId, category_type: 'sport', name })),
+      .map((name) => ({ category_type: 'sport' as const, name })),
     ...newlyAddedCustom('age_group', before.ageGroups, data.ageGroups)
-      .map((name) => ({ user_id: userId, category_type: 'age_group', name })),
-  ]
-
-  if (customs.length > 0) {
-    await supabase
-      .from('custom_categories')
-      .upsert(customs, { onConflict: 'user_id,category_type,name', ignoreDuplicates: true })
-  }
+      .map((name) => ({ category_type: 'age_group' as const, name })),
+  ])
 }
 
 // ---- Generic helpers ----

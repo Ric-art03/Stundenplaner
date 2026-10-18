@@ -321,7 +321,15 @@ Offen für PROJ-4: die Spec nennt noch „Allgemeinsport" und „Senioren (60+)"
 
 Drei Dinge warten auf `/backend`: der Filter „Ohne Material" wird vom Server noch nicht ausgewertet, ein eigener Begriff geht beim Laden noch nicht im mitgelieferten auf (die Listen blenden den Doppel aber schon aus), und der Vergleich beim Speichern unterscheidet noch Groß/Klein. Abweichung: das Schnell-Anlegen hat keine Felder für Sportart und Altersgruppe, der Satz zum Markieren steht dort an der übernommenen Liste.
 
-**Nächster Schritt:** im Browser ansehen, dann `/backend` für PROJ-19 (klein), dann `/architecture` für PROJ-4.
+**Die Serverseite von PROJ-19 steht seit dem 2026-10-18** — Abschnitt „Implementation Notes (Backend)" in der Spec. **Keine Migration**, keine neue Zugriffsregel, keine neuen Pakete. **644 Unit-Tests grün** (6 neu), Typprüfung, Lint und Build sauber. Die drei offenen Stellen der Oberfläche sind geschlossen:
+
+- **Eigene Begriffe gehen beim Laden im mitgelieferten auf** — über `rename_category` aus PROJ-16, an beiden Stellen, die eigene Begriffe lesen (`src/lib/categories/custom-store.ts`)
+- **Der Vergleich beim Speichern** ist ohne Groß/Klein, gegen den Grundstock und gegen die vorhandenen eigenen Begriffe
+- **Der Filter „Ohne Material" wirkt** — und der **Materialfilter läuft jetzt in der Datenbank**: vorher wurde erst nach der Seitenaufteilung gefiltert, ab der 51. Übung fehlten Treffer (seit PROJ-3, mit PROJ-4 wäre es sichtbar geworden)
+
+Am lebenden System mit dem Testkonto nachgewiesen, dreizehn Fälle, nichts zurückgeblieben. **Die Browser-Tests sind nicht gelaufen** (Entwicklungsserver lief nebenher) und gehören in `/qa`, die Übungsübersicht eingeschlossen.
+
+**Nächster Schritt:** `/qa` für PROJ-19, dann `/architecture` für PROJ-4.
 
 ## Features
 

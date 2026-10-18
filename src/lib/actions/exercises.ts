@@ -16,6 +16,7 @@ import {
 } from '@/lib/types/exercise'
 import { CATEGORY_TYPES, newlyAddedCustom, type CategoryType } from '@/lib/manage/categories'
 import { orderByTerm, orderTerms } from '@/lib/categories/terms'
+import { absorbPredefinedCustoms, addCustomCategories } from '@/lib/categories/custom-store'
 
 async function getAuthUser() {
   const supabase = await createClient()
@@ -69,10 +70,31 @@ export async function getExercises(
   const { supabase, user } = await getAuthUser()
   if (!user) return { exercises: [], total: 0 }
 
+  // Der Materialfilter läuft in der Abfrage selbst, damit Seitenaufteilung und
+  // Gesamtzahl stimmen. „Ohne Material" heißt: keine Materialzeile; mit
+  // Material zusammen gilt „oder" (PROJ-19).
+  const materials = filters.materials.filter((name) => name.trim() !== '')
+  const withoutMaterial = filters.withoutMaterial === true
+  const select =
+    materials.length > 0 && withoutMaterial
+      ? '*, matched:exercise_materials(name), anymat:exercise_materials(id)'
+      : materials.length > 0
+        ? '*, matched:exercise_materials!inner(name)'
+        : withoutMaterial
+          ? '*, anymat:exercise_materials(id)'
+          : '*'
+
   let query = supabase
     .from('exercises')
-    .select('*', { count: 'exact' })
+    .select(select, { count: 'exact' })
     .eq('user_id', user.id)
+
+  if (materials.length > 0) query = query.in('matched.name', materials)
+  if (materials.length > 0 && withoutMaterial) {
+    query = query.or('matched.not.is.null,anymat.is.null')
+  } else if (withoutMaterial) {
+    query = query.is('anymat', null)
+  }
 
   if (filters.search) {
     const safe = filters.search.replace(/[,()"'\\]/g, '').trim()
@@ -155,26 +177,7 @@ export async function getExercises(
   const variantsByExercise = groupBy(variantsRes.data as VariantRow[] ?? [], 'exercise_id')
   const linksByExercise = groupBy(linksRes.data as LinkRow[] ?? [], 'exercise_id')
 
-  // Material filter: check if exercise has any of the requested materials
-  let filteredRows = rows
-  if (filters.materials.length > 0) {
-    const allMaterialRows = (materialsRes.data ?? []) as MaterialRow[]
-    const exerciseIdsWithMaterials = new Set(
-      allMaterialRows
-        .filter((m) => filters.materials.includes(m.name))
-        .map((m) => m.exercise_id)
-    )
-    if (filters.materials.includes('Kein Material')) {
-      for (const row of rows) {
-        if (!materialsByExercise[row.id] || materialsByExercise[row.id].length === 0) {
-          exerciseIdsWithMaterials.add(row.id)
-        }
-      }
-    }
-    filteredRows = rows.filter((r) => exerciseIdsWithMaterials.has(r.id))
-  }
-
-  const exercises = filteredRows.map((row) =>
+  const exercises = rows.map((row) =>
     mapRowToExercise(
       row,
       (materialsByExercise[row.id] ?? []).map(mapMaterial),
@@ -183,10 +186,7 @@ export async function getExercises(
     )
   )
 
-  return {
-    exercises,
-    total: filters.materials.length > 0 ? exercises.length : (count ?? 0),
-  }
+  return { exercises, total: count ?? 0 }
 }
 
 export async function getExercise(id: string): Promise<Exercise | null> {
@@ -333,14 +333,15 @@ export async function getCustomCategories(): Promise<Record<string, string[]>> {
 
   const { data, error } = await supabase
     .from('custom_categories')
-    .select('category_type, name')
+    .select('id, category_type, name')
     .eq('user_id', user.id)
     .order('name')
+    .limit(2000)
 
   if (error || !data) return {}
 
   const grouped: Record<string, string[]> = {}
-  for (const row of data) {
+  for (const row of await absorbPredefinedCustoms(supabase, data)) {
     if (!grouped[row.category_type]) grouped[row.category_type] = []
     grouped[row.category_type].push(row.name)
   }
@@ -519,19 +520,16 @@ async function saveCustomCategories(
     material: data.materials.map((m) => m.name),
   }
 
-  const customs = CATEGORY_TYPES.flatMap((type) =>
-    newlyAddedCustom(type, before[type], after[type]).map((name) => ({
-      user_id: userId,
-      category_type: type,
-      name,
-    }))
+  await addCustomCategories(
+    supabase,
+    userId,
+    CATEGORY_TYPES.flatMap((type) =>
+      newlyAddedCustom(type, before[type], after[type]).map((name) => ({
+        category_type: type,
+        name,
+      }))
+    ),
   )
-
-  if (customs.length > 0) {
-    await supabase
-      .from('custom_categories')
-      .upsert(customs, { onConflict: 'user_id,category_type,name', ignoreDuplicates: true })
-  }
 }
 
 function groupBy<T extends Record<string, unknown>>(items: T[], key: keyof T): Record<string, T[]> {

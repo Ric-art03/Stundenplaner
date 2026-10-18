@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { absorbPredefinedCustoms } from '@/lib/categories/custom-store'
 import {
   categoryNameError,
   conflictMessage,
@@ -34,23 +35,25 @@ export async function getManagedCategories(): Promise<CustomCategory[]> {
   const { supabase, user } = await getAuthUser()
   if (!user) return []
 
-  const [rowsRes, countsRes] = await Promise.all([
-    supabase
-      .from('custom_categories')
-      .select('id, category_type, name')
-      .eq('user_id', user.id)
-      .limit(2000),
-    supabase.rpc('category_usage_counts'),
-  ])
+  const rowsRes = await supabase
+    .from('custom_categories')
+    .select('id, category_type, name')
+    .eq('user_id', user.id)
+    .limit(2000)
 
   if (rowsRes.error || !rowsRes.data) return []
+
+  // Erst aufgehen lassen, dann zählen: die Zählung eines aufgegangenen
+  // Begriffs gehört zum mitgelieferten, der hier nicht steht.
+  const rows = await absorbPredefinedCustoms(supabase, rowsRes.data)
+  const countsRes = await supabase.rpc('category_usage_counts')
 
   const counts = countsRes.error
     ? null
     : new Map((countsRes.data ?? []).map((row) => [row.category_id, row]))
 
   return sortCategories(
-    rowsRes.data
+    rows
       .filter((row) => isCategoryType(row.category_type))
       .map((row) => {
         const count = counts?.get(row.id)

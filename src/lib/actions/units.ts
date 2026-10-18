@@ -10,7 +10,8 @@ import {
   unitDraftSchema,
 } from '@/lib/validations/unit'
 import { quickCreateSchema } from '@/lib/validations/exercise'
-import { PHASES } from '@/lib/types/exercise'
+import { newlyAddedCustom } from '@/lib/manage/categories'
+import { addCustomCategories } from '@/lib/categories/custom-store'
 import { orderByTerm, orderTerms } from '@/lib/categories/terms'
 import type {
   DifficultyLevel,
@@ -261,20 +262,17 @@ async function saveCustomPhases(
   // eingetragen — sonst käme eine in der Verwaltung gelöschte Phase von selbst
   // zurück (PROJ-16).
   const typed = new Set(typedPhases.map((name) => name.trim()))
-  const customs = unique(
-    segments
-      .map((segment) => segment.name.trim())
-      .filter(
-        (name) =>
-          name !== '' && typed.has(name) && !(PHASES as readonly string[]).includes(name)
-      )
-  ).map((name) => ({ user_id: userId, category_type: 'phase', name }))
+  const fresh = newlyAddedCustom(
+    'phase',
+    [],
+    segments.map((segment) => segment.name.trim()).filter((name) => typed.has(name))
+  )
 
-  if (customs.length === 0) return
-
-  await supabase
-    .from('custom_categories')
-    .upsert(customs, { onConflict: 'user_id,category_type,name', ignoreDuplicates: true })
+  await addCustomCategories(
+    supabase,
+    userId,
+    fresh.map((name) => ({ category_type: 'phase' as const, name }))
+  )
 }
 
 // ---- Schreiben ----
