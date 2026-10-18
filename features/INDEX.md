@@ -347,7 +347,17 @@ Eines bleibt: **in der Produktion noch nicht von Hand durchgespielt** — Übung
 
 **Offen aus der Vorarbeit:** die bereinigte Rohmasse als erster Block — wartet auf die Entscheidung über das Tabellenformat; die Sicherung enthält alles dafür.
 
-**Nächster Schritt:** `/architecture` für PROJ-4 (Starter-Datenbank).
+**PROJ-4 hat seit dem 2026-10-18 einen Technikentwurf** — Abschnitt „Tech Design" in der Spec, vom Nutzer am selben Tag abgenommen. Drei Entscheidungen tragen ihn:
+
+- **Eigene Tabellen für die Übungsdatenbank**, aufgebaut wie die der eigenen Übungen. Generator, Editor, Live-Modus und Kategorien-Verwaltung können den Bestand gar nicht sehen
+- **Übernehmen als eine Datenbank-Funktion** mit den Rechten des Nutzers, ganz oder gar nicht. Die Kopie merkt sich, woher sie kommt; daraus folgen „Übernommen", Wieder-Übernehmen und „nur eine Kopie aus zwei Tabs"
+- **„Passt zu Gruppe" über die Kriterien des Generators**; die Materialprüfung liefert dafür künftig, *welches* Material fehlt
+
+Gepflegt wird der Bestand über ein **Prüfprogramm auf diesem Rechner** (prüfen → einlesen als Entwurf → freigeben), aus .xlsx-Tabellen **außerhalb des Projektordners**. Entwürfe sieht das eigene Konto des Nutzers; Korrekturen an freigegebenen Übungen werden nach einer Gegenüberstellung direkt live (beides vom Nutzer entschieden, das zweite weicht von Abschnitt G ab). Die Herkunft je Übung bleibt in der Tabelle, nicht in der Datenbank.
+
+**Abschnitt F geändert, auf Wunsch des Nutzers:** gezählt wird je **Zielgruppe = Sportart + Alter** (3 / 5 / 3), ohne feste Liste zum Launch — der Nutzer nennt die Zielgruppen nacheinander, die wichtigsten zuerst. Die Arbeit am Bestand läuft in **eigenen Block-Sitzungen** nach dem Bau, nicht in einem Skill-Schritt (Abschnitt C2 des Entwurfs). Eine Migration, rein hinzufügend; Paket nur `exceljs` als Entwicklungspaket.
+
+**Nächster Schritt:** `/frontend` für PROJ-4.
 
 ## Features
 
@@ -356,7 +366,7 @@ Eines bleibt: **in der Produktion noch nicht von Hand durchgespielt** — Übung
 | PROJ-1 | Supabase Infrastructure Setup | P0 | None | Deployed | [Spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-09-28 |
 | PROJ-2 | Benutzerregistrierung & Login | P0 | PROJ-1 | Deployed | [Spec](PROJ-2-benutzerregistrierung-login.md) | 2026-09-28 |
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
-| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | Planned | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
+| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | Architected | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Deployed | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
