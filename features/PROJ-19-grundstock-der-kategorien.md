@@ -1,6 +1,6 @@
 # PROJ-19: Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich)
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-10-17
 **Last Updated:** 2026-10-18
 
@@ -366,12 +366,155 @@ Ein eigenes Hilfe-Kapitel dazu gehört in PROJ-20 (Hilfe & Tutorial).
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Grundstock bleibt im Programm, nicht in der Datenbank | Er ist für alle Nutzer gleich und ändert sich nur mit einer Auslieferung; die Datenbank musste ihn bisher nie kennen (die Umbenenn-Funktion bekommt „ist mitgeliefert" vom Programm gesagt) | 2026-10-18 |
+| Ein zentraler Baustein „Begriffsordnung" für alle Listen und Anzeigen | „Überall gleich" lässt sich nur halten, wenn es eine Stelle gibt; heute sortiert jede Stelle selbst, daher die sechs Abweichungen | 2026-10-18 |
+| Ordnen beim Lesen und Anzeigen, nicht beim Speichern | Ob ein Begriff eigen oder mitgeliefert ist, ändert sich mit dem Grundstock; eine gespeicherte Folge würde veralten. Kein Umschreiben des Bestands nötig | 2026-10-18 |
+| „Ohne Material" bleibt intern ein Eintrag in der Materialliste der Variante; die drei Zustände werden daraus abgelesen | Keine Migration, alle vorhandenen Varianten und Stundenakten auf Geräten funktionieren unverändert. Verworfen: ein neues Feld „Materialmodus" an der Variante — sauberer, aber Migration, Umschreiben des Bestands und Anpassungen an Speichern, Editor und Live-Modus für dieselbe Wirkung | 2026-10-18 |
+| „Kein Material" und „Ohne Material" sind als eigener Materialbegriff gesperrt | Sonst könnte ein eigener Begriff dieses Namens mit dem internen Eintrag verwechselt werden | 2026-10-18 |
+| Aufgehen eigener Begriffe beim Laden, über die vorhandene Umbenenn-Funktion aus PROJ-16 | Deckt auch jede spätere Erweiterung des Grundstocks ab, ohne je Erweiterung eine Migration; die Funktion fasst schon alle Stellen an und ist am lebenden System nachgewiesen. Verworfen: eine einmalige Migration für alle Konten — sie müsste die Umbenenn-Logik nachbauen und wirkte nur einmal | 2026-10-18 |
+| Begriffe ohne Herkunft (weggefallen, gelöscht) zählen bei der Ordnung als eigene | An der Übung sind sie faktisch eigene; so braucht die Ordnung die eigene Liste nicht, um Gewähltes zu sortieren | 2026-10-18 |
+| Filter „Ohne Material" als eigene Filterangabe statt als Wert in der Materialliste | Er ist kein Begriff mehr; die Abfrage bleibt gleich | 2026-10-18 |
+| Keine Migration, keine neuen Pakete | Alles Nötige ist vorhanden; die Serverarbeit beschränkt sich auf Aufgehen, Vergleich beim Speichern und Filterangabe | 2026-10-18 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+
+PROJ-19 ist **fast reine Oberfläche**. Es braucht **keine Migration, keine neue Tabelle, kein neues
+Feld und keine neuen Pakete**. Drei Gründe:
+
+- **Der Grundstock steht schon an einer Stelle im Programm**, nicht in der Datenbank. Dort werden
+  die Listen aus Abschnitt A eingetragen, und jede Auswahlliste der App liest von dort
+- **Das Aufgehen eines eigenen Begriffs im mitgelieferten gibt es schon.** Die Datenbank-Funktion
+  zum Umbenennen und Zusammenführen aus PROJ-16 kann einen eigenen Begriff in einen mitgelieferten
+  überführen, an allen Stellen (Übungen, Varianten, Material, Gruppen, Hallen, gespeicherte
+  Einheiten, Stundenmuster) und in dessen Schreibweise. PROJ-19 ruft sie nur an einer neuen Stelle auf
+- **„Ohne Material" braucht kein neues Feld.** Die drei Zustände einer Variante lassen sich aus dem
+  ablesen, was heute schon gespeichert wird (siehe „Datenmodell")
+
+Die eigentliche Arbeit ist ein **neuer, zentraler Baustein für die Begriffsordnung**, den alle
+Stellen aus Abschnitt B benutzen, statt je Bildschirm selbst zu sortieren.
+
+### A) Bausteine
+
+```
+Begriffsordnung (neu, ohne Oberfläche, mit Unit-Tests)
++-- Auswahlliste bauen: eigene alphabetisch (deutsch, ohne Groß/Klein) → Grundstock in fester Folge
++-- Gewählte Begriffe ordnen: nach derselben Regel (für Anzeige überall)
++-- Generator-Fassung: Sportarten der Gruppe oben, darunter „Weitere"
++-- Gleichheit prüfen: ohne Rand-Leerzeichen, ohne Groß/Klein, nur innerhalb einer Art
++-- „Ohne Material"-Zustand einer Variante ablesen und schreiben
+
+Auswahlfeld mit Eintippen (besteht: Übung, Variante, Gruppe, Generator, Schnell-Anlegen)
++-- Optionen aus der Begriffsordnung
++-- Gewählte Chips in Listenreihenfolge, schon während des Bearbeitens
++-- Vorhandenen Begriff eingetippt → auswählen + kurzer Satz unter dem Feld
+
+Materialeingabe (besteht: Übung, Variante, Halle)
++-- Liste ohne „Kein Material"
++-- Vorhandenen Begriff eingetippt → diese Zeile bekommt ihn + kurzer Satz
++-- Zeilen bleiben beim Bearbeiten in Eingabefolge
+
+Variante — Material (besteht, wird umgebaut)
++-- Wahl aus drei: „Wie die Hauptübung" / „Eigenes Material" / „Ohne Material"
++-- Altersgruppen und Organisationsformen jetzt mit den eigenen Begriffen
+
+Übungsfilter (besteht)
++-- Material: „Ohne Material" als erster Eintrag, abgesetzt
+
+Hinweis zum vollständigen Markieren (neu, klein, einmal gebaut)
++-- unter Sportart und Altersgruppe im Übungsformular und beim Schnell-Anlegen
+
+Generator (besteht)
++-- Sportarten eines Segments: Blöcke „Sportarten der Gruppe" / „Weitere"
++-- Begründung bei zu wenigen Übungen: Zusatzsatz, wenn die Sportart Übungen ausschließt
++-- Gruppenhinweis „nur eine Sportart": Beispiel „Allgemeinsport" ersetzen (fällt weg)
+
+Live-Modus (besteht)
++-- Material auf Bereitschaftsbild, „Danach", „Zuerst": Listenreihenfolge statt alphabetisch
+```
+
+### B) Datenmodell
+
+**Nichts Neues in der Datenbank.** Was sich an den gespeicherten Daten ändert:
+
+- **Grundstock:** Die fünf Listen im Programm werden durch die Listen aus Abschnitt A ersetzt,
+  in genau dieser Reihenfolge. Die Reihenfolge der Liste **ist** die Ordnung, eine zweite
+  Angabe gibt es nicht
+- **„Ohne Material" an einer Variante** wird gespeichert wie heute: als einzelner, interner Eintrag
+  in der Materialliste der Variante. Der Nutzer sieht ihn nie als Begriff. Abgelesen wird so:
+  Materialliste leer → „Wie die Hauptübung"; nur dieser Eintrag → „Ohne Material"; sonst →
+  „Eigenes Material". Damit funktionieren **alle vorhandenen Varianten ohne Umschreiben weiter**,
+  auch in Stundenakten, die schon auf einem Gerät liegen (PROJ-14). Die Erkennung des Eintrags,
+  heute an sechs Stellen verstreut, wandert in den Baustein Begriffsordnung
+- **Der interne Name ist reserviert:** „Kein Material" und „Ohne Material" lassen sich nicht als
+  eigenes Material anlegen. Wer es eintippt, bekommt den Satz, dass „Ohne Material" bei Varianten
+  eigens gewählt wird
+- **Ordnung beim Lesen, nicht beim Speichern:** Die Begriffe werden geordnet, wenn Übungen, Gruppen,
+  Hallen und Kandidaten aus der Datenbank gelesen werden, und in der Anzeige. Gespeichert wird
+  weiter in beliebiger Folge. Grund: ob ein Begriff „eigen" oder „mitgeliefert" ist, kann sich
+  ändern (der Grundstock wächst); eine gespeicherte Reihenfolge würde dann veralten
+- **Begriffe, die weder mitgeliefert noch in der eigenen Liste sind** (weggefallen wie
+  „Vorschulturnen", in der Verwaltung gelöscht): sie zählen wie eigene und stehen alphabetisch oben
+
+### C) Abläufe
+
+**Aufgehen eines eigenen Begriffs (Abschnitt D der Spec).** Immer wenn die App die eigenen Begriffe
+eines Nutzers lädt (Verwaltung, Übungsformular, Gruppenformular, Generator), prüft sie vorher: gibt
+es einen eigenen Begriff, der ohne Groß/Klein einem mitgelieferten gleicht? Wenn ja, führt sie ihn
+über die vorhandene Funktion zusammen, in die Schreibweise des mitgelieferten Begriffs. Das passiert
+nur, wenn es einen solchen Begriff gibt, also praktisch einmal je Nutzer nach einer Erweiterung des
+Grundstocks. Gelingt es nicht (Netz, Fehler), lädt die Seite trotzdem; die Listen blenden den Doppel
+aus, und beim nächsten Laden wird es erneut versucht.
+
+- Das deckt **diese und jede spätere Erweiterung** ab, ohne dass jedes Mal eine Migration
+  geschrieben werden muss
+- Zwei Tabs gleichzeitig sind abgesichert: die Funktion arbeitet je Nutzer nacheinander, der zweite
+  Versuch findet den Begriff nicht mehr und lässt es
+
+**Eintragen neuer eigener Begriffe beim Speichern** (Übung, Gruppe, Halle, Generator) vergleicht
+heute mit dem Grundstock **mit** Groß/Klein. „gymnastik" würde dort zum eigenen Begriff. Das wird
+auf denselben Vergleich wie überall umgestellt. In der Praxis verhindert das schon das Auswahlfeld
+(es wählt „Gymnastik"); der Server sichert es zusätzlich ab.
+
+**Filter „Ohne Material"** wird eine eigene Filterangabe statt eines Begriffs in der Materialliste.
+Die Abfrage bleibt dieselbe wie heute („Übungen ohne Materialzeile", „oder" mit anderem Material).
+
+**Hinweis im Generator:** Die Aufschlüsselung einer Lücke weiß heute schon, welche Kriterien Übungen
+ausgeschlossen haben. Ist die Sportart darunter, hängt die Anzeige den Satz zum Markieren
+benachbarter Sportarten an. Keine neue Rechnung.
+
+### D) Was nachgezogen wird
+
+- **Texte:** Erklärsatz an Varianten („wähle Kein Material"), Gruppenhinweis im Generator (Beispiel
+  „Allgemeinsport"), alle Stellen, die „Kein Material" als Begriff zeigen
+- **Unit-Tests**, die weggefallene oder umbenannte Begriffe benutzen (Generator, Kandidaten,
+  Live-Material, Hallenmaterial, Generator-Formular, Prüfplan)
+- **Browser-Tests und ihre Testdaten** (Live-Modus, Generator ohne Anmeldung, Testübungen für den
+  Live-Modus)
+
+### E) Reihenfolge des Baus
+
+1. **Grundstock und Begriffsordnung** mit Unit-Tests. Danach zeigen alle Listen, die schon aus dem
+   Grundstock lesen, die neuen Begriffe
+2. **Auswahlfelder und Anzeigen** auf die Begriffsordnung umstellen (Abschnitt B der Spec, Stelle
+   für Stelle), dazu die eigenen Begriffe an Varianten
+3. **„Ohne Material"**: Variante, Filter, Materialeingaben
+4. **Kein Begriff zweimal**: Eintippen in den Feldern, dann das Aufgehen beim Laden und der
+   Vergleich beim Speichern (Serverseite, in `/backend`)
+5. **Die zwei Hinweise** zum vollständigen Markieren
+6. Tests und Texte nachziehen
+
+Schritt 4 auf der Serverseite ist klein (das Aufgehen beim Laden, der Vergleich beim Speichern, die
+Filterangabe) und braucht **keine Zustimmung zu Datenbank-Änderungen**: es ändert sich kein Schema
+und keine Zugriffsregel.
+
+### F) Abhängigkeiten
+
+Keine neuen Pakete.
 
 ## QA Test Results
 _To be added by /qa_

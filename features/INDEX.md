@@ -315,7 +315,9 @@ Eines bleibt: **der Generator mit den neuen Nachfragen ist in der Produktion noc
 
 Offen für PROJ-4: die Spec nennt noch „Allgemeinsport" und „Senioren (60+)", und ihre Frage zu Krabbelgruppe und Eltern-Kind ist mit dem Grundstock beantwortbar.
 
-**Nächster Schritt:** `/architecture` für PROJ-19, danach PROJ-19 bauen und dann `/architecture` für PROJ-4.
+**PROJ-19 hat seit dem 2026-10-18 einen Technikentwurf** — Abschnitt „Tech Design" in der Spec, vom Nutzer am selben Tag abgenommen. **Keine Migration, kein neues Feld, keine neuen Pakete.** Ein zentraler Baustein „Begriffsordnung" ersetzt das Sortieren je Bildschirm; geordnet wird beim Lesen, nicht beim Speichern. „Ohne Material" bleibt intern gespeichert wie heute, die drei Zustände der Variante werden daraus abgelesen. Eigene Begriffe gehen beim Laden über die Zusammenführ-Funktion aus PROJ-16 im mitgelieferten auf — auch bei jeder späteren Erweiterung des Grundstocks.
+
+**Nächster Schritt:** `/frontend` für PROJ-19, danach `/backend` (klein), dann `/architecture` für PROJ-4.
 
 ## Features
 
@@ -337,7 +339,7 @@ Offen für PROJ-4: die Spec nennt noch „Allgemeinsport" und „Senioren (60+)"
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
-| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Planned | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
+| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Architected | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
 | PROJ-20 | Hilfe & Tutorial (die App bringt die richtige Nutzung bei) | P0 | PROJ-3, PROJ-5, PROJ-6 | Roadmap | — | 2026-10-18 |
 
 <!-- Add features above this line -->
