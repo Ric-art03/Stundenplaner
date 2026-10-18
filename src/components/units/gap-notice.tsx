@@ -74,22 +74,31 @@ function remediesFor(detail: GapDetail): string[] {
     case 'all-filtered': {
       // Zuerst, was sich im Generator für dieses Segment ändern lässt („Hake im
       // Generator …"), danach das, wofür man an Übungen, Gruppe oder Halle muss.
-      const remedies = [
-        ...detail.blockedBy.filter((entry) => SOFT.includes(entry.criterion)),
-        ...detail.blockedBy.filter((entry) => !SOFT.includes(entry.criterion)),
-      ].map((entry) => CRITERIA[entry.criterion].remedy)
-      if (detail.blockedBy.some((entry) => entry.criterion === 'sport')) {
-        remedies.push(SPORT_TAGGING_HINT)
-      }
-      return remedies
+      return withSportHint(
+        detail,
+        [
+          ...detail.blockedBy.filter((entry) => SOFT.includes(entry.criterion)),
+          ...detail.blockedBy.filter((entry) => !SOFT.includes(entry.criterion)),
+        ].map((entry) => CRITERIA[entry.criterion].remedy)
+      )
     }
     case 'exhausted':
-      return [`Lege weitere Übungen der Phase „${detail.phase}" an.`]
+      return withSportHint(detail, [`Lege weitere Übungen der Phase „${detail.phase}" an.`])
     case 'too-short':
-      return [
+      return withSportHint(detail, [
         'Verlängere diese Phase im Generator, oder lege kürzere Übungen an.',
-      ]
+      ])
   }
+}
+
+/**
+ * Scheitern Übungen an der Sportart, gehört der Hinweis zum Markieren dazu —
+ * ob das Segment ganz leer blieb oder nur nicht voll wurde (BUG-28).
+ */
+function withSportHint(detail: GapDetail, remedies: string[]): string[] {
+  return detail.blockedBy.some((entry) => entry.criterion === 'sport')
+    ? [...remedies, SPORT_TAGGING_HINT]
+    : remedies
 }
 
 /** Lockern gibt nur Organisationsform, Schwierigkeitsgrad und Sportart frei — alles andere bleibt hart. */

@@ -337,7 +337,9 @@ Am lebenden System mit dem Testkonto nachgewiesen, dreizehn Fälle, nichts zurü
 
 Nicht belegt: Firefox und Safari; ein scheiterndes Aufgehen (vom Nutzer zurückgestellt); „Mehr laden" mit Materialfilter über 50 Übungen.
 
-**Nächster Schritt:** BUG-28 beheben (empfohlen), dann `/deploy` für PROJ-19 — danach `/architecture` für PROJ-4.
+**BUG-28 ist am 2026-10-18 behoben** — der Satz zum Markieren steht jetzt auch bei teilweise gefülltem Segment; der Generator zählt die Ursachen in allen drei Fällen über denselben Baustein. 652 Unit-Tests grün (7 neu), Typprüfung, Lint und Build sauber, Browser-Tests des Generators 14 von 14. Gespeicherte Einheiten zeigen den Satz erst nach dem nächsten Generieren. Offen bleiben BUG-29 und BUG-30 (beide niedrig).
+
+**Nächster Schritt:** `/deploy` für PROJ-19 — danach `/architecture` für PROJ-4.
 
 ## Features
 

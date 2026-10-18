@@ -661,8 +661,8 @@ scheitert.
 
 ### Überblick
 - **Akzeptanzkriterien:** 33 von 36 bestanden, **2 nicht bestanden** (beide wegen eines Fehlers,
-  keiner hoch), 1 entfällt
-- **Fehler:** 3 — 0 kritisch, 0 hoch, 1 mittel, 2 niedrig
+  keiner hoch), 1 entfällt. *Nach der Behebung von BUG-28: 34 von 36, 1 nicht bestanden (BUG-29)*
+- **Fehler:** 3 — 0 kritisch, 0 hoch, 1 mittel, 2 niedrig. *BUG-28 (mittel) am selben Tag behoben*
 - **Sicherheit:** kein Befund
 - **Regression:** keine — **468 von 468 Browser-Tests grün in einem Zug** (15,3 Minuten, zwei
   Arbeiter, kein Entwicklungsserver), darunter 34 neue für PROJ-19; **645 Unit-Tests grün**
@@ -746,8 +746,9 @@ gelesen, **Live** = am lebenden System (Backend-Nachweis vom selben Tag).
 - [x] Schnell-Anlegen: der Satz steht an der übernommenen Liste, weil das Schnell-Anlegen keine
   Felder für Sportart und Altersgruppe hat — **abweichend vom Wortlaut**, in den Implementation
   Notes (Frontend) begründet (Code)
-- [ ] **Nicht bestanden — BUG-28:** der Zusatzsatz steht nur, wenn das Segment **ganz leer**
-  bleibt. Wird es teilweise gefüllt, kommt der Satz nie, auch wenn die Sportart Übungen ausschließt
+- [x] ~~**Nicht bestanden — BUG-28:** der Zusatzsatz steht nur, wenn das Segment **ganz leer**
+  bleibt.~~ **Am 2026-10-18 behoben** — der Satz steht jetzt auch bei teilweise gefülltem Segment
+  (Unit, siehe „Nach der QA behoben")
 - [x] Liegt es nicht an der Sportart, fehlt der Satz (Code)
 
 ### Edge Cases
@@ -780,7 +781,7 @@ gelesen, **Live** = am lebenden System (Backend-Nachweis vom selben Tag).
 
 ### Fehler
 
-#### BUG-28: Der Satz zum Markieren benachbarter Sportarten fehlt bei teilweise gefülltem Segment
+#### BUG-28: Der Satz zum Markieren benachbarter Sportarten fehlt bei teilweise gefülltem Segment — behoben am 2026-10-18
 - **Schwere:** Mittel
 - **Schritte:**
   1. Gruppe mit der Sportart „Turnen", zwei Übungen „Turnen" und mehrere Übungen „Kinderturnen"
@@ -795,6 +796,7 @@ gelesen, **Live** = am lebenden System (Backend-Nachweis vom selben Tag).
 - **Warum mittel:** Das ist der häufigere Fall und genau der, den Abschnitt E meint (zu wenige
   Übungen, weil sie nicht überall markiert sind). Nichts geht kaputt, es fehlt nur der Hinweis
 - **Priorität:** vor der Auslieferung beheben, wenn möglich; kein Hindernis
+- **Behoben:** siehe „Nach der QA behoben" unten
 
 #### BUG-29: „Kein Material nötig" fehlt im Stundenverlauf und beim aktuellen Schritt des Live-Modus
 - **Schwere:** Niedrig
@@ -829,6 +831,30 @@ gelesen, **Live** = am lebenden System (Backend-Nachweis vom selben Tag).
   Änderungsstempel. Wer gerade eine Einheit im Editor offen hat, bekommt beim Speichern einmal
   den Hinweis auf eine fremde Änderung. Am Code gelesen, nicht nachgestellt; einmal je Nutzer und
   Erweiterung des Grundstocks
+
+### Nach der QA behoben (2026-10-18)
+
+**BUG-28** — der Hinweis zum Markieren benachbarter Sportarten steht jetzt auch, wenn ein Segment
+nur teilweise gefüllt wird.
+
+- **Generator** (`src/lib/units/generator.ts`): auch bei „exhausted" und „too-short" zählt die
+  Begründung je Kriterium, wie viele Übungen der Phase daran scheitern — über denselben Baustein
+  `countBlocked` wie beim ganz leeren Segment, auf der Lockerungsstufe des Versuchs. Vorher blieb
+  die Liste dort leer
+- **Lückenhinweis** (`src/components/units/gap-notice.tsx`): alle drei Fälle („keine passt mehr",
+  „schon eingeplant", „zu kurz") hängen den Satz über eine gemeinsame Hilfe an, wenn die Sportart
+  unter den Ursachen ist. Die Aufschlüsselung „Daran scheitern sie" bleibt wie bisher dem ganz
+  leeren Segment vorbehalten; „Lockern" verhält sich unverändert
+- **Gespeicherte Einheiten** tragen ihre Begründung aus der Zeit vor der Behebung weiter, ohne
+  Ursachen; der Satz erscheint dort erst nach dem nächsten Generieren oder Lockern. Bewusst nicht
+  nachgerechnet — die Begründung ist eine Momentaufnahme des Generierens
+
+**Tests:** 7 neue Unit-Tests — 2 im Generator (Ursachen bei teilweiser Füllung; leer, wenn nur zu
+wenige da sind), 5 für den Lückenhinweis (`gap-notice.test.tsx`: teilweise gefüllt, zu kurz, ganz
+leer, andere Ursache, keine Ursache). Ohne die Behebung scheitern die beiden ersten. **652
+Unit-Tests grün**, Typprüfung, Lint und Build sauber. Browser-Tests des Generators (PROJ-6) gegen
+den neuen Build **14 von 14 grün**; Editor und Live-Modus nicht erneut gelaufen — sie lesen die
+Begründung nur aus.
 
 ## Deployment
 _To be added by /deploy_

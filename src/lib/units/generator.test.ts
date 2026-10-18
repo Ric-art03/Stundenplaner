@@ -855,6 +855,31 @@ describe('Lückendiagnose nennt jede Ursache', () => {
     expect(result.segments[0].gapReason).toContain('Auch mit gelockerten Kriterien')
   })
 
+  it('nennt auch bei teilweise gefülltem Segment, woran die übrigen Übungen scheitern (BUG-28)', () => {
+    const result = run({
+      segments: [segment({ minutes: 30, sports: ['Turnen'] })],
+      candidates: [
+        candidate({ exerciseId: 'turnen', sports: ['Turnen'] }),
+        candidate({ exerciseId: 'kinder-1', sports: ['Kinderturnen'] }),
+        candidate({ exerciseId: 'kinder-2', sports: ['Kinderturnen'] }),
+      ],
+    })
+    expect(usedIds(result)).toEqual(['turnen'])
+    expect(result.segments[0].gapDetail).toMatchObject({
+      kind: 'exhausted',
+      usableCandidates: 1,
+      blockedBy: [{ criterion: 'sport', count: 2 }],
+    })
+  })
+
+  it('lässt die Ursachen leer, wenn alle Übungen der Phase passen und nur zu wenige sind', () => {
+    const result = run({
+      segments: [segment({ minutes: 30 })],
+      candidates: [candidate({ exerciseId: 'einzige' })],
+    })
+    expect(result.segments[0].gapDetail).toMatchObject({ kind: 'exhausted', blockedBy: [] })
+  })
+
   it('unterscheidet „schon eingeplant" von „zu kurz"', () => {
     const exhausted = run({
       segments: [segment({ id: 's1', minutes: 20 }), segment({ id: 's2', minutes: 20 })],

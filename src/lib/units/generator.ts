@@ -305,6 +305,16 @@ export function failedCriteriaOf(
   return failed
 }
 
+/** Je Kriterium, wie viele der Phasen-Treffer daran scheitern — nur, was nicht null ist. */
+function countBlocked(phaseMatches: Candidate[], checks: Criterion[]): GapDetail['blockedBy'] {
+  return checks
+    .map((check) => ({
+      criterion: check.criterion,
+      count: phaseMatches.filter((c) => !check.passes(c)).length,
+    }))
+    .filter((entry) => entry.count > 0)
+}
+
 /**
  * Baut den Pool und — falls er leer bleibt — die vollständige Begründung.
  * Anders als eine Filterkette, die beim ersten leeren Zwischenstand abbricht,
@@ -330,12 +340,7 @@ function buildPool(
       phase: segment.name,
       totalCandidates: candidates.length,
       phaseMatches: phaseMatches.length,
-      blockedBy: checks
-        .map((check) => ({
-          criterion: check.criterion,
-          count: phaseMatches.filter((c) => !check.passes(c)).length,
-        }))
-        .filter((entry) => entry.count > 0),
+      blockedBy: countBlocked(phaseMatches, checks),
       relaxed: relaxLevel > 0,
       participants: group.participants,
     },
@@ -513,12 +518,16 @@ function fillSegment(
   let gapDetail: GapDetail | null = null
 
   if (filled < budget) {
+    const phaseMatches = candidates.filter((c) => matchesPhase(c, segment.name))
     gapDetail = {
       kind: lastKind,
       phase: segment.name,
       totalCandidates: candidates.length,
-      phaseMatches: candidates.filter((c) => matchesPhase(c, segment.name)).length,
-      blockedBy: [],
+      phaseMatches: phaseMatches.length,
+      // Auch ein teilweise gefülltes Segment sagt, woran die übrigen Übungen
+      // scheitern — sonst fehlte der Hinweis auf unvollständig markierte
+      // Sportarten genau im häufigsten Fall (BUG-28).
+      blockedBy: countBlocked(phaseMatches, criteriaFor(segment, group, relaxLevel)),
       relaxed: relaxLevel > 0,
       usableCandidates: pool.length,
       remainingMinutes: budget - filled,
