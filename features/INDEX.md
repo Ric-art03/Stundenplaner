@@ -363,7 +363,16 @@ Gepflegt wird der Bestand über ein **Prüfprogramm auf diesem Rechner** (prüfe
 
 Am selben Tag nach Rückfrage des Nutzers geändert: das **Angebot nach dem Anlegen einer Gruppe nennt beide Zahlen** („passen 30 Übungen, 23 davon kann der Generator sofort einplanen") und erscheint auch, wenn noch Material fehlt; und **ein Filter wählt nicht mehr ab** — ausgeblendete Übungen bleiben ausgewählt, die Leiste sagt „davon 18 gerade ausgeblendet".
 
-**Nächster Schritt:** `/backend` für PROJ-4 — Migration, Prüfprogramm, Testblock.
+**Die Serverseite von PROJ-4 steht seit dem 2026-10-18** — Abschnitt „Implementation Notes (Backend)" in der Spec. Migration `20261018200000_library_exercises.sql` mit Zustimmung des Nutzers zu den neuen Zugriffsregeln angewendet, **Register 19 zu 19**; **709 Unit-Tests grün** (17 neu), Typprüfung, Lint und Build sauber. Fünf Tabellen der Übungsdatenbank (nur lesen; Entwürfe nur für die Vorschau-Konten), drei Felder an der Übung, Übernehmen als eine Funktion mit den Rechten des Nutzers, Einlesen und Freigeben nur mit dem Dienstschlüssel.
+
+- **Das Prüfprogramm** läuft als `npm run bestand` (Anleitung in `scripts/library/README.md`): prüfen, einlesen und freigeben, jeweils erst mit `--ja` schreibend, dazu Abdeckung je Zielgruppe und eine leere Vorlage. Geprüft wird mit dem Grundstock und den Grenzen des Übungsformulars; jeder Fehler mit Blatt, Zeile und Spalte
+- **Der Testblock** (fünf erfundene Übungen) ist eingelesen, **nur als Entwurf für das Testkonto**, und wird nie freigegeben
+- **Zwanzig Fälle am lebenden System** in einer zurückgerollten Transaktion, alle bestanden, nichts zurückgeblieben; `get_advisors` meldet weiter nur den Passwortschutz
+- **Zum ersten Mal im Browser mit Inhalt gesehen**: Liste, „Passt zu Gruppe" mit Vorauswahl und Gründen, Leseansicht, Übernehmen, Vermerk an der Kopie, Angebot auf der Gruppenseite — bei 375 und 1280 px
+
+**Nicht belegt** und in `/qa`: „Kopie löschen, dann neu übernehmen" (der Block mit `DELETE` wird vom Werkzeug abgelehnt), zwei gleichzeitige Übernahmen, 100 Übungen auf einmal; die Browser-Tests sind nicht gelaufen. **Für `/deploy`, unabhängig von PROJ-4:** `npm audit` meldet sechs Funde in den Paketen der App, einer „kritisch" in `next`.
+
+**Nächster Schritt:** `/qa` für PROJ-4.
 
 ## Features
 

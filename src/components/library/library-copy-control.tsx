@@ -19,7 +19,7 @@ export function LibraryCopyControl({ libraryExerciseId, name, initialCopiedExerc
   const { copy, copying } = useLibraryCopy()
 
   async function handleCopy() {
-    const outcome = await copy([libraryExerciseId])
+    const outcome = await copy([libraryExerciseId], () => name)
     if (!outcome) return
     if (outcome.unavailable.length > 0) {
       setGone(true)

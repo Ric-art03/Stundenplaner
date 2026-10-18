@@ -131,7 +131,7 @@ export function LibraryBrowser({ initialParams, groups }: LibraryBrowserProps) {
   }
 
   async function handleCopy(ids: string[]) {
-    const outcome = await copy(ids)
+    const outcome = await copy(ids, (id) => byId.get(id)?.exercise.name)
     if (!outcome) return
 
     if (outcome.unavailable.length > 0) {

@@ -855,6 +855,113 @@ bleiben verborgen, weil der Bestand als leer gilt.
 - **Die Browser-Tests sind nicht gelaufen** — gehören in `/qa`, auch PROJ-3 (die Übersicht ist
   umgezogen) und PROJ-7 (geänderter Text)
 
+## Implementation Notes (Backend)
+
+**Stand:** 2026-10-18. Migration `20261018200000_library_exercises.sql` mit ausdrücklicher Zustimmung
+des Nutzers zu den neuen Zugriffsregeln im SQL-Editor angewendet, **Register 19 zu 19**. **709
+Unit-Tests grün** (692 plus 17 neue für das Prüfprogramm), Typprüfung, Lint und Produktionsbuild
+sauber. Ein Entwicklungspaket dazu: `exceljs` (wie im Entwurf abgenommen).
+
+### Migration
+
+- **Fünf Tabellen**: `library_blocks` (Name, Vorschau-Konten), `library_exercises` (Felder und Grenzen
+  wie `exercises`, dazu Schlüssel, Block, Zustand `draft` / `released` / `withdrawn`,
+  „zuerst freigegeben am", Quellenangabe) und die drei Kindtabellen für Material, Varianten, Links
+- **Zugriffsregeln: je Tabelle eine Leseregel, nur für Angemeldete.** Freigegeben sehen alle,
+  Entwürfe nur die Vorschau-Konten ihres Blocks, Zurückgezogenes niemand; einen Block nur seine
+  Vorschau-Konten. Keine Schreibregel, zusätzlich die Schreibrechte für `anon` und
+  `authenticated` entzogen
+- **An `exercises`**: `library_exercise_id`, `copied_at`, `source_credit` und ein eindeutiger Index
+  „je Nutzer höchstens eine Kopie je Übung"
+- **`copy_library_exercises`** mit den Rechten des Nutzers, ganz oder gar nicht; Schon-Übernommenes
+  wird übersprungen (auch gleichzeitig aus zwei Tabs, über den Index), Nicht-mehr-Sichtbares bricht
+  ohne Schreiben ab
+- **`import_library_block`** und **`release_library_block`** nur für den Dienstschlüssel
+
+### Prüfprogramm (`npm run bestand`)
+
+Anleitung in [scripts/library/README.md](../scripts/library/README.md). Befehle: `pruefen`,
+`einlesen [--ja]`, `freigeben [--ja]`, `abdeckung`, `vorlage`, `zielgruppen-vorlage`, `testblock`.
+Geschrieben wird nur mit `--ja`.
+
+- **Prüfregeln** (`src/lib/library/import/parse.ts`): Grundstock-Begriffe in genauer Schreibweise
+  (eine falsche wird gemeldet, mit der richtigen — nicht korrigiert), Material in kurzer
+  Schreibweise mit „je TN", Pflicht für Sportart, Altersgruppe, Phase und Herkunft, im Hauptteil
+  zwei Varianten oder eine Begründung, eindeutige Schlüssel, Varianten mit vorhandenem Schlüssel,
+  fehlende oder falsch geschriebene Spaltenüberschriften. Danach **die Prüfung des Übungsformulars
+  selbst** (`exerciseSchema`) — dieselben Grenzen. Jeder Fehler mit Blatt, Zeile und Spalte
+- **Gegenüberstellung** (`diff.ts`): neu / Feld für Feld geändert (freigegebene markiert: „nach dem
+  Einlesen sofort für alle sichtbar") / zurückgezogen / wieder aufgenommen / fehlt in der Tabelle /
+  Schlüssel eines anderen Blocks
+- **Abdeckung** (`coverage.ts`): je Zielgruppe aus einer Liste, die der Nutzer führt, gegen 3 / 5 / 3;
+  Altersgruppen von Varianten zählen mit
+- **Starter** `scripts/library/bestand.mjs` lädt das Programm über `runnerImport` von Vite (kommt mit
+  Vitest) — so gelten die `@/`-Pfade der App ohne weiteres Paket
+
+### Entscheidungen beim Bauen
+
+- **Varianten auf eigenem Blatt**, Material in kurzer Schreibweise, Listen mit „;", Links als
+  „Titel | Adresse" — wie im Entwurf; Blatt „Hinweise" in jeder Vorlage
+- **Vorschau-Konten stehen als E-Mail-Adressen in der Tabelle**; das Programm löst sie auf und bricht
+  bei einer unbekannten Adresse ab
+- **„Zurückgezogen" nennt keinen Namen mehr**: die Datenbank darf eine zurückgezogene Übung dem
+  Nutzer nicht mehr zeigen, also auch nicht ihren Namen. Die Oberfläche nennt ihn aus ihrer Liste
+  (kleine Anpassung am Frontend)
+- **Im Hauptteil wird nur gezählt, nicht beurteilt**: „eine leichtere und eine schwerere Variante"
+  prüft das Programm als „mindestens zwei Varianten oder eine Begründung" — ob sie wirklich leichter
+  und schwerer sind, bleibt der Abnahme des Blocks
+- **Eine zurückgezogene Zeile** braucht nur ihren Schlüssel; ihr übriger Inhalt wird nicht geprüft
+
+### Testblock
+
+`tests/fixtures/uebungsdatenbank-testblock.xlsx` (erzeugt mit `npm run bestand -- testblock`), Block
+„E2E-Testblock (nie freigeben)", fünf erfundene Übungen, **als Entwurf eingelesen, nur das Testkonto
+sieht sie**. Er deckt ab: passt ohne Material, scheitert an Material und passt mit Variante,
+scheitert an der Teilnehmerzahl, trägt Quellenangabe und Link, andere Sportart. Ein zweites
+„prüfen" meldet „Unverändert: 5" — Datenbank und Tabelle stimmen Feld für Feld überein.
+**Der Testblock wird nie freigegeben.**
+
+### Nachweis am lebenden System
+
+Zwanzig Fälle in einer zurückgerollten Transaktion, alle bestanden, nichts zurückgeblieben:
+Freigabe zählt richtig; Zurückziehen nur per Markierung; fremder Schlüssel bricht das Einlesen ab;
+ein normales Konto sieht nur Freigegebenes — kein Material eines Entwurfs, keinen Block; Schreiben in
+den Bestand und Einlesen für Nutzer gesperrt; Übernehmen kopiert Material, beide Varianten (auch
+„Ohne Material" und abweichende Altersgruppe), Link und Quellenangabe, Arbeitsnotiz leer, keine eigene
+Kategorie; zweites Übernehmen legt keine zweite Kopie an, auch ein direktes Einfügen nicht; Entwurf
+für ein normales Konto nicht übernehmbar, gesammelt mit Zurückgezogenem nennt es beide und schreibt
+nichts; das Vorschau-Konto sieht Entwurf und Blöcke und darf übernehmen, fremde Kopien nicht; `anon`
+sieht nichts und kann nicht übernehmen; eine Korrektur am Freigegebenen bleibt freigegeben, die
+veränderte Kopie des Nutzers unverändert; Neues in einem freigegebenen Block kommt als Entwurf; eine
+zweite Freigabe ändert das Datum der ersten nicht. `get_advisors` meldet weiter nur den bekannten
+Hinweis zum Passwortschutz.
+
+**Im Browser angesehen** (Produktionsbuild, Testkonto, vorübergehende Testgruppe mit Halle ohne
+Bock und ohne Yoga-Matte, 18 Teilnehmer, danach weggeräumt): die Liste mit „Entwurf"; „Passt zu
+Gruppe" mit zwei vorausgewählten und den Sätzen „Passt zur Gruppe", „Passt mit der Variante ‚Ohne
+Bock (leichter)'", „für 4–12 Teilnehmer, die Gruppe hat 18", „In ‚E2E4 Halle' fehlt: Yoga-Matte";
+die Volleyball-Übung fehlt zu Recht; Leseansicht ohne Bearbeiten/Löschen, mit Quelle, „Zurück" in
+dieselbe gefilterte Liste; Übernehmen → „Übernommen", Auswahlleiste schrumpft um die Kopie; die Kopie
+trägt „Aus der Übungsdatenbank übernommen am 18. Oktober 2026"; das Angebot auf der Gruppenseite
+„passen 3 Übungen … 1 davon kann der Generator sofort einplanen". 375 und 1280 px, nirgends
+waagerechtes Scrollen. Dabei behoben: „1 ausgewählt" brach am Handy um.
+
+### Nicht belegt
+
+- **„Kopie löschen, dann neu übernehmen"** am lebenden System — der Block mit `DELETE` wird vom
+  Werkzeug abgelehnt, auch zurückgerollt (wie in PROJ-14). Der eindeutige Index gilt nur für
+  vorhandene Zeilen; im Browser in `/qa` nachzuholen
+- **Zwei gleichzeitige Übernahmen** — über den Index und `ON CONFLICT` gelöst, aber nicht gleichzeitig
+  ausgelöst
+- Die **Leistung bei 100 Übungen** und das **Übernehmen von 100 auf einmal** — der Testblock hat fünf
+- **Die Browser-Tests sind nicht gelaufen** (Entwicklungsserver lief nebenher)
+
+### Für `/deploy` vorgemerkt, unabhängig von PROJ-4
+
+`npm audit --omit=dev` meldet sechs Funde in den Paketen der App (einer „kritisch" in `next`,
+Image-Optimierung). Sie bestanden schon vor PROJ-4. `exceljs` bringt einen mittleren Fund in `uuid`
+mit — nur im Prüfprogramm, nicht in der App.
+
 ## QA Test Results
 _To be added by /qa_
 

@@ -338,7 +338,7 @@ const copyIdsSchema = z.array(z.uuid()).min(1).max(500)
 interface CopyResponse {
   copied?: { library_id: string; exercise_id: string; name: string }[]
   already?: { library_id: string; exercise_id: string; name: string }[]
-  unavailable?: { library_id: string; name: string }[]
+  unavailable?: { library_id: string }[]
 }
 
 /**
@@ -359,9 +359,7 @@ export async function copyLibraryExercises(ids: string[]): Promise<CopyLibraryRe
 
   const response = data as unknown as CopyResponse
   if (response.unavailable && response.unavailable.length > 0) {
-    return {
-      unavailable: response.unavailable.map((u) => ({ libraryExerciseId: u.library_id, name: u.name })),
-    }
+    return { unavailable: response.unavailable.map((u) => u.library_id) }
   }
 
   const copied = (response.copied ?? []).map((c) => ({

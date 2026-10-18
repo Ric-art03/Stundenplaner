@@ -33,7 +33,7 @@ export function useLibraryCopy() {
   const [copying, setCopying] = React.useState<ReadonlySet<string>>(new Set())
 
   const copy = React.useCallback(
-    async (ids: string[]): Promise<CopyOutcome | null> => {
+    async (ids: string[], nameOf: (id: string) => string | undefined): Promise<CopyOutcome | null> => {
       if (ids.length === 0) return null
       setCopying(new Set(ids))
       try {
@@ -45,13 +45,17 @@ export function useLibraryCopy() {
         }
 
         if ('unavailable' in result) {
-          const names = result.unavailable.map((u) => `„${u.name}"`).join(', ')
+          const names = result.unavailable
+            .map((id) => nameOf(id))
+            .filter((name): name is string => !!name)
+            .map((name) => `„${name}"`)
+            .join(', ')
           toast({
             variant: 'destructive',
             title: 'Nichts übernommen',
-            description: `${names} gibt es in der Übungsdatenbank nicht mehr. Es wurde nichts übernommen — die übrige Auswahl kannst du erneut übernehmen.`,
+            description: `${names || 'Eine der Übungen'} gibt es in der Übungsdatenbank nicht mehr. Es wurde nichts übernommen — die übrige Auswahl kannst du erneut übernehmen.`,
           })
-          return { copies: new Map(), unavailable: result.unavailable.map((u) => u.libraryExerciseId) }
+          return { copies: new Map(), unavailable: result.unavailable }
         }
 
         const copies = new Map<string, string>()

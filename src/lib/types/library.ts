@@ -63,6 +63,10 @@ export type CopyLibraryResult =
       /** Namen, die es in „Meine Übungen" jetzt mehr als einmal gibt. */
       duplicateNames: string[]
     }
-  /** Nicht mehr im Bestand (zurückgezogen) — nichts wurde übernommen. */
-  | { unavailable: { libraryExerciseId: string; name: string }[] }
+  /**
+   * Nicht mehr im Bestand (zurückgezogen) — nichts wurde übernommen. Ohne
+   * Namen: eine zurückgezogene Übung darf der Nutzer nicht mehr lesen; den
+   * Namen kennt die Oberfläche aus ihrer Liste.
+   */
+  | { unavailable: string[] }
   | { error: string }

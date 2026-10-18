@@ -26,7 +26,7 @@ export function SelectionBar({ count, hidden, copying, onCopy, onClear }: Select
     >
       <div className="container mx-auto flex items-center gap-2 px-4 py-3">
         <p className="mr-auto text-sm" role="status">
-          <span className="font-medium">{count} ausgewählt</span>
+          <span className="whitespace-nowrap font-medium">{count} ausgewählt</span>
           {hidden > 0 && (
             <span className="block text-xs text-muted-foreground sm:ml-1 sm:inline">
               davon {hidden} gerade ausgeblendet
