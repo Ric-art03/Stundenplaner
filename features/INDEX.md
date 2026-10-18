@@ -303,7 +303,19 @@ Eines bleibt: **der Generator mit den neuen Nachfragen ist in der Produktion noc
 1. **PROJ-19 (Grundstock der Kategorien)** — welche vordefinierten Begriffe es gibt, vor allem Sportarten, und dass sie überall in derselben Reihenfolge stehen. Neu in der Tabelle, noch ohne Spec
 2. **Rohmasse sichern, dann das Konto des Nutzers leeren** — die 39 Testübungen (nicht 40) bereinigt als ersten Block sichern; danach alles außer der Anmeldung löschen, auch Gruppen, Hallen, Einheiten und Durchführungen, damit das Konto aussieht wie bei einem neuen Nutzer. Nur mit ausdrücklicher Zustimmung
 
-**Nächster Schritt:** `/write-spec PROJ-19` (Grundstock der Kategorien), danach `/architecture` für PROJ-4.
+**PROJ-19 (Grundstock der Kategorien) hat seit dem 2026-10-18 eine Spec** — [PROJ-19-grundstock-der-kategorien.md](PROJ-19-grundstock-der-kategorien.md), vom Nutzer am selben Tag abgenommen. Der Grundstock steht Begriff für Begriff fest: 20 Sportarten (Vorschulturnen und Allgemeinsport fallen weg, Gymnastik und Seniorensport kommen dazu), 11 Altersgruppen (Senioren geteilt in 60–75 und 75+), 3 Phasen, 9 Organisationsformen, 23 Materialien (Tor statt Tor/Netz, dazu Volleyballnetz und Stufenbarren).
+
+- **Eine Reihenfolge überall:** eigene Begriffe oben, alphabetisch, danach die mitgelieferten in fester Reihenfolge — auch für gewählte Begriffe an Übung und Gruppe und für das Material im Live-Modus. Eine Ausnahme: im Generator stehen die Sportarten der Gruppe oben. Bei Varianten fehlen die eigenen Begriffe heute ganz; künftig nicht mehr
+- **„Kein Material" ist kein Material mehr**, sondern eine eigene Wahl „Ohne Material" bei Varianten und im Filter
+- **Kein Begriff zweimal:** wer einen vorhandenen eintippt, bekommt ihn ausgewählt; wächst der Grundstock, geht ein gleichnamiger eigener Begriff still im mitgelieferten auf
+- **Die App bringt richtiges Markieren bei** — eine Übung trägt alle passenden Begriffe, sonst plant der Generator sie nicht überall ein. Satz unter Sportart und Altersgruppe beim Erfassen, Zusatz in der Generator-Begründung
+- **Der vorhandene Bestand wird nicht umgeschrieben** — alles Betroffene sind Testdaten, die mit PROJ-4 gelöscht werden
+
+**Neu auf der Roadmap: PROJ-20 (Hilfe & Tutorial), P0** — vom Nutzer am 2026-10-18 verlangt. Bündelt alle Inhalte zur Nutzerbildung aus den bisherigen Features (Gruppen mit mehreren Sportarten, nicht jede Stunde braucht alle Phasen, Dauer mit Nebenzeiten, Übungen mit allen passenden Begriffen markieren).
+
+Offen für PROJ-4: die Spec nennt noch „Allgemeinsport" und „Senioren (60+)", und ihre Frage zu Krabbelgruppe und Eltern-Kind ist mit dem Grundstock beantwortbar.
+
+**Nächster Schritt:** `/architecture` für PROJ-19, danach PROJ-19 bauen und dann `/architecture` für PROJ-4.
 
 ## Features
 
@@ -325,13 +337,14 @@ Eines bleibt: **der Generator mit den neuen Nachfragen ist in der Produktion noc
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
-| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Roadmap | — | 2026-10-17 |
+| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Planned | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
+| PROJ-20 | Hilfe & Tutorial (die App bringt die richtige Nutzung bei) | P0 | PROJ-3, PROJ-5, PROJ-6 | Roadmap | — | 2026-10-18 |
 
 <!-- Add features above this line -->
 
 **PROJ-17 (Stundenmuster) ist am 2026-10-12 in PROJ-16 aufgegangen** und steht deshalb nicht mehr in der Tabelle. Die Nummer wird nicht neu vergeben; Verweise auf PROJ-17 in den Specs von PROJ-6 und PROJ-7 meinen PROJ-16.
 
-## Next Available ID: PROJ-20
+## Next Available ID: PROJ-21
 
 ## Empfohlene Build-Reihenfolge (MVP)
 

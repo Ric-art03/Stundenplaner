@@ -37,6 +37,7 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 | P0 (MVP) | Live-Modus (Stundenbegleitung) | Deployed |
 | P0 (MVP) | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | Deployed |
 | P0 (MVP) | Grundstock der Kategorien (Begriffe und Reihenfolge) | Planned |
+| P0 (MVP) | Hilfe & Tutorial (die App bringt die richtige Nutzung bei) | Planned |
 | P1 | Kalenderansicht & Langzeitplanung | Planned |
 | P1 | Übungsrotation (Abwechslung über Wochen) | Planned |
 | P1 | PWA (Homescreen-Installation) | Planned |
