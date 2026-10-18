@@ -13,8 +13,9 @@ import { getLibrary } from '@/lib/actions/library'
 import { libraryEntryHref, libraryQuery, type LibraryParams } from '@/lib/library/address'
 import { hasActiveFilters } from '@/lib/library/filter-reasons'
 import {
+  dropCopied,
+  hiddenCount,
   preselectedIds,
-  pruneSelection,
   selectableIds,
   selectionInOrder,
 } from '@/lib/library/selection'
@@ -104,9 +105,10 @@ export function LibraryBrowser({ initialParams, groups }: LibraryBrowserProps) {
     const groupId = result.group?.id ?? null
     if (groupId !== appliedGroupRef.current) {
       appliedGroupRef.current = groupId
-      setSelected((prev) => (groupId ? preselectedIds(result.entries) : pruneSelection(prev, result.entries)))
+      setSelected((prev) => (groupId ? preselectedIds(result.entries) : dropCopied(prev, result.entries)))
     } else {
-      setSelected((prev) => pruneSelection(prev, result.entries))
+      // Filter blenden aus, wählen aber nicht ab — die Leiste sagt, was verborgen mitkommt.
+      setSelected((prev) => dropCopied(prev, result.entries))
     }
   }, [result])
 
@@ -156,6 +158,7 @@ export function LibraryBrowser({ initialParams, groups }: LibraryBrowserProps) {
   const byId = React.useMemo(() => new Map(entries.map((e) => [e.exercise.id, e])), [entries])
   const selectable = React.useMemo(() => selectableIds(entries), [entries])
   const allSelected = selectable.size > 0 && [...selectable].every((id) => selected.has(id))
+  const hidden = hiddenCount(selected, entries)
   const copyingAny = copying.size > 0
   const group = result?.group ?? null
   const allCopied = group !== null && entries.length > 0 && selectable.size === 0
@@ -316,7 +319,17 @@ export function LibraryBrowser({ initialParams, groups }: LibraryBrowserProps) {
                 variant="ghost"
                 size="sm"
                 disabled={copyingAny}
-                onClick={() => setSelected(allSelected ? new Set() : new Set(selectable))}
+                // Wirkt nur auf die sichtbaren; ausgeblendete Auswahl bleibt.
+                onClick={() =>
+                  setSelected((prev) => {
+                    const next = new Set(prev)
+                    for (const id of selectable) {
+                      if (allSelected) next.delete(id)
+                      else next.add(id)
+                    }
+                    return next
+                  })
+                }
               >
                 {allSelected ? 'Keine auswählen' : 'Alle auswählen'}
               </Button>
@@ -332,6 +345,7 @@ export function LibraryBrowser({ initialParams, groups }: LibraryBrowserProps) {
 
       <SelectionBar
         count={selected.size}
+        hidden={hidden}
         copying={copyingAny}
         onClear={() => setSelected(new Set())}
         onCopy={() => handleCopy(selectionInOrder(selected, entries))}

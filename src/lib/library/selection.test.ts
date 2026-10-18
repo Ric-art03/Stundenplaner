@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Exercise } from '@/lib/types/exercise'
 import type { LibraryEntry } from '@/lib/types/library'
 import type { ExerciseFit } from './group-fit'
-import { preselectedIds, pruneSelection, selectableIds, selectionInOrder } from './selection'
+import { dropCopied, hiddenCount, preselectedIds, selectableIds, selectionInOrder } from './selection'
 
 const FITS: ExerciseFit = { kind: 'fits', viaVariant: null }
 const BLOCKED: ExerciseFit = { kind: 'blocked', reasons: [], forVariant: null }
@@ -22,11 +22,16 @@ describe('Auswahl in der Übungsdatenbank', () => {
     expect([...selectableIds(entries)]).toEqual(['a', 'b', 'd'])
   })
 
-  it('schrumpft auf das, was noch auswählbar in der Liste steht', () => {
-    expect([...pruneSelection(new Set(['a', 'c', 'x']), entries)]).toEqual(['a'])
+  it('nimmt Übernommenes heraus, lässt Ausgeblendetes aber stehen', () => {
+    expect([...dropCopied(new Set(['a', 'c', 'x']), entries)]).toEqual(['a', 'x'])
   })
 
-  it('übernimmt in Listenreihenfolge', () => {
-    expect(selectionInOrder(new Set(['d', 'a']), entries)).toEqual(['a', 'd'])
+  it('zählt, was ausgewählt, aber gerade ausgeblendet ist', () => {
+    expect(hiddenCount(new Set(['a', 'x', 'y']), entries)).toBe(2)
+    expect(hiddenCount(new Set(['a', 'b']), entries)).toBe(0)
+  })
+
+  it('übernimmt die sichtbaren in Listenreihenfolge, danach die ausgeblendeten', () => {
+    expect(selectionInOrder(new Set(['x', 'd', 'a']), entries)).toEqual(['a', 'd', 'x'])
   })
 })

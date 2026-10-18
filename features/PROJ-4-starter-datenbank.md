@@ -373,6 +373,8 @@ verschwindet aus der Übungsdatenbank, Kopien bei Nutzern bleiben.
 | Grundstock der Kategorien als eigenes Feature PROJ-19, vor PROJ-4 | Für sich prüf- und auslieferbar, berührt PROJ-3, 5, 6 und 16; der Bestand braucht die endgültigen Begriffe vorher | 2026-10-17 |
 | Konto des Nutzers vor dem Befüllen ganz leeren, außer der Anmeldung | Vom Nutzer gewünscht: den Einstieg eines neuen Nutzers selbst durchgehen. Die Testübungen sind vorher als Rohmasse gesichert | 2026-10-17 |
 | Testübungen nur in der Starter-Fassung bereinigen | Testspuren gehören nicht in den Bestand; das Konto wird ohnehin geleert | 2026-10-17 |
+| Angebot nach dem Anlegen einer Gruppe nennt beide Zahlen: was passt, und wie viel davon sofort einplanbar ist | Sonst schwiege das Angebot, wenn der Halle für alles noch Material fehlt — gerade dann ist es nützlich. Vom Nutzer nach einem Beispiel gewählt | 2026-10-18 |
+| Ein Filter blendet ausgewählte Übungen aus, wählt sie aber nicht ab; die Leiste nennt, wie viele ausgeblendet sind | Wer kurz filtert, soll seine Vorauswahl nicht still verlieren; übernommen wird, was angekreuzt ist, und die Leiste sagt es. Vom Nutzer nach einem Beispiel gewählt | 2026-10-18 |
 | Abdeckung je Zielgruppe (Sportart + Alter) statt je festem Altersbereich; keine feste Liste zum Launch | Vom Nutzer beim Tech Design gewünscht: Stück für Stück, die wichtigsten Zielgruppen zuerst, und sehen, wie weit es realistisch reicht. Eine Gruppe braucht Übungen, die zu Sportart und Alter zugleich passen | 2026-10-18 |
 
 ### Technical Decisions
@@ -756,7 +758,7 @@ Für die App selbst **keine neuen Pakete**.
 
 ## Implementation Notes (Frontend)
 
-**Stand:** 2026-10-18. **687 Unit-Tests grün** (652 plus 35 neue), Typprüfung, Lint (nur die
+**Stand:** 2026-10-18. **692 Unit-Tests grün** (652 plus 40 neue), Typprüfung, Lint (nur die
 vier bekannten Bild-Warnungen) und Produktionsbuild sauber. Gebaut sind die Teile 1–5 aus „Reihenfolge
 beim Bauen"; das Prüfprogramm (Teil 6) gehört zu `/backend`.
 
@@ -822,13 +824,20 @@ bleiben verborgen, weil der Bestand als leer gilt.
 
 ### Entscheidungen beim Bauen
 
-- **Das Angebot nach dem Anlegen zählt, was vorausgewählt würde** — also was der Generator sofort
-  einplanen würde und noch nicht übernommen ist. Übungen, die nur an Material oder Teilnehmerzahl
-  scheitern, zählen nicht mit; „passen 23 Übungen" soll stimmen
-- **Die Auswahl springt nur beim Wechsel der Gruppe um.** Filter danach lassen sie stehen, nehmen
-  aber heraus, was nicht mehr in der Liste steht — es wird nie etwas Unsichtbares mit übernommen.
-  Dieselbe Gruppe noch einmal zu wählen rechnet nicht neu (die Auswahlliste meldet keine Änderung);
-  dafür eine andere wählen oder neu laden
+- **Das Angebot nach dem Anlegen nennt beide Zahlen** *(vom Nutzer am 2026-10-18 entschieden,
+  nach der ersten Fassung)*: „Zu dieser Gruppe passen 30 Übungen …" — alles, was zu Sportart und
+  Alter passt und noch nicht übernommen ist — und darunter, wie viele davon der Generator sofort
+  einplanen würde („23 davon …", „sie alle …" oder „für keine davon reicht im Moment das
+  Material …"). Es erscheint damit auch, wenn der Halle für alles noch Material fehlt. Die erste
+  Fassung zählte nur das sofort Einplanbare und schwieg in diesem Fall ganz
+- **Filter wählen nicht ab** *(vom Nutzer am 2026-10-18 entschieden, nach der ersten Fassung)*:
+  Was ein Filter ausblendet, bleibt ausgewählt; die Leiste sagt „23 ausgewählt, davon 18 gerade
+  ausgeblendet", und übernommen werden alle — erst die sichtbaren in Listenreihenfolge, dann die
+  ausgeblendeten. „Alle auswählen" / „Keine auswählen" wirkt nur auf die sichtbaren, „Auswahl
+  aufheben" auf alle. Die erste Fassung wählte Ausgeblendetes ab, und es kam nach dem Entfernen des
+  Filters nicht zurück — wer nur kurz hineinsah, verlor still seine Vorauswahl
+- **Die Auswahl springt nur beim Wechsel der Gruppe um.** Dieselbe Gruppe noch einmal zu wählen
+  rechnet nicht neu (die Auswahlliste meldet keine Änderung); dafür eine andere wählen oder neu laden
 - **„Alle auswählen"** in der Zeile mit der Anzahl — für Edge Case 10 (alle 100 übernehmen)
 - **Gründe je Übung**: die der Grundform; passt nur eine Variante zu Sportart und Alter, die dieser
   Variante (mit ihrem Titel davor)

@@ -301,23 +301,36 @@ export async function hasLibraryContent(): Promise<boolean> {
   return !error && (count ?? 0) > 0
 }
 
+export interface LibraryOffer {
+  /** Passt zu Sportart und Alter und ist noch nicht übernommen. */
+  matching: number
+  /** Davon: was der Generator sofort einplanen würde. */
+  ready: number
+}
+
 /**
- * Für das Angebot nach dem Anlegen einer Gruppe: wie viele Übungen der
- * Generator für sie sofort einplanen würde, die der Nutzer noch nicht hat.
+ * Für das Angebot nach dem Anlegen einer Gruppe — beide Zahlen, damit das
+ * Angebot auch erscheint, wenn der Halle für alles noch Material fehlt
+ * (vom Nutzer am 2026-10-18 so entschieden).
  */
-export async function countLibraryOfferForGroup(groupId: string): Promise<number> {
+export async function getLibraryOfferForGroup(groupId: string): Promise<LibraryOffer> {
+  const none = { matching: 0, ready: 0 }
   const { supabase, user } = await getAuthUser()
-  if (!user) return 0
+  if (!user) return none
 
   const [all, copies, group] = await Promise.all([
     loadLibrary(supabase, null),
     loadCopies(supabase, user.id),
     getGroup(groupId),
   ])
-  if (!all || !group) return 0
+  if (!all || !group) return none
 
-  return summarizeGroupFit(all.map((l) => l.exercise), toFitGroup(group), new Set(copies.keys()))
-    .preselected.length
+  const copied = new Set(copies.keys())
+  const summary = summarizeGroupFit(all.map((l) => l.exercise), toFitGroup(group), copied)
+  return {
+    matching: [...summary.fits.keys()].filter((id) => !copied.has(id)).length,
+    ready: summary.preselected.length,
+  }
 }
 
 const copyIdsSchema = z.array(z.uuid()).min(1).max(500)

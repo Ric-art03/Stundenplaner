@@ -357,9 +357,11 @@ Gepflegt wird der Bestand über ein **Prüfprogramm auf diesem Rechner** (prüfe
 
 **Abschnitt F geändert, auf Wunsch des Nutzers:** gezählt wird je **Zielgruppe = Sportart + Alter** (3 / 5 / 3), ohne feste Liste zum Launch — der Nutzer nennt die Zielgruppen nacheinander, die wichtigsten zuerst. Die Arbeit am Bestand läuft in **eigenen Block-Sitzungen** nach dem Bau, nicht in einem Skill-Schritt (Abschnitt C2 des Entwurfs). Eine Migration, rein hinzufügend; Paket nur `exceljs` als Entwicklungspaket.
 
-**Die Oberfläche von PROJ-4 steht seit dem 2026-10-18** — Abschnitt „Implementation Notes (Frontend)" in der Spec. **687 Unit-Tests grün** (35 neu), Typprüfung, Lint und Produktionsbuild sauber. Die Seite heißt jetzt „Übungen" und hat die Reiter „Meine Übungen" und „Übungsdatenbank"; dazu Leseansicht, Übernehmen einzeln und gesammelt, „Passt zu Gruppe" mit Vorauswahl und allen Gründen, die Einstiege (Leerzustände, Generator, Gruppenseite nach dem Anlegen) und alle Texte aus Abschnitt A. Die Materialprüfung des Generators sagt jetzt, *welches* Material fehlt; die Filter beider Reiter laufen über einen gemeinsamen Baustein.
+**Die Oberfläche von PROJ-4 steht seit dem 2026-10-18** — Abschnitt „Implementation Notes (Frontend)" in der Spec. **692 Unit-Tests grün** (40 neu), Typprüfung, Lint und Produktionsbuild sauber. Die Seite heißt jetzt „Übungen" und hat die Reiter „Meine Übungen" und „Übungsdatenbank"; dazu Leseansicht, Übernehmen einzeln und gesammelt, „Passt zu Gruppe" mit Vorauswahl und allen Gründen, die Einstiege (Leerzustände, Generator, Gruppenseite nach dem Anlegen) und alle Texte aus Abschnitt A. Die Materialprüfung des Generators sagt jetzt, *welches* Material fehlt; die Filter beider Reiter laufen über einen gemeinsamen Baustein.
 
 **Ohne Tabellen ist der neue Reiter noch leer** („gerade nicht erreichbar"), und alle Einstiege bleiben verborgen. Die Datenbank-Typen sind von Hand vorab eingetragen und legen fest, was die Migration liefern muss. Liste, Auswahlleiste und Leseansicht sind nur im Komponententest mit nachgestellten Daten gesehen; die Browser-Tests sind nicht gelaufen.
+
+Am selben Tag nach Rückfrage des Nutzers geändert: das **Angebot nach dem Anlegen einer Gruppe nennt beide Zahlen** („passen 30 Übungen, 23 davon kann der Generator sofort einplanen") und erscheint auch, wenn noch Material fehlt; und **ein Filter wählt nicht mehr ab** — ausgeblendete Übungen bleiben ausgewählt, die Leiste sagt „davon 18 gerade ausgeblendet".
 
 **Nächster Schritt:** `/backend` für PROJ-4 — Migration, Prüfprogramm, Testblock.
 

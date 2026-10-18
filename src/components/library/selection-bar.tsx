@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 
 interface SelectionBarProps {
   count: number
+  /** Ausgewählt, aber von einem Filter ausgeblendet — wird trotzdem übernommen. */
+  hidden: number
   copying: boolean
   onCopy: () => void
   onClear: () => void
@@ -14,7 +16,7 @@ interface SelectionBarProps {
  * Die Leiste fürs gesammelte Übernehmen. Klebt am unteren Rand, damit sie in
  * einer langen Liste erreichbar bleibt — auch am Handy, wo der Daumen unten ist.
  */
-export function SelectionBar({ count, copying, onCopy, onClear }: SelectionBarProps) {
+export function SelectionBar({ count, hidden, copying, onCopy, onClear }: SelectionBarProps) {
   if (count === 0) return null
   return (
     <div
@@ -23,8 +25,13 @@ export function SelectionBar({ count, copying, onCopy, onClear }: SelectionBarPr
       aria-label="Auswahl"
     >
       <div className="container mx-auto flex items-center gap-2 px-4 py-3">
-        <p className="mr-auto text-sm font-medium" role="status">
-          {count} ausgewählt
+        <p className="mr-auto text-sm" role="status">
+          <span className="font-medium">{count} ausgewählt</span>
+          {hidden > 0 && (
+            <span className="block text-xs text-muted-foreground sm:ml-1 sm:inline">
+              davon {hidden} gerade ausgeblendet
+            </span>
+          )}
         </p>
         <Button variant="ghost" size="sm" onClick={onClear} disabled={copying}>
           Auswahl aufheben

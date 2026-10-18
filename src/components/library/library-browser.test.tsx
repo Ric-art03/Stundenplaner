@@ -2,6 +2,7 @@ import * as React from 'react'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import { LibraryBrowser } from './library-browser'
+import { LibraryOffer } from './library-offer'
 import { DEFAULT_LIBRARY_PARAMS } from '@/lib/library/address'
 import type { Exercise } from '@/lib/types/exercise'
 import type { LibraryEntry, LibraryResult } from '@/lib/types/library'
@@ -148,6 +149,27 @@ describe('LibraryBrowser', () => {
     expect(screen.queryByRole('region', { name: 'Auswahl' })).toBeNull()
   })
 
+  it('lässt ausgeblendete Auswahl stehen, sagt es und übernimmt sie mit', async () => {
+    getLibrary
+      .mockResolvedValueOnce(result([entry('a', 'Feuer, Wasser, Sturm'), entry('b', 'Schattenlauf'), entry('c', 'Ballkönig')]))
+      .mockResolvedValue(result([entry('c', 'Ballkönig')]))
+    copyLibraryExercises.mockResolvedValue({ copied: [], alreadyCopied: [], duplicateNames: [] })
+    render(<LibraryBrowser initialParams={DEFAULT_LIBRARY_PARAMS} groups={[]} />)
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /Feuer/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Ballkönig/ }))
+
+    // Die Suche blendet „Feuer, Wasser, Sturm" aus.
+    fireEvent.change(screen.getByPlaceholderText('Übung suchen...'), { target: { value: 'Ball' } })
+    const bar = screen.getByRole('region', { name: 'Auswahl' })
+    await waitFor(() => expect(within(bar).getByText('davon 1 gerade ausgeblendet')).toBeTruthy())
+    expect(within(bar).getByText('2 ausgewählt')).toBeTruthy()
+
+    fireEvent.click(within(bar).getByRole('button', { name: /Übernehmen/ }))
+    // Erst die sichtbare, dann die ausgeblendete.
+    await waitFor(() => expect(copyLibraryExercises).toHaveBeenCalledWith(['c', 'a']))
+  })
+
   it('nennt die Gründe einer leeren Liste und bietet an, die Filter zurückzusetzen', async () => {
     getLibrary.mockResolvedValue(
       result([], { emptyReasons: ['Für „Volleyball" gibt es in der Übungsdatenbank noch keine Übungen.'] })
@@ -166,5 +188,24 @@ describe('LibraryBrowser', () => {
     getLibrary.mockResolvedValue(result([], { hasContent: false }))
     render(<LibraryBrowser initialParams={DEFAULT_LIBRARY_PARAMS} groups={[]} />)
     expect(await screen.findByText('Die Übungsdatenbank wird gerade aufgebaut')).toBeTruthy()
+  })
+})
+
+describe('LibraryOffer', () => {
+  it('nennt beide Zahlen, wenn nicht alles sofort geht', () => {
+    render(<LibraryOffer groupId={GROUP} matching={30} ready={23} />)
+    expect(screen.getByText('Zu dieser Gruppe passen 30 Übungen aus der Übungsdatenbank')).toBeTruthy()
+    expect(screen.getByText(/23 davon kann der Generator sofort einplanen/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Ansehen' }).getAttribute('href')).toBe(`/exercises?tab=library&gruppe=${GROUP}`)
+  })
+
+  it('erscheint auch, wenn der Halle für alles noch Material fehlt', () => {
+    render(<LibraryOffer groupId={GROUP} matching={5} ready={0} />)
+    expect(screen.getByText(/Für keine davon reicht im Moment das Material/)).toBeTruthy()
+  })
+
+  it('erscheint nicht, wenn nichts passt oder alles übernommen ist', () => {
+    const { container } = render(<LibraryOffer groupId={GROUP} matching={0} ready={0} />)
+    expect(container.textContent).toBe('')
   })
 })

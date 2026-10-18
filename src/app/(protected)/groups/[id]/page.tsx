@@ -3,7 +3,7 @@ import { GroupDetail } from '@/components/groups/group-detail'
 import { LibraryOffer } from '@/components/library/library-offer'
 import { getGroup, deleteGroup } from '@/lib/actions/groups'
 import { getUnitsForGroup } from '@/lib/actions/units'
-import { countLibraryOfferForGroup } from '@/lib/actions/library'
+import { getLibraryOfferForGroup } from '@/lib/actions/library'
 
 interface GroupPageProps {
   params: Promise<{ id: string }>
@@ -20,9 +20,9 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
 
   // Nur direkt nach dem Anlegen (PROJ-4, E): dann bietet die Seite an, was aus
   // der Übungsdatenbank sofort zu der neuen Gruppe passt.
-  const [units, offerCount] = await Promise.all([
+  const [units, offer] = await Promise.all([
     getUnitsForGroup(group.id),
-    neu === '1' ? countLibraryOfferForGroup(group.id) : Promise.resolve(0),
+    neu === '1' ? getLibraryOfferForGroup(group.id) : Promise.resolve(null),
   ])
 
   return (
@@ -31,7 +31,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
         group={group}
         units={units}
         onDelete={deleteGroup}
-        notice={<LibraryOffer groupId={group.id} count={offerCount} />}
+        notice={offer && <LibraryOffer groupId={group.id} matching={offer.matching} ready={offer.ready} />}
       />
     </div>
   )
