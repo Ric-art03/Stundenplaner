@@ -339,7 +339,11 @@ Nicht belegt: Firefox und Safari; ein scheiterndes Aufgehen (vom Nutzer zurückg
 
 **BUG-28 ist am 2026-10-18 behoben** — der Satz zum Markieren steht jetzt auch bei teilweise gefülltem Segment; der Generator zählt die Ursachen in allen drei Fällen über denselben Baustein. 652 Unit-Tests grün (7 neu), Typprüfung, Lint und Build sauber, Browser-Tests des Generators 14 von 14. Gespeicherte Einheiten zeigen den Satz erst nach dem nächsten Generieren. Offen bleiben BUG-29 und BUG-30 (beide niedrig).
 
-**Nächster Schritt:** `/deploy` für PROJ-19 — danach `/architecture` für PROJ-4.
+**PROJ-19 (Grundstock der Kategorien) ist am 2026-10-18 ausgeliefert** — https://stundenplaner-self.vercel.app, Tag `v1.9.0-PROJ-19`, Commit `5cd9324`. Abschnitt „Deployment" in der Spec. Vor dem Hochladen geprüft: Build, Lint, Typprüfung, 652 Unit-Tests, keine Migration (Register 18 zu 18), kein Paket, keine Umgebungsvariable, kein Geheimnis im Diff. Nach dem Hochladen: Vercel meldet die Auslieferung als abgeschlossen, öffentliche Seiten 200, geschützte 307 auf `/login`, Sicherheits-Kopfzeilen liegen an, keine Datenbankfehler in den Supabase-Protokollen. Kein eigener Begriff am lebenden System musste aufgehen.
+
+Eines bleibt: **in der Produktion noch nicht von Hand durchgespielt** — Übungsformular, Variante „Ohne Material", Filter „Ohne Material", Generator mit Gruppe. Offen aus der QA: **BUG-29** und **BUG-30** (beide niedrig).
+
+**Nächster Schritt:** `/architecture` für PROJ-4 (Starter-Datenbank). Vorher steht die zweite Vorarbeit an: Rohmasse sichern, dann das Konto des Nutzers leeren — nur mit ausdrücklicher Zustimmung.
 
 ## Features
 
@@ -361,7 +365,7 @@ Nicht belegt: Firefox und Safari; ein scheiterndes Aufgehen (vom Nutzer zurückg
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
-| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Approved | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
+| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Deployed | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
 | PROJ-20 | Hilfe & Tutorial (die App bringt die richtige Nutzung bei) | P0 | PROJ-3, PROJ-5, PROJ-6 | Roadmap | — | 2026-10-18 |
 
 <!-- Add features above this line -->

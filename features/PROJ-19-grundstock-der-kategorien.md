@@ -1,6 +1,6 @@
 # PROJ-19: Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-10-17
 **Last Updated:** 2026-10-18
 
@@ -857,4 +857,32 @@ den neuen Build **14 von 14 grün**; Editor und Live-Modus nicht erneut gelaufen
 Begründung nur aus.
 
 ## Deployment
-_To be added by /deploy_
+
+**Ausgeliefert:** 2026-10-18 — https://stundenplaner-self.vercel.app, Tag `v1.9.0-PROJ-19`,
+Commit `5cd9324`
+
+**Vor dem Hochladen geprüft:** Build, Lint (0 Fehler), Typprüfung und 652 Unit-Tests gegen genau
+diesen Stand; der letzte Gesamtlauf der Browser-Tests 468 von 468 (vor der Behebung von BUG-28),
+danach die Generator-Tests 14 von 14. **Keine Migration** (Register 18 zu 18), kein neues Paket,
+keine neue Umgebungsvariable, `next.config.ts` unverändert, kein Geheimnis im Unterschied zur
+ausgelieferten Fassung.
+
+**Nach dem Hochladen:** Vercel meldet die Auslieferung als abgeschlossen. Von außen geprüft:
+öffentliche Seiten (`/`, `/login`, `/register`, `/live`, `/live-sw.js`) 200; geschützte Seiten
+(`/dashboard`, `/exercises`, `/exercises/new`, `/groups`, `/units/new`, `/manage`,
+`/manage?tab=categories`) 307 auf `/login`; die vier Sicherheits-Kopfzeilen liegen an; kein
+Schlüssel im Seitentext. In den Supabase-Protokollen seit der Auslieferung keine Datenbankfehler
+und keine Serverfehler.
+
+**Was die Auslieferung beim ersten Laden tut:** Eigene Begriffe, die der Grundstock jetzt
+mitliefert, gehen beim ersten Öffnen eines Formulars oder der Verwaltung im mitgelieferten auf.
+Am lebenden System gibt es vor der Auslieferung **keinen** solchen Begriff (nachgesehen für alle
+neuen und umbenannten Begriffe des Grundstocks) — es ändert sich also kein Bestand.
+
+**Offen**
+- **In der Produktion nicht von Hand durchgespielt** — alles liegt hinter der Anmeldung. Einmal
+  anmelden: Übungsformular (Listen, Satz zum Markieren, Eintippen eines vorhandenen Begriffs),
+  eine Variante auf „Ohne Material", Filter „Ohne Material" in der Übungsübersicht, im Generator
+  die Blöcke „Sportarten der Gruppe" / „Weitere"
+- **BUG-29** und **BUG-30** (beide niedrig)
+- Firefox und Safari weiter nicht geprüft
