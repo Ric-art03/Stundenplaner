@@ -68,8 +68,9 @@ function nonEmpty<T>(list: T[] | undefined | null): T[] | null {
 
 /**
  * Das Material einer Variante **ersetzt** die Liste der Hauptübung vollständig,
- * sobald sie gefüllt ist. Eine Variante, die gar kein Material braucht, trägt
- * dafür den Eintrag „Kein Material" — so bleibt „leer" eindeutig als „erbt".
+ * sobald sie gefüllt ist. Eine Variante „Ohne Material" trägt dafür den
+ * internen Eintrag `NO_MATERIAL` (siehe `src/lib/categories/terms.ts`) — so
+ * bleibt „leer" eindeutig als „erbt".
  */
 export function effectiveMaterials(
   exercise: Pick<CandidateSource, 'materials'>,

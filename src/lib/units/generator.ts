@@ -1,6 +1,7 @@
 import { MIN_SEGMENT_MINUTES } from '@/lib/types/unit'
 import type { SegmentConfig } from '@/lib/types/unit'
 import type { Candidate } from './candidates'
+import { isNoMaterial } from '@/lib/categories/terms'
 
 /**
  * Der Auswahlalgorithmus als reine Logik: keine Datenbank, keine Systemzeit,
@@ -11,8 +12,6 @@ import type { Candidate } from './candidates'
 
 /** Die Plandauer darf höchstens um ein Viertel von der Schätzung abweichen. */
 export const DURATION_TOLERANCE = 0.25
-
-const NO_MATERIAL = 'kein material'
 
 export interface GeneratorGroup {
   ageGroups: string[]
@@ -144,7 +143,8 @@ export function materialsAvailable(
   if (group.venueMaterials === null) return true
 
   for (const material of candidate.materials) {
-    if (normalize(material.name) === NO_MATERIAL) continue
+    // „Ohne Material" an einer Variante ist kein Material (PROJ-19).
+    if (isNoMaterial(material.name)) continue
 
     let needed = material.quantity
     if (material.mode === 'pro Teilnehmer') {

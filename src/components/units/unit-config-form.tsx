@@ -27,7 +27,8 @@ import { SegmentTimeline } from './segment-timeline'
 import { SegmentEditor } from './segment-editor'
 import { generateUnit } from '@/lib/actions/units'
 import { unitConfigSchema } from '@/lib/validations/unit'
-import { DIFFICULTY_LEVELS, ORGANIZATION_FORMS, PHASES, SPORTS } from '@/lib/types/exercise'
+import { DIFFICULTY_LEVELS } from '@/lib/types/exercise'
+import { termOptions } from '@/lib/categories/terms'
 import type { DifficultyLevel } from '@/lib/types/exercise'
 import {
   addSegment,
@@ -419,17 +420,12 @@ export function UnitConfigForm({
     })
   }
 
-  const phaseOptions = React.useMemo(
-    () => [...PHASES, ...customPhases.filter((p) => !PHASES.includes(p as never))],
-    [customPhases]
-  )
+  const phaseOptions = React.useMemo(() => termOptions('phase', customPhases), [customPhases])
 
-  // Die Sportarten der Gruppe stehen oben in der Liste.
-  const sportOptions = React.useMemo(() => {
-    if (!group) return [...SPORTS]
-    const rest = [...SPORTS, ...customSports].filter((s) => !group.sports.includes(s))
-    return [...group.sports, ...Array.from(new Set(rest))]
-  }, [group, customSports])
+  // Alle Sportarten in der Begriffsordnung; die der Gruppe stellt das
+  // Auswahlfeld als eigenen Block nach oben (die Ausnahme aus PROJ-19).
+  const sportOptions = React.useMemo(() => termOptions('sport', customSports), [customSports])
+  const groupSports = React.useMemo(() => group?.sports ?? [], [group])
 
   function handleModeChange(next: FormMode) {
     setMode(next)
@@ -448,7 +444,7 @@ export function UnitConfigForm({
 
   // Dieselbe Auswahl wie im Übungs-Wizard: die vordefinierten und die eigenen.
   const organizationFormOptions = React.useMemo(
-    () => Array.from(new Set([...ORGANIZATION_FORMS, ...customOrganizationForms])),
+    () => termOptions('organization_form', customOrganizationForms),
     [customOrganizationForms]
   )
 
@@ -772,6 +768,7 @@ export function UnitConfigForm({
                         totalMinutes={totalMinutes}
                         phaseOptions={phaseOptions}
                         sportOptions={sportOptions}
+                        groupSports={groupSports}
                         organizationFormOptions={organizationFormOptions}
                         onPhaseCreated={(name) => typedPhases.current.add(name)}
                         onChange={(updated) =>

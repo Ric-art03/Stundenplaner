@@ -15,6 +15,7 @@ import {
   type ExerciseImage, type DifficultyLevel,
 } from '@/lib/types/exercise'
 import { CATEGORY_TYPES, newlyAddedCustom, type CategoryType } from '@/lib/manage/categories'
+import { orderByTerm, orderTerms } from '@/lib/categories/terms'
 
 async function getAuthUser() {
   const supabase = await createClient()
@@ -29,6 +30,8 @@ function mapRowToExercise(
   variants: ExerciseVariant[],
   links: ExerciseLink[],
 ): Exercise {
+  // Geordnet wird beim Lesen (PROJ-19): so zeigen Karte, Liste, Detailansicht
+  // und Formular dieselbe Folge, ohne dass jede Anzeige selbst sortiert.
   return {
     id: row.id,
     userId: row.user_id,
@@ -36,11 +39,11 @@ function mapRowToExercise(
     description: row.description,
     notes: row.notes,
     workNotes: row.work_notes,
-    sports: (row.sports as string[]) ?? [],
-    ageGroups: (row.age_groups as string[]) ?? [],
-    phases: (row.phases as string[]) ?? [],
+    sports: orderTerms('sport', (row.sports as string[]) ?? []),
+    ageGroups: orderTerms('age_group', (row.age_groups as string[]) ?? []),
+    phases: orderTerms('phase', (row.phases as string[]) ?? []),
     difficulty: row.difficulty as DifficultyLevel,
-    organizationForms: (row.organization_forms as string[]) ?? [],
+    organizationForms: orderTerms('organization_form', (row.organization_forms as string[]) ?? []),
     duration: row.duration,
     participantsMin: row.participants_min,
     participantsMax: row.participants_max,
@@ -48,7 +51,7 @@ function mapRowToExercise(
     musicLink: row.music_link,
     needsCompletion: row.needs_completion,
     images: ((row.images as unknown as ExerciseImage[]) ?? []).filter((img) => img?.path),
-    materials,
+    materials: orderByTerm('material', materials),
     variants,
     links,
     createdAt: row.created_at,
@@ -555,12 +558,12 @@ function mapVariant(row: VariantRow): ExerciseVariant {
     id: row.id,
     title: row.title,
     description: row.description,
-    materials: (row.materials as unknown as ExerciseVariant['materials']) ?? [],
+    materials: orderByTerm('material', (row.materials as unknown as ExerciseVariant['materials']) ?? []),
     participantsMin: row.participants_min,
     participantsMax: row.participants_max,
     duration: row.duration,
-    ageGroups: (row.age_groups as string[]) ?? [],
-    organizationForms: (row.organization_forms as string[]) ?? [],
+    ageGroups: orderTerms('age_group', (row.age_groups as string[]) ?? []),
+    organizationForms: orderTerms('organization_form', (row.organization_forms as string[]) ?? []),
   }
 }
 

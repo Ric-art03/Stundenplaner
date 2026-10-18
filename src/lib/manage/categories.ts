@@ -1,10 +1,8 @@
 import {
-  AGE_GROUPS,
-  MATERIALS,
-  ORGANIZATION_FORMS,
-  PHASES,
-  SPORTS,
-} from '@/lib/types/exercise'
+  isReservedMaterialName,
+  NO_MATERIAL_LABEL,
+  PREDEFINED_TERMS,
+} from '@/lib/categories/terms'
 
 /** Die fünf Arten eigener Kategorien, in der Reihenfolge der Verwaltung. */
 export const CATEGORY_TYPES = ['sport', 'age_group', 'phase', 'organization_form', 'material'] as const
@@ -18,13 +16,8 @@ export const CATEGORY_LABELS: Record<CategoryType, { plural: string; singular: s
   material: { plural: 'Material', singular: 'Material' },
 }
 
-export const PREDEFINED_CATEGORIES: Record<CategoryType, readonly string[]> = {
-  sport: SPORTS,
-  age_group: AGE_GROUPS,
-  phase: PHASES,
-  organization_form: ORGANIZATION_FORMS,
-  material: MATERIALS,
-}
+/** Der Grundstock (PROJ-19) — eine Quelle mit der Begriffsordnung. */
+export const PREDEFINED_CATEGORIES: Record<CategoryType, readonly string[]> = PREDEFINED_TERMS
 
 /**
  * Phasen sind kürzer begrenzt als die übrigen Arten: das Segment einer Einheit
@@ -127,6 +120,9 @@ export function categoryNameError(type: CategoryType, name: string): string | nu
   if (trimmed === '') return 'Bitte gib einen Namen ein.'
   const max = categoryNameMax(type)
   if (trimmed.length > max) return `Höchstens ${max} Zeichen.`
+  if (type === 'material' && isReservedMaterialName(trimmed)) {
+    return `„${NO_MATERIAL_LABEL}" ist kein Material — bei einer Variante wählst du es eigens.`
+  }
   return null
 }
 

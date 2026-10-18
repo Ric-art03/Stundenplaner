@@ -11,7 +11,16 @@ describe('Bereitschaftsbild', () => {
       step({ materials: [material('Hütchen', 6), material('Bank', 2)] }),
     ])
 
-    expect(materialNeeds(plan)).toEqual([material('Bank', 2), material('Hütchen', 6)])
+    // Hütchen vor Bank: in der Begriffsordnung (PROJ-19), nicht alphabetisch.
+    expect(materialNeeds(plan)).toEqual([material('Hütchen', 6), material('Bank', 2)])
+  })
+
+  it('ordnet das Material von klein nach groß, wie im Geräteraum', () => {
+    const plan = planWith([
+      step({ materials: [material('Weichbodenmatte', 1), material('Ball', 10), material('Hütchen', 8)] }),
+    ])
+
+    expect(materialNeeds(plan).map((m) => m.name)).toEqual(['Ball', 'Hütchen', 'Weichbodenmatte'])
   })
 
   it('rechnet „pro Teilnehmer" mit der Teilnehmerzahl der Gruppe aus', () => {
@@ -24,7 +33,7 @@ describe('Bereitschaftsbild', () => {
     expect(materials).toEqual([material('Ball', 1, true)])
   })
 
-  it('zählt „Kein Material" nicht als Material', () => {
+  it('zählt den Eintrag „Ohne Material" einer Variante nicht als Material', () => {
     expect(liveMaterials([{ name: 'Kein Material', quantity: 1, mode: 'insgesamt' }], 12)).toEqual([])
   })
 

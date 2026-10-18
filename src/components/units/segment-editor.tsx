@@ -19,6 +19,7 @@ import { WorkNoteField } from '@/components/exercises/work-note'
 import { resolvePrimarySport } from '@/lib/units/timeline'
 import { PhaseSelect } from './phase-select'
 import { DIFFICULTY_LEVELS } from '@/lib/types/exercise'
+import { orderTerms } from '@/lib/categories/terms'
 import type { DifficultyLevel } from '@/lib/types/exercise'
 import type { SegmentConfig } from '@/lib/types/unit'
 
@@ -28,6 +29,8 @@ interface SegmentEditorProps {
   totalMinutes: number
   phaseOptions: string[]
   sportOptions: string[]
+  /** Die Sportarten der gewählten Gruppe — sie stehen als eigener Block oben. */
+  groupSports?: string[]
   organizationFormOptions: string[]
   onChange: (segment: SegmentConfig) => void
   onMinutesChange: (minutes: number) => void
@@ -42,6 +45,7 @@ export function SegmentEditor({
   totalMinutes,
   phaseOptions,
   sportOptions,
+  groupSports = [],
   organizationFormOptions,
   onPhaseCreated,
   onChange,
@@ -130,6 +134,12 @@ export function SegmentEditor({
             <Label>Sportart(en)</Label>
             <MultiSelect
               options={sportOptions}
+              termType="sport"
+              leadingGroup={{
+                terms: groupSports,
+                label: 'Sportarten der Gruppe',
+                restLabel: 'Weitere',
+              }}
               selected={segment.sports}
               onChange={(sports) =>
                 onChange({
@@ -163,7 +173,7 @@ export function SegmentEditor({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Keine — alle gleichwertig</SelectItem>
-                  {segment.sports.map((sport) => (
+                  {orderTerms('sport', segment.sports).map((sport) => (
                     <SelectItem key={sport} value={sport}>
                       {sport}
                     </SelectItem>
@@ -198,6 +208,7 @@ export function SegmentEditor({
             <Label>Organisationsform(en)</Label>
             <MultiSelect
               options={organizationFormOptions}
+              termType="organization_form"
               selected={segment.organizationForms}
               onChange={(organizationForms) => onChange({ ...segment, organizationForms })}
               placeholder="Egal — keine Einschränkung"

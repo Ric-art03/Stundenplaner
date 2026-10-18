@@ -189,7 +189,7 @@ export async function seedLive(
     name: 'Kreisfangen',
     description: KREIS_DESCRIPTION,
     workNotes: KREIS_NOTE,
-    organizationForms: ['Kreis / Sitzkreis'],
+    organizationForms: ['Kreis'],
     musicRequired: true,
     musicLink: MUSIC_LINK,
     materials: [
@@ -211,7 +211,7 @@ export async function seedLive(
 
   const ruhe = await makeExercise(admin, userId, base, {
     name: 'Ruhekreis',
-    organizationForms: ['Kreis / Sitzkreis'],
+    organizationForms: ['Kreis'],
   })
 
   return {

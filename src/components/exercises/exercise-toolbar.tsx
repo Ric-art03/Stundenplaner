@@ -23,12 +23,14 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
 import { MultiSelect } from './multi-select'
 import {
-  SPORTS, AGE_GROUPS, PHASES, ORGANIZATION_FORMS, MATERIALS, DIFFICULTY_LEVELS,
+  DIFFICULTY_LEVELS,
   type ExerciseFilters, type ExerciseViewMode, type ExerciseSortField, type ExerciseSortDirection,
   EMPTY_FILTERS,
 } from '@/lib/types/exercise'
+import { NO_MATERIAL_LABEL, orderTerms, termOptions } from '@/lib/categories/terms'
 
 interface ExerciseToolbarProps {
   filters: ExerciseFilters
@@ -41,16 +43,6 @@ interface ExerciseToolbarProps {
   customCategories?: Record<string, string[]>
 }
 
-function mergeOptions(predefined: readonly string[], custom?: string[]): string[] {
-  if (!custom || custom.length === 0) return [...predefined]
-  const set = new Set<string>(predefined)
-  const result = [...predefined]
-  for (const c of custom) {
-    if (!set.has(c)) result.push(c)
-  }
-  return result
-}
-
 export function ExerciseToolbar({
   filters,
   onFiltersChange,
@@ -61,20 +53,21 @@ export function ExerciseToolbar({
   sortDirection,
   customCategories = {},
 }: ExerciseToolbarProps) {
-  const sportsOptions = React.useMemo(() => mergeOptions(SPORTS, customCategories.sport), [customCategories.sport])
-  const ageGroupOptions = React.useMemo(() => mergeOptions(AGE_GROUPS, customCategories.age_group), [customCategories.age_group])
-  const phaseOptions = React.useMemo(() => mergeOptions(PHASES, customCategories.phase), [customCategories.phase])
-  const orgFormOptions = React.useMemo(() => mergeOptions(ORGANIZATION_FORMS, customCategories.organization_form), [customCategories.organization_form])
-  const materialOptions = React.useMemo(() => mergeOptions(MATERIALS, customCategories.material), [customCategories.material])
+  const sportsOptions = React.useMemo(() => termOptions('sport', customCategories.sport), [customCategories.sport])
+  const ageGroupOptions = React.useMemo(() => termOptions('age_group', customCategories.age_group), [customCategories.age_group])
+  const phaseOptions = React.useMemo(() => termOptions('phase', customCategories.phase), [customCategories.phase])
+  const orgFormOptions = React.useMemo(() => termOptions('organization_form', customCategories.organization_form), [customCategories.organization_form])
+  const materialOptions = React.useMemo(() => termOptions('material', customCategories.material), [customCategories.material])
 
   const activeChips = React.useMemo(() => {
     const chips: { label: string; key: string; value?: string }[] = []
-    for (const s of filters.sports) chips.push({ label: s, key: 'sports', value: s })
-    for (const ag of filters.ageGroups) chips.push({ label: ag, key: 'ageGroups', value: ag })
-    for (const p of filters.phases) chips.push({ label: p, key: 'phases', value: p })
+    for (const s of orderTerms('sport', filters.sports)) chips.push({ label: s, key: 'sports', value: s })
+    for (const ag of orderTerms('age_group', filters.ageGroups)) chips.push({ label: ag, key: 'ageGroups', value: ag })
+    for (const p of orderTerms('phase', filters.phases)) chips.push({ label: p, key: 'phases', value: p })
     if (filters.difficulty) chips.push({ label: `Schwierigkeit: ${filters.difficulty}`, key: 'difficulty' })
-    for (const of_ of filters.organizationForms) chips.push({ label: of_, key: 'organizationForms', value: of_ })
-    for (const m of filters.materials) chips.push({ label: m, key: 'materials', value: m })
+    for (const of_ of orderTerms('organization_form', filters.organizationForms)) chips.push({ label: of_, key: 'organizationForms', value: of_ })
+    if (filters.withoutMaterial) chips.push({ label: NO_MATERIAL_LABEL, key: 'withoutMaterial' })
+    for (const m of orderTerms('material', filters.materials)) chips.push({ label: m, key: 'materials', value: m })
     if (filters.participantsMin != null) chips.push({ label: `Min. ${filters.participantsMin} TN`, key: 'participantsMin' })
     if (filters.participantsMax != null) chips.push({ label: `Max. ${filters.participantsMax} TN`, key: 'participantsMax' })
     if (filters.needsCompletion) chips.push({ label: 'Noch zu ergänzen', key: 'needsCompletion' })
@@ -98,6 +91,8 @@ export function ExerciseToolbar({
       onFiltersChange({ ...filters, participantsMax: null })
     } else if (key === 'needsCompletion') {
       onFiltersChange({ ...filters, needsCompletion: false })
+    } else if (key === 'withoutMaterial') {
+      onFiltersChange({ ...filters, withoutMaterial: false })
     }
   }
 
@@ -164,6 +159,7 @@ export function ExerciseToolbar({
                 <FilterSection label="Sportart">
                   <MultiSelect
                     options={sportsOptions}
+                    termType="sport"
                     selected={filters.sports}
                     onChange={(v) => updateFilter('sports', v)}
                     placeholder="Alle Sportarten"
@@ -172,6 +168,7 @@ export function ExerciseToolbar({
                 <FilterSection label="Altersgruppe">
                   <MultiSelect
                     options={ageGroupOptions}
+                    termType="age_group"
                     selected={filters.ageGroups}
                     onChange={(v) => updateFilter('ageGroups', v)}
                     placeholder="Alle Altersgruppen"
@@ -180,6 +177,7 @@ export function ExerciseToolbar({
                 <FilterSection label="Phase">
                   <MultiSelect
                     options={phaseOptions}
+                    termType="phase"
                     selected={filters.phases}
                     onChange={(v) => updateFilter('phases', v)}
                     placeholder="Alle Phasen"
@@ -204,14 +202,27 @@ export function ExerciseToolbar({
                 <FilterSection label="Organisationsform">
                   <MultiSelect
                     options={orgFormOptions}
+                    termType="organization_form"
                     selected={filters.organizationForms}
                     onChange={(v) => updateFilter('organizationForms', v)}
                     placeholder="Alle Organisationsformen"
                   />
                 </FilterSection>
                 <FilterSection label="Material">
+                  {/* Eine eigene Angabe, kein Begriff — deshalb abgesetzt über der Liste. */}
+                  <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2">
+                    <Checkbox
+                      id="filter-without-material"
+                      checked={filters.withoutMaterial}
+                      onCheckedChange={(v) => updateFilter('withoutMaterial', v === true)}
+                    />
+                    <Label htmlFor="filter-without-material" className="font-normal cursor-pointer">
+                      {NO_MATERIAL_LABEL}
+                    </Label>
+                  </div>
                   <MultiSelect
                     options={materialOptions}
+                    termType="material"
                     selected={filters.materials}
                     onChange={(v) => updateFilter('materials', v)}
                     placeholder="Alle Materialien"

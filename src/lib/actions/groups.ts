@@ -9,6 +9,7 @@ import {
   type ScheduleType,
 } from '@/lib/types/group'
 import { newlyAddedCustom } from '@/lib/manage/categories'
+import { orderByTerm, orderTerms } from '@/lib/categories/terms'
 import {
   materialImpacts,
   materialLosses,
@@ -36,7 +37,8 @@ function mapVenueRow(row: VenueRow, materials: VenueMaterial[]): Venue {
     userId: row.user_id,
     name: row.name,
     notes: row.notes,
-    materials,
+    // Geordnet beim Lesen (PROJ-19), wie an der Übung.
+    materials: orderByTerm('material', materials),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -61,8 +63,8 @@ function mapGroupRow(
     id: row.id,
     userId: row.user_id,
     name: row.name,
-    sports: (row.sports as string[]) ?? [],
-    ageGroups: (row.age_groups as string[]) ?? [],
+    sports: orderTerms('sport', (row.sports as string[]) ?? []),
+    ageGroups: orderTerms('age_group', (row.age_groups as string[]) ?? []),
     primarySport: row.primary_sport,
     participants: row.participants,
     unitDuration: row.unit_duration,

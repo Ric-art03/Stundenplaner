@@ -317,7 +317,11 @@ Offen für PROJ-4: die Spec nennt noch „Allgemeinsport" und „Senioren (60+)"
 
 **PROJ-19 hat seit dem 2026-10-18 einen Technikentwurf** — Abschnitt „Tech Design" in der Spec, vom Nutzer am selben Tag abgenommen. **Keine Migration, kein neues Feld, keine neuen Pakete.** Ein zentraler Baustein „Begriffsordnung" ersetzt das Sortieren je Bildschirm; geordnet wird beim Lesen, nicht beim Speichern. „Ohne Material" bleibt intern gespeichert wie heute, die drei Zustände der Variante werden daraus abgelesen. Eigene Begriffe gehen beim Laden über die Zusammenführ-Funktion aus PROJ-16 im mitgelieferten auf — auch bei jeder späteren Erweiterung des Grundstocks.
 
-**Nächster Schritt:** `/frontend` für PROJ-19, danach `/backend` (klein), dann `/architecture` für PROJ-4.
+**Die Oberfläche von PROJ-19 steht seit dem 2026-10-18** — Abschnitt „Implementation Notes (Frontend)" in der Spec. **638 Unit-Tests grün** (22 neu für die Begriffsordnung), Typprüfung, Lint und Build sauber, Browser-Tests der Stufe „chromium" 53 von 53. Ein Baustein `src/lib/categories/terms.ts` ordnet jetzt alle Listen und Anzeigen; Übungen, Gruppen, Hallen und Kandidaten werden beim Lesen geordnet. Die zwei Materialauswahlen sind zu einer zusammengelegt. **Im Browser von Hand noch nicht angesehen.**
+
+Drei Dinge warten auf `/backend`: der Filter „Ohne Material" wird vom Server noch nicht ausgewertet, ein eigener Begriff geht beim Laden noch nicht im mitgelieferten auf (die Listen blenden den Doppel aber schon aus), und der Vergleich beim Speichern unterscheidet noch Groß/Klein. Abweichung: das Schnell-Anlegen hat keine Felder für Sportart und Altersgruppe, der Satz zum Markieren steht dort an der übernommenen Liste.
+
+**Nächster Schritt:** im Browser ansehen, dann `/backend` für PROJ-19 (klein), dann `/architecture` für PROJ-4.
 
 ## Features
 
@@ -339,7 +343,7 @@ Offen für PROJ-4: die Spec nennt noch „Allgemeinsport" und „Senioren (60+)"
 | PROJ-15 | Dokumenten-Upload (Gruppen & Hallen) | P1 | PROJ-5 | Roadmap | — | 2026-10-02 |
 | PROJ-16 | Verwaltung (Hallen, Stundenmuster, eigene Kategorien) | P0 | PROJ-3, PROJ-5, PROJ-6 | Deployed | [Spec](PROJ-16-verwaltung.md) | 2026-10-04 |
 | PROJ-18 | Dunkelmodus (Schalter oder Systemeinstellung folgen) | P2 | None | Roadmap | — | 2026-10-09 |
-| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | Architected | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
+| PROJ-19 | Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich) | P0 | PROJ-3, PROJ-5, PROJ-16 | In Progress | [Spec](PROJ-19-grundstock-der-kategorien.md) | 2026-10-17 |
 | PROJ-20 | Hilfe & Tutorial (die App bringt die richtige Nutzung bei) | P0 | PROJ-3, PROJ-5, PROJ-6 | Roadmap | — | 2026-10-18 |
 
 <!-- Add features above this line -->

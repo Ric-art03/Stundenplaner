@@ -1,3 +1,4 @@
+import { orderByTerm } from '@/lib/categories/terms'
 import type { LiveMaterial, LivePlan, LiveStep } from './types'
 
 function materialKey(material: LiveMaterial): string {
@@ -22,7 +23,9 @@ export function materialNeeds(plan: LivePlan): LiveMaterial[] {
     }
   }
 
-  return [...needs.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'))
+  // In der Begriffsordnung (PROJ-19): von klein nach groß, wie man es im
+  // Geräteraum zusammensucht — nicht alphabetisch.
+  return orderByTerm('material', [...needs.values()])
 }
 
 export interface MusicNeed {

@@ -57,19 +57,32 @@ const CRITERIA: Record<GapCriterion, { label: string; remedy: string }> = {
 
 const SOFT: GapCriterion[] = ['sport', 'difficulty', 'organization']
 
+/**
+ * Der Generator plant eine Übung nur für die Sportarten ein, die sie trägt
+ * (PROJ-19, Abschnitt E). Scheitern Übungen an der Sportart, steckt dahinter
+ * oft eine unvollständig markierte Übung — das sagt die Begründung mit.
+ */
+export const SPORT_TAGGING_HINT =
+  'Übungen passen oft auch zu benachbarten Sportarten. Markiere sie dort mit — dann plant der Generator sie auch für diese Phase ein.'
+
 function remediesFor(detail: GapDetail): string[] {
   switch (detail.kind) {
     case 'no-phase':
       return [
         `Ordne Übungen der Phase „${detail.phase}" zu, oder wähle hier eine andere Phase, für die du schon Übungen hast.`,
       ]
-    case 'all-filtered':
+    case 'all-filtered': {
       // Zuerst, was sich im Generator für dieses Segment ändern lässt („Hake im
       // Generator …"), danach das, wofür man an Übungen, Gruppe oder Halle muss.
-      return [
+      const remedies = [
         ...detail.blockedBy.filter((entry) => SOFT.includes(entry.criterion)),
         ...detail.blockedBy.filter((entry) => !SOFT.includes(entry.criterion)),
       ].map((entry) => CRITERIA[entry.criterion].remedy)
+      if (detail.blockedBy.some((entry) => entry.criterion === 'sport')) {
+        remedies.push(SPORT_TAGGING_HINT)
+      }
+      return remedies
+    }
     case 'exhausted':
       return [`Lege weitere Übungen der Phase „${detail.phase}" an.`]
     case 'too-short':

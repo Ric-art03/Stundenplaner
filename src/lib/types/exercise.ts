@@ -1,34 +1,45 @@
+// Der Grundstock (PROJ-19). Die Reihenfolge der Listen ist die Reihenfolge,
+// in der die Begriffe überall erscheinen — eine zweite Angabe dazu gibt es
+// nicht. Geordnet wird über `src/lib/categories/terms.ts`.
+
 export const SPORTS = [
-  'Turnen', 'Volleyball', 'Fußball', 'Basketball', 'Handball',
-  'Leichtathletik', 'Tanzen', 'Fitness/Workout', 'Schwimmen',
-  'Allgemeinsport', 'Krabbelgruppe', 'Eltern-Kind Turnen',
-  'Vorschulturnen', 'Kinderturnen', 'Kinderspiele',
-  'Abenteuer und Erlebnis', 'Kampfsport', 'Therapie',
-  'Rehabilitation/Prävention', 'Teambuilding',
+  'Krabbelgruppe', 'Eltern-Kind-Turnen', 'Kinderturnen', 'Kinderspiele',
+  'Seniorensport', 'Gymnastik', 'Fitness/Workout',
+  'Rehabilitation/Prävention', 'Therapie', 'Schwimmen', 'Turnen', 'Tanzen',
+  'Kampfsport', 'Leichtathletik', 'Basketball', 'Fußball', 'Handball',
+  'Volleyball', 'Abenteuer und Erlebnis', 'Teambuilding',
 ] as const
 
+// Dass sich Grenzen überschneiden (4, 60, 75), ist gewollt.
 export const AGE_GROUPS = [
   'Kinder (0–1)', 'Kinder (1–2)', 'Kinder (2–4)', 'Kinder (4–6)',
   'Kinder (7–10)', 'Jugend (11–14)', 'Jugend (15–17)',
-  'Erwachsene (18–45)', 'Erwachsene (46–60)', 'Senioren (60+)',
+  'Erwachsene (18–45)', 'Erwachsene (46–60)', 'Senioren (60–75)',
+  'Senioren (75+)',
 ] as const
 
 export const PHASES = [
   'Aufwärmen', 'Hauptteil', 'Cool-Down',
 ] as const
 
+// Erst die ganze Gruppe zusammen, dann aufgeteilt nach Gruppengröße,
+// zuletzt Mannschaften.
 export const ORGANIZATION_FORMS = [
-  'Freie Verteilung (ganze Halle)', 'Zu zweit / Paare', 'Kleingruppen',
-  'Zwei Mannschaften (gemeinsames Spielfeld)',
+  'Freie Verteilung (ganze Halle)', 'Kreis', 'Reihe / Gasse',
+  'Schachbrettformation', 'Zu zweit / Paare', 'Kleingruppen',
+  'Stationsbetrieb', 'Zwei Mannschaften (gemeinsames Spielfeld)',
   'Zwei Mannschaften (getrenntes Spielfeld)',
-  'Kreis / Sitzkreis', 'Reihe / Gasse', 'Stationsbetrieb', '1-gegen-1',
 ] as const
 
+// Von klein nach groß, wie man es im Geräteraum zusammensucht: Kleingeräte,
+// Markieren, Matten, Großgeräte. „Ohne Material" ist kein Material und steht
+// deshalb nicht hier (siehe `NO_MATERIAL` in terms.ts).
 export const MATERIALS = [
-  'Ball', 'Yoga-Matte', 'Weichbodenmatte', 'Turnmatte', 'Hütchen',
-  'Seil/Springseil', 'Bank', 'Reifen', 'Kleiner Kasten', 'Großer Kasten',
-  'Bock', 'Pferd', 'Sprossenwand', 'Turnringe', 'Stab', 'Leibchen',
-  'Tor/Netz', 'Kegel', 'Schwungtuch', 'Markierung', 'Tuch', 'Kein Material',
+  'Ball', 'Seil/Springseil', 'Reifen', 'Stab', 'Tuch', 'Schwungtuch',
+  'Leibchen', 'Hütchen', 'Kegel', 'Markierung', 'Turnmatte', 'Yoga-Matte',
+  'Weichbodenmatte', 'Bank', 'Kleiner Kasten', 'Großer Kasten', 'Bock',
+  'Pferd', 'Sprossenwand', 'Turnringe', 'Stufenbarren', 'Tor',
+  'Volleyballnetz',
 ] as const
 
 export const DIFFICULTY_LEVELS = [
@@ -139,6 +150,11 @@ export interface ExerciseFilters {
   difficulty: DifficultyLevel | null
   organizationForms: string[]
   materials: string[]
+  /**
+   * Übungen ohne jede Materialzeile. Eine eigene Angabe, kein Begriff der
+   * Materialliste (PROJ-19); mit Material zusammen gilt „oder".
+   */
+  withoutMaterial: boolean
   participantsMin: number | null
   participantsMax: number | null
   /** Nur Übungen mit der Markierung „noch zu ergänzen". */
@@ -153,6 +169,7 @@ export const EMPTY_FILTERS: ExerciseFilters = {
   difficulty: null,
   organizationForms: [],
   materials: [],
+  withoutMaterial: false,
   participantsMin: null,
   participantsMax: null,
   needsCompletion: false,

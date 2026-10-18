@@ -1,5 +1,6 @@
 import type { Unit, UnitItem, UnitSegment } from '@/lib/types/unit'
 import type { ExerciseMaterial } from '@/lib/types/exercise'
+import { orderByTerm, realMaterials } from '@/lib/categories/terms'
 import type { LiveMaterial, LivePlan, LiveStep } from './types'
 
 export const FREE_TIME_NAME = 'Freie Zeit'
@@ -13,14 +14,14 @@ export interface LiveGroupFacts {
 /**
  * Rechnet das Material einer Übung für die Halle aus: „pro Teilnehmer" mal
  * Teilnehmerzahl. Ohne Teilnehmerzahl bleibt die Angabe je Teilnehmer stehen.
- * „Kein Material" ist kein Material.
+ * „Ohne Material" an einer Variante ist kein Material. Geordnet nach der
+ * Begriffsordnung (PROJ-19).
  */
 export function liveMaterials(
   materials: ExerciseMaterial[],
   participants: number | null
 ): LiveMaterial[] {
-  return materials
-    .filter((material) => material.name.trim().toLowerCase() !== 'kein material')
+  return orderByTerm('material', realMaterials(materials))
     .map((material) => {
       if (material.mode !== 'pro Teilnehmer') {
         return { name: material.name, quantity: material.quantity, perParticipant: false }

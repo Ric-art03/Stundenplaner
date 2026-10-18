@@ -11,6 +11,7 @@ import {
 } from '@/lib/validations/unit'
 import { quickCreateSchema } from '@/lib/validations/exercise'
 import { PHASES } from '@/lib/types/exercise'
+import { orderByTerm, orderTerms } from '@/lib/categories/terms'
 import type {
   DifficultyLevel,
   ExerciseMaterial,
@@ -96,12 +97,12 @@ function mapVariant(row: VariantRow): ExerciseVariant {
     id: row.id,
     title: row.title,
     description: row.description,
-    materials: (row.materials as unknown as ExerciseVariant['materials']) ?? [],
+    materials: orderByTerm('material', (row.materials as unknown as ExerciseVariant['materials']) ?? []),
     participantsMin: row.participants_min,
     participantsMax: row.participants_max,
     duration: row.duration,
-    ageGroups: (row.age_groups as string[]) ?? [],
-    organizationForms: (row.organization_forms as string[]) ?? [],
+    ageGroups: orderTerms('age_group', (row.age_groups as string[]) ?? []),
+    organizationForms: orderTerms('organization_form', (row.organization_forms as string[]) ?? []),
   }
 }
 
@@ -152,18 +153,20 @@ async function loadCandidateSources(
   const materialsByExercise = groupBy((materialsRes.data ?? []) as MaterialRow[], 'exercise_id')
   const variantsByExercise = groupBy((variantsRes.data ?? []) as VariantRow[], 'exercise_id')
 
+  // Begriffe und Material in der Begriffsordnung (PROJ-19) — für die Anzeige
+  // im Editor und im Live-Modus; auf die Auswahl des Generators wirkt das nicht.
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
-    phases: (row.phases as string[]) ?? [],
-    sports: (row.sports as string[]) ?? [],
+    phases: orderTerms('phase', (row.phases as string[]) ?? []),
+    sports: orderTerms('sport', (row.sports as string[]) ?? []),
     difficulty: row.difficulty as DifficultyLevel,
-    ageGroups: (row.age_groups as string[]) ?? [],
-    organizationForms: (row.organization_forms as string[]) ?? [],
+    ageGroups: orderTerms('age_group', (row.age_groups as string[]) ?? []),
+    organizationForms: orderTerms('organization_form', (row.organization_forms as string[]) ?? []),
     duration: row.duration,
     participantsMin: row.participants_min,
     participantsMax: row.participants_max,
-    materials: (materialsByExercise[row.id] ?? []).map(mapMaterial),
+    materials: orderByTerm('material', (materialsByExercise[row.id] ?? []).map(mapMaterial)),
     variants: (variantsByExercise[row.id] ?? []).map(mapVariant),
     musicRequired: row.music_required,
     musicLink: row.music_link,

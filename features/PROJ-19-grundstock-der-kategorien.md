@@ -1,6 +1,6 @@
 # PROJ-19: Grundstock der Kategorien (Begriffe und Reihenfolge überall gleich)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-10-17
 **Last Updated:** 2026-10-18
 
@@ -515,6 +515,77 @@ und keine Zugriffsregel.
 ### F) Abhängigkeiten
 
 Keine neuen Pakete.
+
+## Implementation Notes (Frontend)
+
+Gebaut am 2026-10-18 in der Reihenfolge des Entwurfs. Keine Migration, keine neuen Pakete,
+keine neue shadcn-Komponente (Radio-Gruppe, Checkbox, Popover, Badge waren da).
+
+**Grundstock und Begriffsordnung**
+- Die fünf Listen in `src/lib/types/exercise.ts` sind durch Abschnitt A ersetzt, mit den Gründen
+  der Reihenfolge als Kommentar
+- Neuer Baustein `src/lib/categories/terms.ts` (mit 22 Unit-Tests): Auswahlliste bauen, Gewähltes
+  ordnen, Generator-Blöcke, Gleichheit ohne Groß/Klein, Schreibweise des Grundstocks, „Ohne
+  Material" ablesen und schreiben. `PREDEFINED_CATEGORIES` der Verwaltung zeigt auf dieselbe Quelle
+
+**Auswahlfelder** (`multi-select.tsx`, neue `material-select.tsx`, `phase-select.tsx`)
+- Das Auswahlfeld kennt die Begriffsordnung: Optionen und Chips in Listenfolge, auch während des
+  Bearbeitens. Optional zwei Blöcke („Sportarten der Gruppe" / „Weitere") für den Generator
+- Vorhandenen Begriff eingetippt → er wird ausgewählt, mit „„X" gibt es schon — ausgewählt." bzw.
+  „„X" ist schon ausgewählt." Die Meldung steht im offenen Auswahlfeld, nach dem Schließen darunter
+- Die zwei fast gleichen Materialauswahlen (Übung, Halle) sind zu `material-select.tsx`
+  zusammengelegt. Dort zusätzlich: „Kein Material"/„Ohne Material" lassen sich nicht als Material
+  anlegen; ein Material, das in der Halle schon in einer anderen Zeile steht, wird benannt
+- Die Phasenauswahl im Generator wählt eine eingetippte, vorhandene Phase aus, statt eine zweite
+  anzulegen
+
+**Angeschlossen:** Übungsformular, Varianten (jetzt mit eigenen Altersgruppen, Organisationsformen
+und Materialien), Filter der Übungsübersicht, Gruppenformular, Hallenmaterial, Generator (Phase,
+Sportarten mit Blöcken, Hauptsportart, Organisationsform), Schnell-Anlegen, Verwaltung
+
+**Ordnen beim Lesen:** Übungen, Varianten, Gruppen, Hallen und die Kandidaten für Editor und
+Live-Modus werden beim Lesen geordnet (`actions/exercises.ts`, `groups.ts`, `units.ts`). Die
+Übungszeile und das Material im Live-Modus ordnen zusätzlich selbst, weil sie auch Daten zeigen,
+die nicht frisch gelesen sind (Stundenakte auf dem Gerät). **Nicht geordnet** werden die
+Sportarten eines Generator-Segments beim Lesen: ihre Folge steuert dort, welche Sportart zuerst
+gezogen wird
+
+**„Ohne Material"**
+- Variante: Wahl aus drei als Radio-Gruppe; „Eigenes Material" kopiert die Liste der Hauptübung wie
+  bisher. Die Detailansicht zeigt bei „Ohne Material" „Kein Material nötig"
+- Die sechs verstreuten Erkennungen von „Kein Material" laufen über `isNoMaterial` /
+  `realMaterials`
+- Filter: eigene Angabe `withoutMaterial` im Filterzustand, als abgesetzte Checkbox über der
+  Materialliste, mit eigenem Chip
+
+**Hinweise zum vollständigen Markieren:** `tagging-hint.tsx` unter Sportart und Altersgruppe im
+Übungsformular; in der Lückenbegründung des Generators ein Zusatz, wenn die Sportart Übungen
+ausschließt (`SPORT_TAGGING_HINT` in `gap-notice.tsx`); der Gruppenhinweis nennt „Kinderspiele"
+oder „Gymnastik" statt „Allgemeinsport"
+
+**Abweichungen von der Spec**
+- **Schnell-Anlegen hat keine Felder für Sportart und Altersgruppe**, es übernimmt sie aus Abschnitt
+  und Gruppe. Der Satz steht deshalb an der übernommenen Liste, als Aufforderung, die Übung später
+  zu ergänzen (betrifft das dritte Kriterium in Abschnitt E)
+- **„Ohne Material" im Filter** ist eine abgesetzte Checkbox direkt über der Materialliste, kein
+  Eintrag in ihr. Wirkung und Lage („zuerst, abgesetzt") wie beschrieben
+- **Auch in der Verwaltung** lassen sich „Kein Material" und „Ohne Material" nicht als Material
+  anlegen (folgt aus der technischen Entscheidung „interner Name reserviert")
+
+**Wartet auf `/backend`**
+- **Filter „Ohne Material"** wird vom Server noch nicht ausgewertet; bis dahin wirkt das Häkchen
+  nicht
+- **Aufgehen eigener Begriffe beim Laden**: bis dahin blendet die Oberfläche den Doppel aus
+  (die Auswahllisten zeigen den Begriff nur einmal), aber die Verwaltung listet ihn noch als eigenen
+- **Vergleich beim Speichern** (`newlyAddedCustom`) unterscheidet noch Groß/Klein; das Auswahlfeld
+  verhindert den Fall in der Oberfläche bereits
+
+**Tests:** Unit-Tests 638 grün (615 plus 22 für die Begriffsordnung plus 1 für die Reihenfolge des
+Materials im Live-Modus; ein bestehender Test von alphabetisch auf Listenfolge umgestellt).
+Browser-Testdaten von „Kreis / Sitzkreis" auf „Kreis" umgestellt. Typprüfung, Lint und
+Produktionsbuild sauber. Browser-Tests der Stufe „chromium" (Übungen, Gruppen, Generator am
+Rechner) **53 von 53 grün**; die übrigen Stufen (Handy, Editor, Live-Modus, Verwaltung) sind nicht
+gelaufen und gehören in `/qa`. Im Browser von Hand angesehen ist noch nichts.
 
 ## QA Test Results
 _To be added by /qa_

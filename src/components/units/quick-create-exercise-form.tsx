@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { WorkNoteField } from '@/components/exercises/work-note'
 import type { EditorCandidate } from '@/lib/units/editor-pool'
+import { orderTerms } from '@/lib/categories/terms'
 
 /** Was aus Segment und Gruppe übernommen wird, damit die Übung ein gültiger
  *  Kandidat ist und nicht beim nächsten Generieren durch jeden Filter fällt. */
@@ -164,19 +165,21 @@ export function QuickCreateExerciseForm({
         <div className="flex flex-wrap gap-1">
           <Badge variant="secondary" className="text-xs">{defaults.phase}</Badge>
           <Badge variant="secondary" className="text-xs">{defaults.difficulty}</Badge>
-          {defaults.sports.map((sport) => (
+          {orderTerms('sport', defaults.sports).map((sport) => (
             <Badge key={sport} variant="outline" className="text-xs">{sport}</Badge>
           ))}
-          {defaults.ageGroups.map((group) => (
+          {orderTerms('age_group', defaults.ageGroups).map((group) => (
             <Badge key={group} variant="outline" className="text-xs">{group}</Badge>
           ))}
-          {defaults.organizationForms.map((form) => (
+          {orderTerms('organization_form', defaults.organizationForms).map((form) => (
             <Badge key={form} variant="secondary" className="text-xs">{form}</Badge>
           ))}
         </div>
         <p className="text-xs text-muted-foreground">
           Die Übung wird als &bdquo;noch zu ergänzen&ldquo; markiert — so findest du sie
           später in der Übungsübersicht wieder, um Material und Details nachzutragen.
+          Taugt sie auch für weitere Sportarten oder Altersgruppen, ergänze sie dort: der
+          Generator plant sie nur dort ein, wo sie markiert ist.
         </p>
       </div>
 

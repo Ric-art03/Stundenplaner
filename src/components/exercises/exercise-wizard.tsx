@@ -20,11 +20,13 @@ import { VariantInput } from './variant-input'
 import { LinkInput } from './link-input'
 import { ImageUpload } from './image-upload'
 import { WorkNoteField } from './work-note'
+import { TaggingHint } from './tagging-hint'
 import {
-  SPORTS, AGE_GROUPS, PHASES, ORGANIZATION_FORMS, DIFFICULTY_LEVELS,
+  DIFFICULTY_LEVELS,
   EMPTY_FORM_DATA,
   type ExerciseFormData, type DifficultyLevel,
 } from '@/lib/types/exercise'
+import { realMaterials, termOptions } from '@/lib/categories/terms'
 import {
   stepBasisSchema,
   stepEinordnungSchema,
@@ -48,10 +50,10 @@ interface ExerciseWizardProps {
 }
 
 export function ExerciseWizard({ initialData, exerciseId, onSave, customCategories = {}, returnTo, notice }: ExerciseWizardProps) {
-  const sportsOptions = React.useMemo(() => mergeOptions(SPORTS, customCategories.sport), [customCategories.sport])
-  const ageGroupOptions = React.useMemo(() => mergeOptions(AGE_GROUPS, customCategories.age_group), [customCategories.age_group])
-  const phaseOptions = React.useMemo(() => mergeOptions(PHASES, customCategories.phase), [customCategories.phase])
-  const orgFormOptions = React.useMemo(() => mergeOptions(ORGANIZATION_FORMS, customCategories.organization_form), [customCategories.organization_form])
+  const sportsOptions = React.useMemo(() => termOptions('sport', customCategories.sport), [customCategories.sport])
+  const ageGroupOptions = React.useMemo(() => termOptions('age_group', customCategories.age_group), [customCategories.age_group])
+  const phaseOptions = React.useMemo(() => termOptions('phase', customCategories.phase), [customCategories.phase])
+  const orgFormOptions = React.useMemo(() => termOptions('organization_form', customCategories.organization_form), [customCategories.organization_form])
   const customMaterials = React.useMemo(() => customCategories.material ?? [], [customCategories.material])
   const router = useRouter()
   const { toast } = useToast()
@@ -71,7 +73,9 @@ export function ExerciseWizard({ initialData, exerciseId, onSave, customCategori
   }
 
   function cleanMaterials() {
-    const cleaned = data.materials.filter((m) => m.name && m.name !== 'Kein Material')
+    // An der Hauptübung heißt „keine Zeile" ohne Material; ein interner
+    // Eintrag aus dem Altbestand fällt hier weg.
+    const cleaned = realMaterials(data.materials.filter((m) => m.name))
     if (cleaned.length !== data.materials.length) {
       setData((prev) => ({ ...prev, materials: cleaned }))
     }
@@ -228,7 +232,9 @@ export function ExerciseWizard({ initialData, exerciseId, onSave, customCategori
             customMaterials={customMaterials} />
         )}
         {step === 3 && (
-          <StepExtras data={data} errors={errors} update={update} />
+          <StepExtras data={data} errors={errors} update={update}
+            ageGroupOptions={ageGroupOptions} orgFormOptions={orgFormOptions}
+            customMaterials={customMaterials} />
         )}
       </div>
 
@@ -266,16 +272,6 @@ interface StepProps {
   phaseOptions?: string[]
   orgFormOptions?: string[]
   customMaterials?: string[]
-}
-
-function mergeOptions(predefined: readonly string[], custom?: string[]): string[] {
-  if (!custom || custom.length === 0) return [...predefined]
-  const set = new Set<string>(predefined)
-  const result = [...predefined]
-  for (const c of custom) {
-    if (!set.has(c)) result.push(c)
-  }
-  return result
 }
 
 function StepBasis({ data, errors, update }: StepProps) {
@@ -345,7 +341,8 @@ function StepEinordnung({ data, errors, update, sportsOptions, ageGroupOptions, 
       <div className="space-y-2">
         <Label>Sportart(en) *</Label>
         <MultiSelect
-          options={sportsOptions ?? SPORTS}
+          options={sportsOptions ?? []}
+          termType="sport"
           selected={data.sports}
           onChange={(v) => update('sports', v)}
           placeholder="Sportarten auswählen..."
@@ -353,11 +350,13 @@ function StepEinordnung({ data, errors, update, sportsOptions, ageGroupOptions, 
           customLabel="Eigene Sportart hinzufügen"
           error={errors.sports}
         />
+        <TaggingHint />
       </div>
       <div className="space-y-2">
         <Label>Altersgruppe(n) *</Label>
         <MultiSelect
-          options={ageGroupOptions ?? AGE_GROUPS}
+          options={ageGroupOptions ?? []}
+          termType="age_group"
           selected={data.ageGroups}
           onChange={(v) => update('ageGroups', v)}
           placeholder="Altersgruppen auswählen..."
@@ -365,11 +364,13 @@ function StepEinordnung({ data, errors, update, sportsOptions, ageGroupOptions, 
           customLabel="Eigene Altersgruppe hinzufügen"
           error={errors.ageGroups}
         />
+        <TaggingHint />
       </div>
       <div className="space-y-2">
         <Label>Phase(n) *</Label>
         <MultiSelect
-          options={phaseOptions ?? PHASES}
+          options={phaseOptions ?? []}
+          termType="phase"
           selected={data.phases}
           onChange={(v) => update('phases', v)}
           placeholder="Phasen auswählen..."
@@ -398,7 +399,8 @@ function StepEinordnung({ data, errors, update, sportsOptions, ageGroupOptions, 
       <div className="space-y-2">
         <Label>Organisationsform(en)</Label>
         <MultiSelect
-          options={orgFormOptions ?? ORGANIZATION_FORMS}
+          options={orgFormOptions ?? []}
+          termType="organization_form"
           selected={data.organizationForms}
           onChange={(v) => update('organizationForms', v)}
           placeholder="Organisationsformen auswählen..."
@@ -504,9 +506,12 @@ interface StepExtrasProps {
   data: ExerciseFormData
   errors: Record<string, string>
   update: <K extends keyof ExerciseFormData>(field: K, value: ExerciseFormData[K]) => void
+  ageGroupOptions: string[]
+  orgFormOptions: string[]
+  customMaterials: string[]
 }
 
-function StepExtras({ data, errors, update }: StepExtrasProps) {
+function StepExtras({ data, errors, update, ageGroupOptions, orgFormOptions, customMaterials }: StepExtrasProps) {
   const variantErrors = React.useMemo(() => {
     const result: Record<number, string> = {}
     for (const [key, msg] of Object.entries(errors)) {
@@ -526,6 +531,9 @@ function StepExtras({ data, errors, update }: StepExtrasProps) {
           onChange={(v) => update('variants', v)}
           variantErrors={variantErrors}
           mainMaterials={data.materials}
+          ageGroupOptions={ageGroupOptions}
+          orgFormOptions={orgFormOptions}
+          customMaterials={customMaterials}
         />
       </div>
       <div className="space-y-2">

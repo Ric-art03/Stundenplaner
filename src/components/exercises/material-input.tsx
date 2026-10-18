@@ -1,15 +1,9 @@
 'use client'
 
 import * as React from 'react'
-import { Plus, Trash2, ChevronsUpDown } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -17,7 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { MATERIALS, type ExerciseMaterial, type MaterialMode } from '@/lib/types/exercise'
+import { type ExerciseMaterial, type MaterialMode } from '@/lib/types/exercise'
+import { termOptions } from '@/lib/categories/terms'
+import { MaterialSelect } from './material-select'
 
 interface MaterialInputProps {
   materials: ExerciseMaterial[]
@@ -25,11 +21,13 @@ interface MaterialInputProps {
   customMaterials?: string[]
 }
 
+/**
+ * Die Materialzeilen einer Übung oder Variante. Die Zeilen bleiben beim
+ * Bearbeiten in der Folge, in der sie eingegeben wurden — sonst spränge eine
+ * Zeile weg, während man die Menge eintippt. Geordnet wird in der Anzeige.
+ */
 export function MaterialInput({ materials, onChange, customMaterials = [] }: MaterialInputProps) {
-  const allMaterials = React.useMemo(() => {
-    const customs = customMaterials.filter((c) => !(MATERIALS as readonly string[]).includes(c))
-    return [...MATERIALS, ...customs]
-  }, [customMaterials])
+  const allMaterials = React.useMemo(() => termOptions('material', customMaterials), [customMaterials])
 
   function addMaterial() {
     onChange([...materials, { name: '', quantity: 1, mode: 'insgesamt' }])
@@ -89,6 +87,7 @@ export function MaterialInput({ materials, onChange, customMaterials = [] }: Mat
             size="icon"
             onClick={() => removeMaterial(index)}
             className="shrink-0 text-muted-foreground hover:text-destructive"
+            aria-label="Material entfernen"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -99,122 +98,5 @@ export function MaterialInput({ materials, onChange, customMaterials = [] }: Mat
         Material hinzufügen
       </Button>
     </div>
-  )
-}
-
-interface MaterialSelectProps {
-  options: (string | typeof MATERIALS[number])[]
-  value: string
-  onChange: (value: string) => void
-}
-
-function MaterialSelect({ options, value, onChange }: MaterialSelectProps) {
-  const [open, setOpen] = React.useState(false)
-  const [search, setSearch] = React.useState('')
-  const [customInput, setCustomInput] = React.useState('')
-  const [showCustomInput, setShowCustomInput] = React.useState(false)
-  const [localOptions, setLocalOptions] = React.useState<string[]>([])
-
-  const allOptions = React.useMemo(() => {
-    const extra = localOptions.filter((l) => !options.includes(l))
-    return [...options, ...extra]
-  }, [options, localOptions])
-
-  const filtered = allOptions.filter((opt) =>
-    opt.toLowerCase().includes(search.toLowerCase())
-  )
-
-  function select(val: string) {
-    onChange(val)
-    setOpen(false)
-    setSearch('')
-  }
-
-  function addCustom() {
-    const trimmed = customInput.trim()
-    if (trimmed && !allOptions.includes(trimmed)) {
-      setLocalOptions((prev) => [...prev, trimmed])
-      onChange(trimmed)
-      setCustomInput('')
-      setShowCustomInput(false)
-      setOpen(false)
-      setSearch('')
-    }
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={`w-full justify-between font-normal ${
-            open ? 'text-primary border-primary' : !value ? 'text-muted-foreground' : ''
-          }`}
-        >
-          {open ? 'Fertig' : value || 'Auswählen...'}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0"
-        align="start"
-        onWheel={(e) => e.stopPropagation()}
-      >
-        <div className="p-2">
-          <Input
-            placeholder="Suchen..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8"
-          />
-        </div>
-        <div className="max-h-60 overflow-y-auto overscroll-contain p-2 space-y-1">
-          {filtered.map((option) => (
-            <label
-              key={option}
-              className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
-              onClick={() => select(option)}
-            >
-              <Checkbox checked={value === option} />
-              {option}
-            </label>
-          ))}
-          {filtered.length === 0 && (
-            <p className="text-sm text-muted-foreground px-2 py-1.5">
-              Keine Ergebnisse
-            </p>
-          )}
-        </div>
-        <div className="border-t p-2">
-          {showCustomInput ? (
-            <div className="flex gap-2">
-              <Input
-                placeholder="Neues Material..."
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addCustom()}
-                className="h-8"
-                autoFocus
-              />
-              <Button size="sm" variant="outline" onClick={addCustom} className="h-8 px-2">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start text-muted-foreground"
-              onClick={() => setShowCustomInput(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Eigenes Material hinzufügen
-            </Button>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
   )
 }

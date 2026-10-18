@@ -21,8 +21,8 @@ import { VenueDialog } from './venue-dialog'
 import { ManageLink } from '@/components/manage/manage-link'
 import { manageHref } from '@/lib/manage/tabs'
 import { groupSchema } from '@/lib/validations/group'
+import { orderTerms, termOptions } from '@/lib/categories/terms'
 import {
-  SPORTS, AGE_GROUPS,
   EMPTY_GROUP_FORM,
   type GroupFormData, type GroupSchedule, type Venue, type VenueFormData,
 } from '@/lib/types/group'
@@ -58,15 +58,15 @@ export function GroupForm({
   const [editVenueTarget, setEditVenueTarget] = React.useState<Venue | null>(null)
   const [venues, setVenues] = React.useState<Venue[]>(initialVenues)
 
-  const sportsOptions = React.useMemo(() => {
-    const customs = customCategories.sport ?? []
-    return [...SPORTS, ...customs.filter((c) => !(SPORTS as readonly string[]).includes(c))]
-  }, [customCategories])
+  const sportsOptions = React.useMemo(
+    () => termOptions('sport', customCategories.sport),
+    [customCategories]
+  )
 
-  const ageOptions = React.useMemo(() => {
-    const customs = customCategories.age_group ?? []
-    return [...AGE_GROUPS, ...customs.filter((c) => !(AGE_GROUPS as readonly string[]).includes(c))]
-  }, [customCategories])
+  const ageOptions = React.useMemo(
+    () => termOptions('age_group', customCategories.age_group),
+    [customCategories]
+  )
 
   function updateField<K extends keyof GroupFormData>(field: K, value: GroupFormData[K]) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -191,6 +191,7 @@ export function GroupForm({
         <Label>Sportart *</Label>
         <MultiSelect
           options={sportsOptions}
+          termType="sport"
           selected={form.sports}
           onChange={(v) => {
             updateField('sports', v)
@@ -219,7 +220,7 @@ export function GroupForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Keine — alle gleichwertig</SelectItem>
-              {form.sports.map((sport) => (
+              {orderTerms('sport', form.sports).map((sport) => (
                 <SelectItem key={sport} value={sport}>
                   {sport}
                 </SelectItem>
@@ -242,6 +243,7 @@ export function GroupForm({
         <Label>Altersgruppe *</Label>
         <MultiSelect
           options={ageOptions}
+          termType="age_group"
           selected={form.ageGroups}
           onChange={(v) => updateField('ageGroups', v)}
           placeholder="Altersgruppen auswählen..."

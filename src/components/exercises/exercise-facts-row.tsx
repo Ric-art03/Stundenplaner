@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Check, ChevronDown, Layers, LayoutGrid, Package } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+import { orderByTerm, orderTerms, realMaterials } from '@/lib/categories/terms'
 
 export interface FactsMaterial {
   name: string
@@ -61,9 +62,10 @@ export function ExerciseFactsRow({
 }: ExerciseFactsRowProps) {
   const [open, setOpen] = React.useState(false)
 
-  const visibleMaterials = materials.filter(
-    (material) => material.name.trim().toLowerCase() !== 'kein material'
-  )
+  // Hier wird noch einmal geordnet: die Zeile zeigt auch Daten, die nicht
+  // frisch gelesen wurden (Stundenakte auf dem Gerät, Arbeitsfassung).
+  const visibleMaterials = orderByTerm('material', realMaterials(materials))
+  const orderedForms = orderTerms('organization_form', organizationForms)
 
   // Die Grundübung steht nur dort mit in der Liste, wo es um die Wahl zwischen
   // den Formen geht: im Stundenverlauf und im Auswahldialog. Im Übungsordner
@@ -102,8 +104,8 @@ export function ExerciseFactsRow({
         <span className="flex items-center gap-1">
           <LayoutGrid className="h-3 w-3 shrink-0" aria-hidden />
           <span className="sr-only">Organisationsform: </span>
-          {organizationForms.length > 0 ? (
-            organizationForms.join(', ')
+          {orderedForms.length > 0 ? (
+            orderedForms.join(', ')
           ) : (
             <>
               <span aria-hidden>–</span>

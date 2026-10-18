@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { findTerm, withSelected } from '@/lib/categories/terms'
 
 interface PhaseSelectProps {
   options: string[]
@@ -24,19 +25,30 @@ interface PhaseSelectProps {
 export function PhaseSelect({ options, value, onChange, onCreate, error }: PhaseSelectProps) {
   const [adding, setAdding] = React.useState(false)
   const [draft, setDraft] = React.useState('')
+  const [notice, setNotice] = React.useState<string | null>(null)
 
   // Eine bereits gewählte eigene Phase muss in der Liste auftauchen,
   // sonst zeigt die Auswahl nichts an.
-  const allOptions = React.useMemo(() => {
-    if (value && !options.includes(value)) return [...options, value]
-    return options
-  }, [options, value])
+  const allOptions = React.useMemo(
+    () => withSelected('phase', options, value ? [value] : []),
+    [options, value]
+  )
 
   function confirmCustom() {
     const name = draft.trim()
     if (!name) return
-    onCreate?.(name)
-    onChange(name)
+    // Eine Phase gibt es nur einmal: die vorhandene wird gewählt.
+    const existing = findTerm(name, allOptions)
+    if (existing) {
+      setNotice(
+        existing === value ? `„${existing}" ist schon ausgewählt.` : `„${existing}" gibt es schon — ausgewählt.`
+      )
+      onChange(existing)
+    } else {
+      setNotice(null)
+      onCreate?.(name)
+      onChange(name)
+    }
     setDraft('')
     setAdding(false)
   }
@@ -90,7 +102,13 @@ export function PhaseSelect({ options, value, onChange, onCreate, error }: Phase
   return (
     <div className="space-y-1">
       <div className="flex gap-2">
-        <Select value={value} onValueChange={onChange}>
+        <Select
+          value={value}
+          onValueChange={(next) => {
+            setNotice(null)
+            onChange(next)
+          }}
+        >
           <SelectTrigger aria-label="Phase">
             <SelectValue placeholder="Phase auswählen" />
           </SelectTrigger>
@@ -113,6 +131,11 @@ export function PhaseSelect({ options, value, onChange, onCreate, error }: Phase
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+      {notice && (
+        <p className="text-xs text-muted-foreground" role="status">
+          {notice}
+        </p>
+      )}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )

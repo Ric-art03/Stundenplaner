@@ -273,7 +273,7 @@ test.describe('Start und Bereitschaftsbild', () => {
     await expect(first).toContainText('Aufwärmen')
     await expect(first.getByRole('heading', { name: new RegExp(fx.names.kreis) })).toBeVisible()
     await expect(first).toContainText('4× Hütchen')
-    await expect(first).toContainText('Kreis / Sitzkreis')
+    await expect(first).toContainText('Kreis')
     await expect(first).toContainText(KREIS_DESCRIPTION)
     await expect(first).toContainText(KREIS_NOTE)
     // Noch läuft kein Schritt — es gibt nichts zu vergleichen.
@@ -398,7 +398,7 @@ test.describe('Der Schritt', () => {
     const current = page.locator('.overflow-y-auto > div').first()
     await expect(current).toContainText('4× Hütchen')
     await expect(current).toContainText('12× Ball')
-    await expect(current).toContainText('Kreis / Sitzkreis')
+    await expect(current).toContainText('Kreis')
     await expect(current).toContainText('Arbeitsnotiz der Übung')
     await expect(current).toContainText(KREIS_NOTE)
   })

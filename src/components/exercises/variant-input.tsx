@@ -1,9 +1,11 @@
 'use client'
 
 import * as React from 'react'
-import { Plus, Trash2, ChevronDown, ChevronUp, Pencil, RotateCcw } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { MaterialInput } from './material-input'
@@ -14,6 +16,14 @@ import {
   type ExerciseMaterial,
   type ExerciseVariant,
 } from '@/lib/types/exercise'
+import {
+  NO_MATERIAL_LABEL,
+  noMaterialEntry,
+  orderByTerm,
+  realMaterials,
+  variantMaterialMode,
+  type VariantMaterialMode,
+} from '@/lib/categories/terms'
 
 interface VariantInputProps {
   variants: ExerciseVariant[]
@@ -21,35 +31,59 @@ interface VariantInputProps {
   variantErrors?: Record<number, string>
   /** Material der Hauptübung — eine Variante erbt es, solange sie keins eigenes hat. */
   mainMaterials?: ExerciseMaterial[]
+  /** Dieselben Listen wie an der Hauptübung, mit den eigenen Begriffen. */
+  ageGroupOptions?: string[]
+  orgFormOptions?: string[]
+  customMaterials?: string[]
 }
+
+const MATERIAL_MODES: { value: VariantMaterialMode; label: string }[] = [
+  { value: 'inherit', label: 'Wie die Hauptübung' },
+  { value: 'own', label: 'Eigenes Material' },
+  { value: 'none', label: NO_MATERIAL_LABEL },
+]
 
 export function VariantInput({
   variants,
   onChange,
   variantErrors,
   mainMaterials = [],
+  ageGroupOptions = [...AGE_GROUPS],
+  orgFormOptions = [...ORGANIZATION_FORMS],
+  customMaterials = [],
 }: VariantInputProps) {
   const [expandedExtras, setExpandedExtras] = React.useState<Record<number, boolean>>({})
 
-  // Eine Variante mit eigener Materialliste weicht ab; eine leere Liste erbt.
-  // Beim Umschalten auf "abweichend" brauchen wir den Zustand aber auch dann,
-  // wenn noch keine Zeile eingetragen ist.
-  const [overriding, setOverriding] = React.useState<Record<number, boolean>>({})
+  // Der Zustand wird aus der Materialliste abgelesen (leer → wie die
+  // Hauptübung). „Eigenes Material" mit noch leerer Liste sähe aber aus wie
+  // „wie die Hauptübung" — dafür merkt sich die Maske die Wahl.
+  const [chosenMode, setChosenMode] = React.useState<Record<number, VariantMaterialMode>>({})
 
-  function isOverriding(index: number, variant: ExerciseVariant): boolean {
-    return overriding[index] ?? (variant.materials?.length ?? 0) > 0
+  function materialMode(index: number, variant: ExerciseVariant): VariantMaterialMode {
+    const derived = variantMaterialMode(variant.materials)
+    return derived === 'inherit' && chosenMode[index] === 'own' ? 'own' : derived
   }
 
-  function startOverride(index: number) {
-    setOverriding((prev) => ({ ...prev, [index]: true }))
-    // Die Liste der Hauptübung wird kopiert, damit nichts abgetippt werden muss.
-    updateVariant(index, 'materials', mainMaterials.map((m) => ({ ...m })))
+  function setMaterialMode(index: number, variant: ExerciseVariant, mode: VariantMaterialMode) {
+    setChosenMode((prev) => ({ ...prev, [index]: mode }))
+    if (mode === 'inherit') {
+      updateVariant(index, 'materials', [])
+    } else if (mode === 'none') {
+      updateVariant(index, 'materials', [noMaterialEntry()])
+    } else {
+      const own = realMaterials(variant.materials ?? [])
+      // Die Liste der Hauptübung wird kopiert, damit nichts abgetippt werden muss.
+      updateVariant(
+        index,
+        'materials',
+        own.length > 0 ? own : realMaterials(mainMaterials).map((m) => ({ ...m }))
+      )
+    }
   }
 
-  function stopOverride(index: number) {
-    setOverriding((prev) => ({ ...prev, [index]: false }))
-    updateVariant(index, 'materials', [])
-  }
+  const inheritedSummary = orderByTerm('material', realMaterials(mainMaterials).filter((m) => m.name))
+    .map((m) => `${m.quantity}× ${m.name}`)
+    .join(', ')
 
   function addVariant() {
     onChange([...variants, { title: '', description: '' }])
@@ -155,62 +189,58 @@ export function VariantInput({
                   )}
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Material</label>
-                {isOverriding(index, variant) ? (
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground block" id={`variant-${index}-material`}>
+                  Material
+                </label>
+                <RadioGroup
+                  aria-labelledby={`variant-${index}-material`}
+                  value={materialMode(index, variant)}
+                  onValueChange={(v) => setMaterialMode(index, variant, v as VariantMaterialMode)}
+                  className="flex flex-wrap gap-x-4 gap-y-2"
+                >
+                  {MATERIAL_MODES.map((mode) => (
+                    <div key={mode.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={mode.value} id={`variant-${index}-material-${mode.value}`} />
+                      <Label
+                        htmlFor={`variant-${index}-material-${mode.value}`}
+                        className="font-normal cursor-pointer"
+                      >
+                        {mode.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                {materialMode(index, variant) === 'inherit' && (
+                  <p className="text-sm text-muted-foreground">
+                    {inheritedSummary
+                      ? `Wie die Hauptübung: ${inheritedSummary}`
+                      : 'Die Hauptübung braucht kein Material.'}
+                  </p>
+                )}
+                {materialMode(index, variant) === 'own' && (
                   <div className="space-y-2">
                     <MaterialInput
-                      materials={variant.materials ?? []}
+                      materials={realMaterials(variant.materials ?? [])}
                       onChange={(mats) => updateVariant(index, 'materials', mats)}
+                      customMaterials={customMaterials}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Diese Liste <strong>ersetzt</strong> das Material der Hauptübung
-                      vollständig. Braucht die Variante gar nichts, wähle
-                      {' '}&bdquo;Kein Material&ldquo;.
+                      Diese Liste <strong>ersetzt</strong> das Material der Hauptübung vollständig.
                     </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => stopOverride(index)}
-                      className="text-muted-foreground"
-                    >
-                      <RotateCcw className="mr-2 h-4 w-4" />
-                      Wieder von der Hauptübung erben
-                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-sm">
-                      {mainMaterials.length > 0 ? (
-                        <>
-                          <span className="text-muted-foreground">Wie Hauptübung: </span>
-                          {mainMaterials
-                            .map((m) => `${m.quantity}× ${m.name}`)
-                            .join(', ')}
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          Wie Hauptübung: kein Material
-                        </span>
-                      )}
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startOverride(index)}
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Material für diese Variante anpassen
-                    </Button>
-                  </div>
+                )}
+                {materialMode(index, variant) === 'none' && (
+                  <p className="text-sm text-muted-foreground">
+                    Diese Variante braucht kein Material — auch wenn die Hauptübung welches hat.
+                  </p>
                 )}
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Abweichende Altersgruppe</label>
                 <MultiSelect
-                  options={AGE_GROUPS}
+                  options={ageGroupOptions}
+                  termType="age_group"
                   selected={variant.ageGroups ?? []}
                   onChange={(v) => updateVariant(index, 'ageGroups', v)}
                   placeholder="Altersgruppen auswählen..."
@@ -221,7 +251,8 @@ export function VariantInput({
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Abweichende Organisationsform</label>
                 <MultiSelect
-                  options={ORGANIZATION_FORMS}
+                  options={orgFormOptions}
+                  termType="organization_form"
                   selected={variant.organizationForms ?? []}
                   onChange={(v) => updateVariant(index, 'organizationForms', v)}
                   placeholder="Organisationsformen auswählen..."

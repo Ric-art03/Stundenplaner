@@ -17,7 +17,7 @@ export function GroupHints({ group }: GroupHintsProps) {
 
   if (group.sports.length === 1) {
     hints.push(
-      'Deine Gruppe ist nur mit einer Sportart getaggt. Der Generator findet dadurch weniger passende Übungen. Ergänze im Gruppenprofil alle Sportarten, die in irgendeiner Phase deiner Stunde vorkommen könnten — zum Beispiel „Allgemeinsport" oder „Kinderspiele" für das Aufwärmen.'
+      'Deine Gruppe ist nur mit einer Sportart getaggt. Der Generator findet dadurch weniger passende Übungen. Ergänze im Gruppenprofil alle Sportarten, die in irgendeiner Phase deiner Stunde vorkommen könnten — zum Beispiel „Kinderspiele" oder „Gymnastik" für das Aufwärmen.'
     )
   }
 

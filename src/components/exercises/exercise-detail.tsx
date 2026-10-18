@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/client'
 import { DeleteConfirmDialog } from './delete-confirm-dialog'
 import { WorkNote } from './work-note'
 import type { Exercise } from '@/lib/types/exercise'
+import { realMaterials, variantMaterialMode } from '@/lib/categories/terms'
 
 interface ExerciseDetailProps {
   exercise: Exercise
@@ -167,9 +168,8 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
       <section>
         <h2 className="text-sm font-medium text-muted-foreground mb-2">Material</h2>
         <div className="space-y-1">
-          {exercise.materials.filter((mat) => mat.name !== 'Kein Material').length > 0 ? (
-            exercise.materials
-              .filter((mat) => mat.name !== 'Kein Material')
+          {realMaterials(exercise.materials).length > 0 ? (
+            realMaterials(exercise.materials)
               .map((mat, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm">
                   <Package className="h-3.5 w-3.5 text-muted-foreground" />
@@ -240,10 +240,16 @@ export function ExerciseDetail({ exercise, onDelete }: ExerciseDetailProps) {
                       )}
                     </div>
                   )}
-                  {variant.materials && variant.materials.filter((m) => m.name !== 'Kein Material').length > 0 && (
+                  {variantMaterialMode(variant.materials) === 'none' && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Kein Material nötig</span>
+                    </div>
+                  )}
+                  {variantMaterialMode(variant.materials) === 'own' && (
                     <div className="space-y-1">
                       <span className="text-xs text-muted-foreground">Abweichendes Material:</span>
-                      {variant.materials.filter((m) => m.name !== 'Kein Material').map((mat, j) => (
+                      {realMaterials(variant.materials ?? []).map((mat, j) => (
                         <div key={j} className="flex items-center gap-2 text-sm">
                           <Package className="h-3.5 w-3.5 text-muted-foreground" />
                           {mat.quantity}× {mat.name} ({mat.mode})
