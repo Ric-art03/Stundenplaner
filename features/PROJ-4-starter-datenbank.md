@@ -1,6 +1,6 @@
 # PROJ-4: Starter-Datenbank (Übungsdatenbank zum Übernehmen)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-09-28
 **Last Updated:** 2026-10-19
 
@@ -1295,4 +1295,45 @@ ist das jetzt ausgeräumt; anderswo (etwa der Hinweis zur Verwendung im Löschdi
 Kandidatenliste im Editor) ist es nicht untersucht.
 
 ## Deployment
-_To be added by /deploy_
+
+**Ausgeliefert:** 2026-10-19 — https://stundenplaner-self.vercel.app, Tag `v1.10.0-PROJ-4`,
+Commit `1aef5d7`
+
+**Vor dem Hochladen geprüft:** Build, Lint (0 Fehler, 4 bekannte Warnungen zu `<img>`),
+Typprüfung und 713 Unit-Tests (1 erwarteter Fehlschlag, BUG-33) gegen genau diesen Stand; der
+Gesamtlauf der Browser-Tests 568 von 568 am Morgen desselben Tages, nach der Behebung von BUG-31.
+**Die Migration ist seit dem Backend in der Datenbank** (19 Dateien, Register laut Backend 19 zu
+19 — heute nicht erneut abgeglichen, der Supabase-Zugang war in der Sitzung nicht verbunden).
+Kein Geheimnis im Unterschied zur ausgelieferten Fassung, keine neue Umgebungsvariable für die
+App, `next.config.ts` unverändert. Neues Paket nur `exceljs`, als Entwicklungspaket für das
+Prüfprogramm.
+
+**Nach dem Hochladen:** Vercel meldet die Auslieferung als abgeschlossen. Von außen geprüft:
+öffentliche Seiten (`/`, `/login`, `/register`, `/live`, `/live-sw.js`) 200; geschützte Seiten
+(`/dashboard`, `/exercises`, `/exercises?tab=library`, `/exercises/new`, `/groups`, `/units/new`,
+`/manage`) 307 auf `/login`; die vier Sicherheits-Kopfzeilen liegen an; kein Schlüssel im
+Seitentext. Die beiden neuen Abfragen `/api/exercises` und `/api/library` antworten ohne Anmeldung
+mit 200 und **leerer Liste** — so gebaut (`getExercises` und `getLibrary` prüfen die Anmeldung
+selbst, die Zugriffsregeln der Datenbank liegen dahinter), kein Befund. **Die Supabase-Protokolle
+sind nicht nachgesehen** (Zugang nicht verbunden).
+
+**Was Nutzer nach der Auslieferung sehen:** In der Produktion ist noch **keine Übung
+freigegeben** — der Testblock ist nur ein Entwurf für das Testkonto. Für alle anderen sagt der
+Reiter „Übungsdatenbank", dass sie gerade aufgebaut wird, und die Einstiege (Leerzustände,
+Generator, Gruppenseite) bleiben verborgen (Edge Case 11). Inhalt kommt mit dem ersten
+freigegebenen Block aus den Block-Sitzungen (Abschnitt C2 des Entwurfs).
+
+**Bewusst nicht mit ausgeliefert:** das Update von `next` (16.1.1 → 16.4.x) gegen die Funde aus
+`npm audit` — vom Nutzer entschieden, als eigener Schritt direkt danach, mit vollem Testlauf. Die
+Funde bestanden schon vor PROJ-4.
+
+**Offen**
+- **In der Produktion nicht von Hand durchgespielt** — alles liegt hinter der Anmeldung, und ohne
+  freigegebenen Block ist dort nur der Leerzustand zu sehen. Einmal anmelden: Reiter „Meine
+  Übungen" und „Übungsdatenbank", Wechsel zwischen beiden
+- Der eigentliche Weg (Übernehmen, „Passt zu Gruppe", Angebot nach dem Anlegen einer Gruppe) ist
+  in der Produktion erst mit dem ersten freigegebenen Block prüfbar
+- `SUPABASE_SERVICE_ROLE_KEY` braucht das Prüfprogramm in `.env.local`; in `.env.local.example`
+  steht er nicht (gehört **nicht** nach Vercel)
+- **BUG-32** bis **BUG-35** (alle niedrig)
+- Firefox und Safari weiter nicht geprüft

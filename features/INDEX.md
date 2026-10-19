@@ -388,7 +388,11 @@ In der Nacht fiel der Gesamtlauf aus — der Rechner war ab etwa 1 Uhr so ausgeb
 
 Offen aus der QA: **BUG-32 bis BUG-35** (alle niedrig).
 
-**Nächster Schritt:** `/deploy` für PROJ-4. Vorgemerkt dafür, unabhängig von PROJ-4: `npm audit` meldet sechs Funde in den Paketen der App, einer „kritisch" in `next`.
+**PROJ-4 (Starter-Datenbank) ist am 2026-10-19 ausgeliefert** — https://stundenplaner-self.vercel.app, Tag `v1.10.0-PROJ-4`, Commit `1aef5d7`. Abschnitt „Deployment" in der Spec. Vor dem Hochladen geprüft: Build, Lint, Typprüfung, 713 Unit-Tests, Browser-Tests 568 von 568 vom selben Morgen, kein Geheimnis und keine neue Umgebungsvariable im Diff. Nach dem Hochladen: Vercel meldet die Auslieferung als abgeschlossen, öffentliche Seiten 200, geschützte 307 auf `/login`, Sicherheits-Kopfzeilen liegen an; `/api/exercises` und `/api/library` geben ohne Anmeldung leere Listen. **Nicht nachgesehen:** Migrationsregister und Supabase-Protokolle — der Supabase-Zugang war in der Sitzung nicht verbunden.
+
+**In der Produktion ist noch keine Übung freigegeben** — der Reiter „Übungsdatenbank" sagt allen außer dem Testkonto, dass sie gerade aufgebaut wird, und die Einstiege bleiben verborgen. Inhalt kommt mit dem ersten Block aus den Block-Sitzungen. Offen: von Hand anmelden und beide Reiter ansehen; **BUG-32 bis BUG-35** (alle niedrig); `SUPABASE_SERVICE_ROLE_KEY` (nur fürs Prüfprogramm) fehlt in `.env.local.example`.
+
+**Nächster Schritt:** das Update von `next` (16.1.1 → 16.4.x) gegen die sechs Funde aus `npm audit` (einer „kritisch") — vom Nutzer am 2026-10-19 als eigener Schritt direkt nach PROJ-4 entschieden, mit Build, Unit-Tests und vollem Browser-Testlauf. Danach der erste Block für die Übungsdatenbank.
 
 ## Features
 
@@ -397,7 +401,7 @@ Offen aus der QA: **BUG-32 bis BUG-35** (alle niedrig).
 | PROJ-1 | Supabase Infrastructure Setup | P0 | None | Deployed | [Spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-09-28 |
 | PROJ-2 | Benutzerregistrierung & Login | P0 | PROJ-1 | Deployed | [Spec](PROJ-2-benutzerregistrierung-login.md) | 2026-09-28 |
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
-| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | Approved | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
+| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | Deployed | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Deployed | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |

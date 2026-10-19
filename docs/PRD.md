@@ -30,7 +30,7 @@ Ehrenamtliche Übungsleiter und Trainer im Breitensport (Vereine, Schulen, Freiz
 | P0 (MVP) | Supabase Infrastructure Setup | Deployed |
 | P0 (MVP) | Benutzerregistrierung & Login | Deployed |
 | P0 (MVP) | Übungsdatenbank (CRUD + Metadaten) | Deployed |
-| P0 (MVP) | Starter-Datenbank (50–100 kuratierte Übungen) | Planned |
+| P0 (MVP) | Starter-Datenbank (50–100 kuratierte Übungen) | Deployed |
 | P0 (MVP) | Gruppenprofile (Sportart, Alter, Halle, Material) | Deployed |
 | P0 (MVP) | Einheiten-Generator (automatische Zusammenstellung) | Deployed |
 | P0 (MVP) | Einheiten-Editor (Phasen anpassen, tauschen, Lücken) | Deployed |
