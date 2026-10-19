@@ -382,9 +382,13 @@ Am selben Tag nach Rückfrage des Nutzers geändert: das **Angebot nach dem Anle
 
 **Neue Browser-Tests:** `tests/PROJ-4-starter-datenbank.spec.ts`, 49 je Rechner und Handy, als eigene Stufe „uebungsdatenbank" / „uebungsdatenbank mobil" nach dem Grundstock und vor „exklusiv"; dazu zwei Tests ohne Anmeldung. Beide Stufen grün (49 von 49 je Stufe, BUG-32 und BUG-34 als erwartete Fehlschläge). **Unit-Tests: 710 grün, 1 erwarteter Fehlschlag** (BUG-33).
 
-**Der Gesamtlauf aller Stufen ist nicht gelaufen — vor `/deploy` nachholen.** Ab etwa 1 Uhr nachts war der Rechner so ausgebremst (Seitenbausteine hingen im Browser über 20 s, Vitest-Prozesse starteten nicht rechtzeitig, Playwright brauchte 14 Minuten zum Start; Prozessor bei 2 %, ProtonVPN lief), dass der Gesamtlauf abgebrochen wurde. Grün sind außer PROJ-4: PROJ-3 an Rechner und Handy (26 von 26) und alle Tests ohne Anmeldung (18 von 18). Offen: PROJ-5, 6, 7, 14, 16, 19 und „exklusiv" — Risiko vor allem dort, wo PROJ-4 gemeinsame Bausteine umgebaut hat (Filter → PROJ-19, Materialprüfung des Generators → PROJ-6, 7, 16).
+In der Nacht fiel der Gesamtlauf aus — der Rechner war ab etwa 1 Uhr so ausgebremst (Seitenbausteine hingen im Browser über 20 s, Vitest-Prozesse starteten nicht rechtzeitig; Prozessor bei 2 %, ProtonVPN lief), dass seine Ergebnisse nichts aussagten.
 
-**Nächster Schritt:** entscheiden, ob BUG-31 vor der Auslieferung behoben wird (dann `/frontend`), danach den Gesamtlauf auf einem ruhigen Rechner — dann `/deploy`.
+**BUG-31 ist am 2026-10-19 behoben und nachgeprüft** — Abschnitt „Nach der QA behoben" in der Spec. Die Ursache lag im Router von Next.js 16.1.1: eine Server-Aktion, die während eines Seitenwechsels zurückkam, konnte den alten Seitenstand wieder einsetzen. Die Seite „Übungen" liest deshalb nicht mehr über Server-Aktionen, sondern über zwei gewöhnliche Abfragen (`/api/exercises`, `/api/library`); die eigenen Kategorien kommen mit der Seite. Mitten ins Laden geklickt: Reiterwechsel 8 von 8, Verlassen der Übungsdatenbank 8 von 8 (vorher 4 von 5 bzw. 1 von 5 verloren). Nebenbei zeigt „Meine Übungen" jetzt einen Fehlerzustand mit „Erneut versuchen", wenn das Laden scheitert, statt still „Noch keine Übungen". **713 Unit-Tests grün**, 1 erwarteter Fehlschlag (BUG-33). **Gesamtlauf am Morgen nachgeholt: 568 von 568 Browser-Tests grün in einem Zug** (20,1 Minuten) — keine Regression. Festgestellt, nicht untersucht: dieselbe Eigenheit des Routers trifft jede andere Stelle, die beim Laden per Server-Aktion liest.
+
+Offen aus der QA: **BUG-32 bis BUG-35** (alle niedrig).
+
+**Nächster Schritt:** `/deploy` für PROJ-4. Vorgemerkt dafür, unabhängig von PROJ-4: `npm audit` meldet sechs Funde in den Paketen der App, einer „kritisch" in `next`.
 
 ## Features
 

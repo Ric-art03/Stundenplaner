@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { EMPTY_FILTERS } from '@/lib/types/exercise'
 import {
   DEFAULT_LIBRARY_PARAMS,
+  exerciseListQuery,
   libraryEntryHref,
   libraryHref,
   libraryQuery,
   parseExercisesTab,
+  parseExerciseListQuery,
   parseLibraryParams,
 } from './address'
 
@@ -68,5 +70,41 @@ describe('parseLibraryParams / libraryQuery', () => {
   it('führt die Leseansicht mit derselben Liste zurück', () => {
     const params = { ...DEFAULT_LIBRARY_PARAMS, filters: { ...EMPTY_FILTERS, sports: ['Gymnastik'] } }
     expect(libraryEntryHref('abc', params)).toBe('/exercises/library/abc?tab=library&sportart=Gymnastik')
+  })
+})
+
+describe('exerciseListQuery / parseExerciseListQuery (BUG-31)', () => {
+  it('liest und schreibt dieselben Werte (Hin und zurück)', () => {
+    const params = {
+      filters: {
+        ...EMPTY_FILTERS,
+        search: 'Ball',
+        sports: ['Turnen'],
+        materials: ['Bank'],
+        withoutMaterial: true,
+        difficulty: 'Mittel' as const,
+        participantsMax: 12,
+        needsCompletion: true,
+      },
+      sortField: 'name' as const,
+      sortDirection: 'asc' as const,
+      offset: 50,
+      limit: 50,
+    }
+    expect(parseExerciseListQuery(new URLSearchParams(exerciseListQuery(params)))).toEqual(params)
+  })
+
+  it('fällt bei Unsinn auf die Voreinstellung zurück und begrenzt Seite und Anzahl', () => {
+    const parsed = parseExerciseListQuery(new URLSearchParams('sortierung=drop-table&ab=-3&anzahl=100000'))
+    expect(parsed.sortField).toBe('updatedAt')
+    expect(parsed.sortDirection).toBe('desc')
+    expect(parsed.offset).toBe(0)
+    expect(parsed.limit).toBe(100)
+    expect(parseExerciseListQuery(new URLSearchParams('anzahl=abc')).limit).toBe(50)
+  })
+
+  it('„noch zu ergänzen" gilt nur für eigene Übungen, nie in der Übungsdatenbank', () => {
+    expect(parseLibraryParams(new URLSearchParams('tab=library&zuErgaenzen=1')).filters.needsCompletion).toBe(false)
+    expect(libraryQuery({ ...DEFAULT_LIBRARY_PARAMS, filters: { ...EMPTY_FILTERS, needsCompletion: true } })).toBe('tab=library')
   })
 })

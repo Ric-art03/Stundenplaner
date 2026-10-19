@@ -1,4 +1,10 @@
-import { DIFFICULTY_LEVELS, EMPTY_FILTERS, type ExerciseFilters } from '@/lib/types/exercise'
+import {
+  DIFFICULTY_LEVELS,
+  EMPTY_FILTERS,
+  type ExerciseFilters,
+  type ExerciseSortDirection,
+  type ExerciseSortField,
+} from '@/lib/types/exercise'
 import type { LibrarySortDirection, LibrarySortField } from '@/lib/types/library'
 
 /**
@@ -67,38 +73,29 @@ export function parseExercisesTab(source: Source): ExercisesTab {
   return isExercisesTab(tab) ? tab : 'mine'
 }
 
-export function parseLibraryParams(source: Source): LibraryParams {
+/** Die Filter aus einer Adresse — dieselben Schlüssel für beide Reiter. */
+function parseFilters(source: Source): ExerciseFilters {
   const difficulty = one(source, 'schwierigkeit')
-  const [field, direction] = (one(source, 'sortierung') ?? '').split('-')
-  const group = one(source, 'gruppe')
-
   return {
-    filters: {
-      ...EMPTY_FILTERS,
-      search: (one(source, 'suche') ?? '').slice(0, MAX_VALUE_LENGTH),
-      sports: all(source, 'sportart'),
-      ageGroups: all(source, 'alter'),
-      phases: all(source, 'phase'),
-      organizationForms: all(source, 'form'),
-      materials: all(source, 'material'),
-      withoutMaterial: one(source, 'ohneMaterial') === '1',
-      difficulty: (DIFFICULTY_LEVELS as readonly string[]).includes(difficulty ?? '')
-        ? (difficulty as ExerciseFilters['difficulty'])
-        : null,
-      participantsMin: positiveInt(one(source, 'tnMin')),
-      participantsMax: positiveInt(one(source, 'tnMax')),
-    },
-    sortField: SORT_FIELDS.includes(field as LibrarySortField) ? (field as LibrarySortField) : 'addedAt',
-    sortDirection: direction === 'asc' || direction === 'desc' ? direction : 'desc',
-    groupId: group && UUID.test(group) ? group.toLowerCase() : null,
+    ...EMPTY_FILTERS,
+    search: (one(source, 'suche') ?? '').slice(0, MAX_VALUE_LENGTH),
+    sports: all(source, 'sportart'),
+    ageGroups: all(source, 'alter'),
+    phases: all(source, 'phase'),
+    organizationForms: all(source, 'form'),
+    materials: all(source, 'material'),
+    withoutMaterial: one(source, 'ohneMaterial') === '1',
+    difficulty: (DIFFICULTY_LEVELS as readonly string[]).includes(difficulty ?? '')
+      ? (difficulty as ExerciseFilters['difficulty'])
+      : null,
+    participantsMin: positiveInt(one(source, 'tnMin')),
+    participantsMax: positiveInt(one(source, 'tnMax')),
+    needsCompletion: one(source, 'zuErgaenzen') === '1',
   }
 }
 
-/** Nur was vom Standard abweicht, damit die Adresse kurz bleibt. */
-export function libraryQuery(params: LibraryParams): string {
-  const query = new URLSearchParams()
-  query.set('tab', 'library')
-  const f = params.filters
+/** Nur gesetzte Filter, damit die Adresse kurz bleibt. */
+function appendFilters(query: URLSearchParams, f: ExerciseFilters): void {
   if (f.search.trim()) query.set('suche', f.search.trim())
   for (const v of f.sports) query.append('sportart', v)
   for (const v of f.ageGroups) query.append('alter', v)
@@ -109,6 +106,27 @@ export function libraryQuery(params: LibraryParams): string {
   if (f.difficulty) query.set('schwierigkeit', f.difficulty)
   if (f.participantsMin != null) query.set('tnMin', String(f.participantsMin))
   if (f.participantsMax != null) query.set('tnMax', String(f.participantsMax))
+  if (f.needsCompletion) query.set('zuErgaenzen', '1')
+}
+
+export function parseLibraryParams(source: Source): LibraryParams {
+  const [field, direction] = (one(source, 'sortierung') ?? '').split('-')
+  const group = one(source, 'gruppe')
+
+  return {
+    // „noch zu ergänzen" gibt es nur an eigenen Übungen.
+    filters: { ...parseFilters(source), needsCompletion: false },
+    sortField: SORT_FIELDS.includes(field as LibrarySortField) ? (field as LibrarySortField) : 'addedAt',
+    sortDirection: direction === 'asc' || direction === 'desc' ? direction : 'desc',
+    groupId: group && UUID.test(group) ? group.toLowerCase() : null,
+  }
+}
+
+/** Nur was vom Standard abweicht, damit die Adresse kurz bleibt. */
+export function libraryQuery(params: LibraryParams): string {
+  const query = new URLSearchParams()
+  query.set('tab', 'library')
+  appendFilters(query, { ...params.filters, needsCompletion: false })
   if (params.sortField !== 'addedAt' || params.sortDirection !== 'desc') {
     query.set('sortierung', `${params.sortField}-${params.sortDirection}`)
   }
@@ -124,4 +142,44 @@ export function libraryHref(params: Partial<LibraryParams> = {}): string {
 /** Die Leseansicht einer Übung; sie trägt die Liste mit, um dorthin zurückzuführen. */
 export function libraryEntryHref(id: string, params: LibraryParams): string {
   return `/exercises/library/${id}?${libraryQuery(params)}`
+}
+
+/**
+ * Die Liste von „Meine Übungen" als Abfrage an `/api/exercises` (BUG-31).
+ * Gelesen wird über eine gewöhnliche Abfrage statt einer Server-Aktion:
+ * Server-Aktionen stehen in der Warteschlange des Routers, und eine, die
+ * während einer Navigation zurückkommt, setzte den alten Seitenstand wieder
+ * ein — die Adresse wechselte, der Inhalt nicht.
+ */
+export interface ExerciseListParams {
+  filters: ExerciseFilters
+  sortField: ExerciseSortField
+  sortDirection: ExerciseSortDirection
+  offset: number
+  limit: number
+}
+
+const EXERCISE_SORT_FIELDS: ExerciseSortField[] = ['name', 'updatedAt', 'createdAt', 'duration', 'difficulty']
+const MAX_LIMIT = 100
+
+export function exerciseListQuery(params: ExerciseListParams): string {
+  const query = new URLSearchParams()
+  appendFilters(query, params.filters)
+  query.set('sortierung', `${params.sortField}-${params.sortDirection}`)
+  query.set('ab', String(params.offset))
+  query.set('anzahl', String(params.limit))
+  return query.toString()
+}
+
+export function parseExerciseListQuery(source: Source): ExerciseListParams {
+  const [field, direction] = (one(source, 'sortierung') ?? '').split('-')
+  const offset = Number(one(source, 'ab'))
+  const limit = Number(one(source, 'anzahl'))
+  return {
+    filters: parseFilters(source),
+    sortField: EXERCISE_SORT_FIELDS.includes(field as ExerciseSortField) ? (field as ExerciseSortField) : 'updatedAt',
+    sortDirection: direction === 'asc' ? 'asc' : 'desc',
+    offset: Number.isInteger(offset) && offset >= 0 && offset <= 100_000 ? offset : 0,
+    limit: Number.isInteger(limit) && limit >= 1 ? Math.min(limit, MAX_LIMIT) : 50,
+  }
 }

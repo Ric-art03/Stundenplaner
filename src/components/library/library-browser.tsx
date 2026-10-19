@@ -9,7 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ExerciseToolbar } from '@/components/exercises/exercise-toolbar'
 import { ExerciseListView, type ExerciseViewSlots } from '@/components/exercises/exercise-list-view'
 import { ExerciseCardView } from '@/components/exercises/exercise-card-view'
-import { getLibrary } from '@/lib/actions/library'
 import { libraryEntryHref, libraryQuery, type LibraryParams } from '@/lib/library/address'
 import { hasActiveFilters } from '@/lib/library/filter-reasons'
 import {
@@ -80,19 +79,32 @@ export function LibraryBrowser({ initialParams, groups }: LibraryBrowserProps) {
 
   React.useEffect(() => {
     const request = ++requestRef.current
+    const abort = new AbortController()
     setLoading(true)
     // Kurz warten, damit nicht jeder Tastendruck in der Suche eine Abfrage wird.
+    // Gelesen wird über `/api/library`, nicht über eine Server-Aktion: eine
+    // Server-Aktion, die während eines Seitenwechsels zurückkam, setzte den
+    // alten Seitenstand wieder ein (BUG-31).
     const timer = window.setTimeout(async () => {
       try {
-        const next = await getLibrary(params)
+        const response = await fetch(`/api/library?${libraryQuery(params)}`, {
+          cache: 'no-store',
+          signal: abort.signal,
+        })
+        if (!response.ok) throw new Error(`Status ${response.status}`)
+        const next = (await response.json()) as LibraryResult
         if (request === requestRef.current) setResult(next)
       } catch {
+        if (abort.signal.aborted) return
         if (request === requestRef.current) setResult(UNREACHABLE)
       } finally {
-        if (request === requestRef.current) setLoading(false)
+        if (request === requestRef.current && !abort.signal.aborted) setLoading(false)
       }
     }, 200)
-    return () => window.clearTimeout(timer)
+    return () => {
+      window.clearTimeout(timer)
+      abort.abort()
+    }
   }, [params])
 
   React.useEffect(() => {

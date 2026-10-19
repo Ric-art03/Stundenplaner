@@ -1,6 +1,7 @@
 import { ExercisesTabs } from '@/components/exercises/exercises-tabs'
 import { MyExercises } from '@/components/exercises/my-exercises'
 import { LibraryBrowser } from '@/components/library/library-browser'
+import { getCustomCategories } from '@/lib/actions/exercises'
 import { getGroups } from '@/lib/actions/groups'
 import { hasLibraryContent } from '@/lib/actions/library'
 import { parseExercisesTab, parseLibraryParams } from '@/lib/library/address'
@@ -26,7 +27,12 @@ export default async function ExercisesPage({ searchParams }: ExercisesPageProps
 }
 
 async function MineTab() {
-  return <MyExercises libraryHasContent={await hasLibraryContent()} />
+  // Mit der Seite statt per Server-Aktion nach dem Laden — siehe BUG-31.
+  const [libraryHasContent, customCategories] = await Promise.all([
+    hasLibraryContent(),
+    getCustomCategories(),
+  ])
+  return <MyExercises libraryHasContent={libraryHasContent} customCategories={customCategories} />
 }
 
 async function LibraryTab({ search }: { search: Record<string, string | string[] | undefined> }) {

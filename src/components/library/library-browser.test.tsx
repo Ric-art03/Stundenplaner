@@ -3,21 +3,20 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import { LibraryBrowser } from './library-browser'
 import { LibraryOffer } from './library-offer'
-import { DEFAULT_LIBRARY_PARAMS } from '@/lib/library/address'
+import { DEFAULT_LIBRARY_PARAMS, parseLibraryParams } from '@/lib/library/address'
 import type { Exercise } from '@/lib/types/exercise'
 import type { LibraryEntry, LibraryResult } from '@/lib/types/library'
 
 /**
- * Der Reiter „Übungsdatenbank" mit nachgestellten Serverantworten — bis die
- * Tabellen mit `/backend` kommen, ist das der einzige Weg, Liste, Vorauswahl
- * und Auswahlleiste zu sehen.
+ * Der Reiter „Übungsdatenbank" mit nachgestellten Serverantworten. Die Liste
+ * kommt über die Abfrage `/api/library` (BUG-31); nachgestellt wird sie über
+ * `getLibrary`, das die gelesenen Werte der Adresse bekommt.
  */
 
 const getLibrary = vi.fn<(...args: unknown[]) => Promise<LibraryResult>>()
 const copyLibraryExercises = vi.fn()
 
 vi.mock('@/lib/actions/library', () => ({
-  getLibrary: (...args: unknown[]) => getLibrary(...args),
   copyLibraryExercises: (...args: unknown[]) => copyLibraryExercises(...args),
 }))
 
@@ -69,6 +68,15 @@ function result(entries: LibraryEntry[], extra: Partial<LibraryResult> = {}): Li
 beforeEach(() => {
   getLibrary.mockReset()
   copyLibraryExercises.mockReset()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost')
+      if (url.pathname !== '/api/library') throw new Error(`Unerwartete Abfrage: ${url.pathname}`)
+      const body = await getLibrary(parseLibraryParams(url.searchParams))
+      return { ok: true, status: 200, json: async () => body }
+    })
+  )
 })
 
 describe('LibraryBrowser', () => {

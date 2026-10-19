@@ -19,7 +19,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { getExercises, deleteExercise, getCustomCategories } from '@/lib/actions/exercises'
+import { deleteExercise } from '@/lib/actions/exercises'
+import { exerciseListQuery } from '@/lib/library/address'
 import { hasActiveFilters } from '@/lib/library/filter-reasons'
 import {
   type Exercise, type ExerciseFilters, type ExerciseViewMode,
@@ -32,10 +33,12 @@ const PAGE_SIZE = 50
 interface MyExercisesProps {
   /** Ob es in der Übungsdatenbank etwas zu übernehmen gibt — für den Leerzustand. */
   libraryHasContent: boolean
+  /** Eigene Kategorien für die Filter — kommen mit der Seite vom Server. */
+  customCategories: Record<string, string[]>
 }
 
 /** Der Reiter „Meine Übungen" — die bisherige Übersicht, unverändert. */
-export function MyExercises({ libraryHasContent }: MyExercisesProps) {
+export function MyExercises({ libraryHasContent, customCategories }: MyExercisesProps) {
   const { toast } = useToast()
   const [exercises, setExercises] = React.useState<Exercise[]>([])
   const [total, setTotal] = React.useState(0)
@@ -47,27 +50,46 @@ export function MyExercises({ libraryHasContent }: MyExercisesProps) {
   const [sortDirection, setSortDirection] = React.useState<ExerciseSortDirection>('desc')
   const [deleteTarget, setDeleteTarget] = React.useState<Exercise | null>(null)
   const [deleting, setDeleting] = React.useState(false)
-  const [customCategories, setCustomCategories] = React.useState<Record<string, string[]>>({})
+  const [loadFailed, setLoadFailed] = React.useState(false)
+  const listRequestRef = React.useRef<AbortController | null>(null)
 
-  React.useEffect(() => {
-    getCustomCategories().then(setCustomCategories)
-  }, [])
-
+  // Gelesen wird über `/api/exercises`, nicht über eine Server-Aktion: eine
+  // Server-Aktion, die während eines Seitenwechsels zurückkam, setzte den
+  // alten Seitenstand wieder ein (BUG-31). Ein überholtes Laden wird abgebrochen.
   const fetchExercises = React.useCallback(async (offset: number, append: boolean) => {
+    listRequestRef.current?.abort()
+    const request = new AbortController()
+    listRequestRef.current = request
     if (append) setLoadingMore(true)
-    else setLoading(true)
+    else {
+      setLoading(true)
+      setLoadFailed(false)
+    }
     try {
-      const result = await getExercises(filters, sortField, sortDirection, offset, PAGE_SIZE)
+      const query = exerciseListQuery({ filters, sortField, sortDirection, offset, limit: PAGE_SIZE })
+      const response = await fetch(`/api/exercises?${query}`, { cache: 'no-store', signal: request.signal })
+      if (!response.ok) throw new Error(`Status ${response.status}`)
+      const result = (await response.json()) as { exercises: Exercise[]; total: number }
       setExercises((prev) => append ? [...prev, ...result.exercises] : result.exercises)
       setTotal(result.total)
+    } catch {
+      if (request.signal.aborted) return
+      if (append) {
+        toast({ variant: 'destructive', title: 'Nicht geladen', description: 'Weitere Übungen ließen sich gerade nicht laden. Bitte versuche es erneut.' })
+      } else {
+        setLoadFailed(true)
+      }
     } finally {
-      setLoading(false)
-      setLoadingMore(false)
+      if (listRequestRef.current === request) {
+        setLoading(false)
+        setLoadingMore(false)
+      }
     }
-  }, [filters, sortField, sortDirection])
+  }, [filters, sortField, sortDirection, toast])
 
   React.useEffect(() => {
     fetchExercises(0, false)
+    return () => listRequestRef.current?.abort()
   }, [fetchExercises])
 
   React.useEffect(() => {
@@ -139,6 +161,13 @@ export function MyExercises({ libraryHasContent }: MyExercisesProps) {
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-20 w-full rounded-lg" />
           ))}
+        </div>
+      ) : loadFailed && exercises.length === 0 ? (
+        <div className="space-y-3 py-12 text-center text-muted-foreground">
+          <p>Deine Übungen ließen sich gerade nicht laden.</p>
+          <Button variant="outline" onClick={() => fetchExercises(0, false)}>
+            Erneut versuchen
+          </Button>
         </div>
       ) : exercises.length === 0 ? (
         hasActiveFilters(filters) ? (

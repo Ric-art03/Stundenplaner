@@ -976,10 +976,9 @@ lebenden System unter den Rollen `authenticated` und `anon`
   Block)
 - **Fehler:** 5 — 0 kritisch, 0 hoch, 1 mittel, 4 niedrig
 - **Sicherheit:** kein Befund; ein Hinweis ohne Handlungsbedarf (siehe unten)
-- **Regression:** **nur zum Teil belegt** — der Gesamtlauf aller Stufen ist **nicht** gelaufen
-  (siehe „Regression" unten). Grün: PROJ-4 am Rechner 49 von 49 und in Handybreite 49 von 49,
-  PROJ-3 an Rechner und Handy 26 von 26, alle Tests ohne Anmeldung 18 von 18. Offen: PROJ-5, 6, 7,
-  14, 16, 19 und „exklusiv" — **vor `/deploy` nachzuholen**
+- **Regression:** in der Nacht nur zum Teil belegt (siehe „Regression" unten). *Am Morgen nach der
+  Behebung von BUG-31 nachgeholt: **568 von 568 Browser-Tests grün in einem Zug** (20,1 Minuten,
+  zwei Arbeiter) — keine Regression*
 - **Leistung:** erfüllt — 105 Übungen in 1,3–1,5 s („Meine Übungen" 1,6–2,0 s), 100 Übungen auf
   einmal übernommen in 0,3 s
 - **Bereit für die Auslieferung:** ja — kein kritischer oder hoher Fehler
@@ -1157,6 +1156,7 @@ dadurch nichts, und die Wirkung bleibt im eigenen Konto (die Übung gilt dort al
 ### Fehler
 
 #### BUG-31: Ein Klick, der in das Laden einer Übungsliste fällt, geht verloren
+*Am 2026-10-19 behoben — siehe „Nach der QA behoben" unten.*
 - **Schwere:** mittel
 - **Schritte:**
   1. „Übungen" öffnen und sofort, während „Meine Übungen" noch lädt, auf „Übungsdatenbank" tippen
@@ -1244,6 +1244,55 @@ liefert (PROJ-6, PROJ-7, PROJ-16). Beide sind durch ihre Unit-Tests abgedeckt.
 - **Freigabe im Browser** — der Testblock wird nie freigegeben; „Zuletzt hinzugefügt" ist über
   das gesetzte Datum geprüft, die Freigabe selbst am lebenden System im `/backend`
 - **Gruppe in einem anderen Tab geändert** (Edge 6) — nur am Code
+
+## Nach der QA behoben
+
+### BUG-31 (2026-10-19, `/frontend`)
+
+**Die Ursache liegt im Router von Next.js 16.1.1, nicht im Ablauf der App.** Am Quelltext des
+Routers nachgelesen (`app-router-instance.js`): Server-Aktionen stehen in einer Warteschlange.
+Eine Navigation verwirft die gerade laufende Aktion und läuft sofort los. Kommt die verworfene
+Aktion zurück, *bevor* die Navigation fertig ist, rückt die Schlange trotzdem weiter und startet
+die nächste wartende Aktion — mit dem **alten** Seitenstand als Ausgang. Ist die Navigation fertig
+und kommt danach diese Aktion zurück, setzt sie den alten Seitenstand wieder ein: neue Adresse,
+alter Inhalt. „Meine Übungen" startete beim Laden zwei Server-Aktionen (Liste und eigene
+Kategorien) — deshalb verlor gerade der Reiterwechsel so oft.
+
+**Behoben, indem die Seite „Übungen" nicht mehr über Server-Aktionen liest:**
+- Die beiden Listen kommen über gewöhnliche Abfragen, die nicht in der Warteschlange des Routers
+  stehen: `GET /api/exercises` („Meine Übungen") und `GET /api/library` („Übungsdatenbank" samt
+  „Passt zu Gruppe"). Beide rufen dieselben Serverfunktionen wie vorher (`getExercises`,
+  `getLibrary`); Anmeldung und Zugriffsregeln wirken unverändert dort
+- Die Abfragen tragen dieselbe Adresskodierung wie die Seite (`address.ts`: die Filter aus
+  `parseLibraryParams` und `libraryQuery` herausgelöst; neu `exerciseListQuery` und
+  `parseExerciseListQuery` für Sortierung und Seite, Anzahl höchstens 100). Werte aus der Adresse
+  werden wie bisher misstrauisch gelesen; „noch zu ergänzen" gilt nie für die Übungsdatenbank
+- Die eigenen Kategorien von „Meine Übungen" kommen mit der Seite vom Server statt per
+  Server-Aktion nach dem Laden
+- Ein überholtes Laden wird abgebrochen (neuer Filter, Verlassen der Seite)
+- **Neu dabei:** scheitert das Laden von „Meine Übungen", steht dort „Deine Übungen ließen sich
+  gerade nicht laden" mit „Erneut versuchen" — vorher erschien still der Leerzustand „Noch keine
+  Übungen"; beim Nachladen („Mehr laden") sagt es eine Meldung
+- Server-Aktionen bleiben fürs Ändern: Übernehmen und Löschen
+
+**Nachgeprüft:** mit denselben Nachstell-Skripten wie in der QA, mitten ins Laden geklickt —
+Reiterwechsel **8 von 8** (vorher 4 von 5 verloren), Klick auf „Gruppen" aus der ladenden
+Übungsdatenbank **8 von 8** (vorher 1 von 5 verloren). Die Browser-Tests klicken jetzt bewusst
+sofort (Reiter, „Gruppe anlegen") und bewachen den Fehler damit. **713 Unit-Tests grün**, 1
+erwarteter Fehlschlag (BUG-33); 3 neu für die Kodierung der Liste; der Komponententest der
+Übungsdatenbank stellt jetzt die Abfrage statt der Server-Aktion nach. Typprüfung, Lint und
+Produktionsbuild sauber.
+
+**Gesamtlauf danach, am Morgen des 2026-10-19 auf wieder schnellem Rechner: 568 von 568
+Browser-Tests grün in einem Zug** (20,1 Minuten, zwei Arbeiter, kein Entwicklungsserver) — alle
+Stufen von PROJ-3 bis PROJ-19, beide Stufen von PROJ-4 und „exklusiv". Damit ist die Regression
+nachgeholt, die in der Nacht ausfiel. Erwartete Fehlschläge darin: BUG-27 (PROJ-16), BUG-32 und
+BUG-34 (PROJ-4).
+
+**Nicht behoben, nur festgestellt:** dieselbe Eigenheit des Routers trifft jede Stelle, die beim
+Laden per Server-Aktion liest und neben der eine Navigation möglich ist. Auf der Seite „Übungen"
+ist das jetzt ausgeräumt; anderswo (etwa der Hinweis zur Verwendung im Löschdialog, die
+Kandidatenliste im Editor) ist es nicht untersucht.
 
 ## Deployment
 _To be added by /deploy_

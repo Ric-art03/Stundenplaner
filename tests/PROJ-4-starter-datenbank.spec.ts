@@ -158,9 +158,10 @@ test.describe('PROJ-4 — A. Reiter und Namen', () => {
 
   test('AC: der Reiter „Übungsdatenbank" steht in der Adresse — Neuladen und Zurück führen in denselben Reiter', async ({ page }) => {
     await page.goto('/exercises')
-    // Erst wenn „Meine Übungen" geladen hat — ein früherer Klick geht oft verloren (BUG-31).
-    await expect(page.getByRole('heading', { level: 3, name: 'E2E Aufwärmen Turnen' })).toBeVisible()
+    // Bewusst sofort, während „Meine Übungen" noch lädt: bis BUG-31 ging ein
+    // solcher Klick meist verloren — die Adresse wechselte, der Inhalt nicht.
     await page.getByRole('tab', { name: 'Übungsdatenbank' }).click()
+    await expect(page.getByRole('tab', { name: 'Übungsdatenbank' })).toHaveAttribute('aria-selected', 'true')
     await expect(page).toHaveURL(/tab=library/)
     await expect(row(page, FANG)).toBeVisible()
 
@@ -729,9 +730,10 @@ test.describe('PROJ-4 — D. Gesammelt und „Passt zu Gruppe"', () => {
       await admin.from('groups').delete().eq('user_id', userId)
       await openLibrary(page)
       await expect(page.getByText(/Für „Passt zu Gruppe“ braucht es eine Gruppe/)).toBeVisible()
-      // Erst nach dem Laden der Liste klicken — ein früherer Klick geht oft verloren (BUG-31).
-      await expect(count(page)).toHaveText('5 Übungen')
+      // Bewusst sofort, während die Liste noch lädt (BUG-31: der Klick ging verloren
+      // oder die Adresse blieb stehen, während schon die neue Seite zu sehen war).
       await page.getByRole('link', { name: 'Gruppe anlegen' }).click()
+      await expect(page.getByRole('heading', { level: 1, name: 'Neue Gruppe anlegen' })).toBeVisible()
       await expect(page).toHaveURL(/\/groups\/new$/)
     } finally {
       await seed(admin, userId)
