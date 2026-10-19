@@ -55,6 +55,27 @@ describe('explainEmptyFilters', () => {
   })
 })
 
+describe('explainEmptyFilters — Teilnehmerzahl (QA, BUG-33)', () => {
+  // Alle Übungen sind für höchstens 12 Teilnehmer. Ein Filter „ab 20" lässt die
+  // Liste leer — und ist der einzige gesetzte Filter.
+  const small = [
+    { ...exercise(), participantsMin: 4, participantsMax: 12 },
+    { ...exercise({ name: 'Kettenfangen' }), participantsMin: null, participantsMax: 10 },
+  ]
+
+  it.fails('nennt die Teilnehmerzahl als Grund, statt eine Kombination zu behaupten', () => {
+    const reasons = explainEmptyFilters(small, { ...EMPTY_FILTERS, participantsMin: 20 })
+    expect(reasons).not.toContain('Jeder Filter hat für sich Treffer, aber keine Übung erfüllt alle zugleich.')
+    expect(reasons.join(' ')).toMatch(/Teilnehmer/)
+  })
+
+  it('heute: ein einzelner Teilnehmer-Filter ohne Treffer heißt „liegt an der Kombination"', () => {
+    expect(explainEmptyFilters(small, { ...EMPTY_FILTERS, participantsMin: 20 })).toEqual([
+      'Jeder Filter hat für sich Treffer, aber keine Übung erfüllt alle zugleich.',
+    ])
+  })
+})
+
 describe('hasActiveFilters', () => {
   it('erkennt leere und gesetzte Filter', () => {
     expect(hasActiveFilters(EMPTY_FILTERS)).toBe(false)

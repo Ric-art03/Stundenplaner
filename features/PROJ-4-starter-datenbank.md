@@ -1,8 +1,8 @@
 # PROJ-4: Starter-Datenbank (Übungsdatenbank zum Übernehmen)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-09-28
-**Last Updated:** 2026-10-18
+**Last Updated:** 2026-10-19
 
 ## Worum es geht
 
@@ -963,7 +963,287 @@ Image-Optimierung). Sie bestanden schon vor PROJ-4. `exceljs` bringt einen mittl
 mit — nur im Prüfprogramm, nicht in der App.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Getestet:** 2026-10-19, Stand Commit `bbd81cf` plus die Tests dieser QA
+**Umgebung:** Produktionsbuild auf Port 3100, Edge (Chromium) am Rechner und in Handybreite
+(iPhone 13, Chromium-Motor), Testkonto (Vorschau-Konto des Testblocks), dazu Prüfungen am
+lebenden System unter den Rollen `authenticated` und `anon`
+**Tester:** QA Engineer (AI)
+
+### Überblick
+- **Akzeptanzkriterien:** 53 von 57 bestanden, **1 nicht bestanden** (BUG-31), 1 erst mit dem
+  ersten echten Block prüfbar, 2 entfallen für die Prüfung der App (Vorgaben an die Arbeit je
+  Block)
+- **Fehler:** 5 — 0 kritisch, 0 hoch, 1 mittel, 4 niedrig
+- **Sicherheit:** kein Befund; ein Hinweis ohne Handlungsbedarf (siehe unten)
+- **Regression:** **nur zum Teil belegt** — der Gesamtlauf aller Stufen ist **nicht** gelaufen
+  (siehe „Regression" unten). Grün: PROJ-4 am Rechner 49 von 49 und in Handybreite 49 von 49,
+  PROJ-3 an Rechner und Handy 26 von 26, alle Tests ohne Anmeldung 18 von 18. Offen: PROJ-5, 6, 7,
+  14, 16, 19 und „exklusiv" — **vor `/deploy` nachzuholen**
+- **Leistung:** erfüllt — 105 Übungen in 1,3–1,5 s („Meine Übungen" 1,6–2,0 s), 100 Übungen auf
+  einmal übernommen in 0,3 s
+- **Bereit für die Auslieferung:** ja — kein kritischer oder hoher Fehler
+
+**Neue Browser-Tests:** `tests/PROJ-4-starter-datenbank.spec.ts`, 49 Tests je Rechner und Handy,
+als eigene Stufe „uebungsdatenbank" und danach „uebungsdatenbank mobil", nach dem Grundstock und
+vor „exklusiv". Die Tests legen Kopien in „Meine Übungen" an und räumen für die Leerzustände den
+Grundbestand zeitweise weg (und bauen ihn im `finally` wieder auf) — das darf neben keinem anderen
+Feature laufen. Zwei davon (BUG-32, BUG-34) sind als erwartete Fehlschläge markiert und stellen die
+Befunde nach. Dazu `tests/PROJ-4-starter-datenbank.anon.spec.ts` (2 Tests ohne Anmeldung, Stufe
+„abgemeldet"). Der Testblock wird dabei **nie freigegeben**: wo ein Test ihn verändert (Name,
+Zustand, Datum „zuerst freigegeben", Vorschau-Konten), stellt er ihn im `finally` wieder her.
+
+Alle Fehlschläge beim Schreiben der Tests lagen an den Tests, nicht an der App — mit einer
+Ausnahme, aus der BUG-31 wurde: gerade Anführungszeichen statt der typografischen der App, die
+doppelt im Seitenbaum stehende Meldung (sichtbar und als Ansage), „Öffnen" trifft auch „In Meine
+Übungen öffnen", die Materialfolge (richtig ist die des Grundstocks: „Turnmatte" vor „Bock"), und
+zwei Seiten im selben Browser-Kontext, die beim Laden hängen blieben.
+
+**Neuer Unit-Test:** `filter-reasons.test.ts` — ein Teilnehmer-Filter ohne Treffer (BUG-33), als
+erwarteter Fehlschlag plus dem heutigen Verhalten. **Unit-Tests: 710 grün, 1 erwarteter
+Fehlschlag** (709 vor der QA plus 2 neue). Zu Beginn liefen alle in 13 s; am Ende der Nacht nur
+noch mit einem Arbeitsprozess, und zwei Komponententests (`library-browser`, `unit-config-form`)
+rissen dabei die Grenze von 5 s — mit 30 s Grenze beide grün.
+
+Legende: **E2E** = im Browser ausgeführt, **Unit** = über Unit-Tests, **Code** = nur am Code
+gelesen, **Live** = am lebenden System, **Skript** = eigenes Prüfskript gegen das lebende System
+bzw. den Testserver (nicht Teil der Suite).
+
+### A. Seite „Übungen" mit zwei Reitern und neue Namen
+- [x] „Übungen" öffnet mit „Meine Übungen" und der bisherigen Übersicht (E2E)
+- [ ] **BUG-31:** Reiter „Übungsdatenbank" — mit Abwarten des Ladens: Bestand, Adresse, Neuladen,
+  Zurück und Vorwärts landen im richtigen Reiter (E2E). Fällt der Klick aber in das Laden von
+  „Meine Übungen", wechselt nur die Adresse (Skript: 4 von 5 Läufen)
+- [x] Leseansicht → „Zurück zur Übungsdatenbank" und Zurück-Knopf des Browsers: dieselbe Suche,
+  dieselbe Trefferzahl (E2E)
+- [x] Karte der Startseite heißt „Übungen" (E2E)
+- [x] Kein „deine Übungsdatenbank" / „deine Datenbank" mehr im Code der Oberfläche (Code, Suche
+  über `src/`); Generator-Einleitung „aus deinen Übungen" (E2E); die Texte der Nachfragen im
+  Editor über den mitgezogenen Browser-Test von PROJ-7 (E2E)
+- [x] Am Handy beide Reiter nebeneinander, kein waagerechtes Scrollen (E2E)
+
+### B. Die Übungsdatenbank durchsehen
+- [x] Alle sichtbaren Übungen mit Anzahl („5 Übungen"), dieselbe Übungszeile wie in „Meine
+  Übungen"; auch in der Kartenansicht mit Auswählen, Vermerken und „Übernehmen" (E2E)
+- [x] Filter (Sportart, Phase) und Suche mit Trefferzahl (E2E)
+- [x] „Zuletzt hinzugefügt" ist Voreinstellung und sortiert nach dem Freigabedatum (E2E — das
+  Datum wird gesetzt, der Testblock nicht freigegeben)
+- [x] Leseansicht mit Beschreibung, Metadaten, Material, Varianten, Links, Vermerk „Entwurf" —
+  ohne Bearbeiten und Löschen (E2E). Anmerkungen trägt keine Testübung; sie laufen über dieselbe
+  Detailansicht wie bei eigenen Übungen (Code)
+- [x] Quellenangabe sichtbar (E2E)
+- [x] Filter ohne Treffer nennt den Grund („Für „Fußball" gibt es … noch keine Übungen"), dazu
+  „Filter zurücksetzen" (E2E). Lücke beim Teilnehmer-Filter: BUG-33
+- [x] Ohne Anmeldung zur Anmeldung, Reiter und Leseansicht (E2E)
+
+### C. Einzeln übernehmen
+- [x] Vollständige Kopie (2 Materialzeilen, 2 Varianten, Arbeitsnotiz leer), Meldung mit „Öffnen"
+  zur Kopie (E2E); Link und Quellenangabe gehen mit (E2E)
+- [x] „Aus der Übungsdatenbank übernommen am …" auf der Kopie; Bearbeiten über den Assistenten
+  speichert und lässt Vermerk und „Übernommen" stehen; Löschen funktioniert (E2E)
+- [x] Der Generator plant übernommene Übungen ein (E2E: alle drei Phasen aus Kopien gefüllt).
+  Varianten der Kopie werden wie bei jeder eigenen Übung behandelt (Code)
+- [x] Korrektur am Bestand lässt die Kopie unverändert, „Übernommen" bleibt (E2E)
+- [x] „Übernommen" + „In Meine Übungen öffnen", kein „Übernehmen", Ankästchen gesperrt — auch
+  nach dem Neuladen (E2E)
+- [x] Kopie gelöscht → Vermerk weg, neu übernehmen legt eine neue Kopie an (E2E; bisher unbelegt)
+- [x] Gleicher Name wie eine eigene Übung: übernommen, mit Hinweis „zwei Übungen namens …" (E2E)
+- [x] Keine eigene Kategorie entsteht (E2E, Zählung vorher/nachher)
+- [x] Abgebrochene Verbindung: „Nichts übernommen", keine Kopie, Knopf wieder bedienbar (E2E).
+  Ein Fehler des Servers läuft über denselben Meldungsweg (Code)
+
+### D. Gesammelt übernehmen und „Passt zu Gruppe"
+- [x] Leiste mit „2 ausgewählt", „Übernehmen", „Auswahl aufheben" (E2E)
+- [x] Gesammelt übernommen, Meldung „2 Übungen übernommen" mit „Zu Meine Übungen" (E2E)
+- [x] Fehlschlag mittendrin: keine übernommen, Auswahl bleibt (E2E)
+- [x] Gruppen wählbar, dazu „Keine Gruppe — alle Übungen" (E2E)
+- [x] Nur Passendes („4 Übungen passen …", die Volleyball-Übung fehlt), vorausgewählt genau das
+  Einplanbare (E2E)
+- [x] Fehlendes Material mit Halle („In „E2E4 Halle" fehlt: Yoga-Matte"); zu wenig mit Bedarf und
+  Bestand („Turnmatte (2 nötig, 1 da)") (E2E)
+- [x] Teilnehmerzahl mit Grenze und Zahl der Gruppe („für 4–12 Teilnehmer, die Gruppe hat 18") (E2E)
+- [x] Grundform scheitert, Variante passt: vorausgewählt, „Passt mit der Variante „Ohne Bock
+  (leichter)"" (E2E)
+- [x] Mehrere Gründe in einem Satz (Material · Teilnehmer) (E2E)
+- [x] Gruppe ohne Halle: Hinweis oben, kein Materialabgleich (E2E)
+- [x] Genau die eigene Auswahl wird übernommen (E2E); ein Filter wählt nicht ab, die Leiste sagt
+  „davon 1 gerade ausgeblendet", übernommen wird alles Angekreuzte (E2E)
+- [x] Ohne Gruppe: Erklärung und „Gruppe anlegen" (E2E)
+- [x] Leere Liste mit jedem Grund: Sportart und Altersgruppe zugleich genannt (E2E)
+- [x] „Alles Passende hast du schon übernommen" — auch nach dem Neuladen (E2E). Erscheint aber
+  auch, wenn nur ein Filter das noch nicht Übernommene ausblendet: BUG-32
+- [x] Am Handy bleibt die Leiste im Bild, auch nach dem Scrollen, kein waagerechtes Scrollen (E2E)
+
+### E. Einstiege
+- [x] Leerzustand „Meine Übungen" bietet „Aus der Übungsdatenbank übernehmen" (E2E)
+- [x] Generator ohne Übungen: Erklärung, Knopf „Zur Übungsdatenbank", kein „in Vorbereitung" (E2E)
+- [x] … und „Passt zu Gruppe" ist mit der gewählten Gruppe gesetzt (E2E); mit der einzigen Gruppe,
+  wenn keine gewählt ist (Code)
+- [x] Neue Gruppe über das Formular angelegt → „Zu dieser Gruppe passen 4 Übungen …", „Ansehen"
+  setzt „Passt zu Gruppe" (E2E)
+- [x] Kein Angebot, wenn nichts passt oder alles übernommen ist (E2E)
+- [x] Kein Angebot nach dem Bearbeiten einer Gruppe (E2E)
+
+### F. Der Bestand
+- [x] Nur Begriffe des Grundstocks, jede Abweichung mit Zeile und Feld (Unit `import.test.ts`;
+  Live aus `/backend`)
+- [x] Zählung je Zielgruppe gegen 3 / 5 / 3 (Unit `coverage.ts`)
+- [ ] *Erst mit dem ersten echten Block prüfbar:* abgedeckte Zielgruppe → Einheit ohne offene Lücke.
+  Der Testblock ist dafür zu klein (eine Übung je Phase)
+- [x] Hauptteil mit zwei Varianten oder Begründung (Unit) — ob sie wirklich leichter und schwerer
+  sind, bleibt der Abnahme des Blocks (so im Backend entschieden)
+
+### G. Pflege des Bestands
+- [x] Fehlerhafter Block: nichts eingelesen, jeder Fehler mit Zeile und Feld (Unit)
+- [x] Ein normales Konto sieht keinen Entwurf — weder Übung noch Material, Varianten, Links oder
+  Block (Live, Rolle `authenticated` mit dem Konto des Nutzers)
+- [x] Das Vorschau-Konto sieht Entwürfe mit „Entwurf" und kann „Passt zu Gruppe" damit ausprobieren
+  (E2E)
+- [x] Freigabe macht sichtbar und setzt das Datum (Live aus `/backend`); die Sortierung danach (E2E)
+- [x] Korrektur am Freigegebenen: Kopie unverändert, „Übernommen" bleibt (E2E und Live)
+- [x] Zurückgezogen: aus der Liste weg, die Kopie bleibt (Live aus `/backend`; E2E über Edge 2 und 3)
+
+### H. Urheberrecht
+- [x] Herkunft ist Pflicht beim Einlesen (Unit)
+- [x] Die Quellenangabe geht beim Übernehmen mit (E2E)
+- [ ] *Entfällt für die App:* Vermerk „nur kleiner Teil einer Quelle" — Vorgabe an die Arbeit je
+  Block
+- [ ] *Entfällt für die App:* keine Bilder, keine wörtlichen Passagen — Bilder kann der Bestand
+  technisch nicht tragen (keine Spalte); wörtliche Passagen sind Abnahme je Block
+
+### Edge Cases
+- [x] **1 — zwei Tabs:** nur eine Kopie; drei gleichzeitige Aufrufe ergaben eine Kopie und zweimal
+  „schon übernommen" (Skript). Die Seite des zweiten Tabs sagt „Schon übernommen" mit Link (E2E,
+  die Kopie des anderen Tabs nebenher angelegt)
+- [x] **2 — zurückgezogen beim Ansehen:** „gibt es nicht mehr", nichts angelegt (E2E)
+- [x] **3 — gesammelt mit Zurückgezogenem:** nichts übernommen, die Übung genannt, der Rest bleibt
+  ausgewählt und lässt sich übernehmen (E2E)
+- [x] **4 — Kopie bearbeitet, Bestand korrigiert** (E2E, siehe C)
+- [x] **5 — Kopie gelöscht:** neu übernehmen legt eine neue Kopie an (E2E). Der Platzhalter in der
+  Einheit ist das Verhalten aus PROJ-3 (Code)
+- [x] **6 — Gruppe ändert sich in einem anderen Tab:** die Vorauswahl springt nicht um (Code)
+- [x] **7 — nur eigene Begriffe:** genau das wird als Grund genannt (E2E)
+- [x] **8 — Halle ohne Material:** nur die Übung ohne Material ist vorausgewählt (E2E)
+- [x] **9 — „pro Teilnehmer" ohne Teilnehmerzahl:** gilt als passend, Hinweis oben (E2E)
+- [x] **10 — 100 auf einmal:** 100 Übungen in einem Aufruf in 0,3 s, mit allen 200 Material- und
+  200 Variantenzeilen; ein zweiter Aufruf legt nichts doppelt an; 93 über die Oberfläche in 1,4 s
+  (Skript, vorübergehender Entwurfsblock nur für das Testkonto, danach restlos entfernt)
+- [x] **11 — leerer Bestand:** „wird gerade aufgebaut", kein „Übernehmen" (E2E)
+- [x] **12 — zu langer Name:** wird beim Einlesen abgewiesen (Unit)
+- [x] **13 — Entwurf über erratene Adresse:** 404 (E2E), nicht übernehmbar (Live)
+
+### Sicherheit (Red Team)
+Am lebenden System in einer zurückgerollten Transaktion, unter `authenticated` mit dem Konto des
+Nutzers (kein Vorschau-Konto), unter `anon` und unter dem Testkonto — alles wie entworfen:
+- [x] Normales Konto sieht 0 Übungen, 0 Material-, Varianten-, Linkzeilen, 0 Blöcke des Entwurfs
+- [x] Normales Konto kann einen Entwurf nicht übernehmen (`unavailable`, nichts geschrieben)
+- [x] Schreiben in den Bestand: `permission denied` (UPDATE, INSERT); `import_library_block` und
+  `release_library_block`: `permission denied`
+- [x] Eine Übung in ein fremdes Konto schreiben: von der Zugriffsregel abgewiesen
+- [x] `anon` sieht nichts und darf `copy_library_exercises` nicht aufrufen
+- [x] Übernehmen: doppelte Kennungen im Aufruf ergeben eine Kopie; leere Liste ohne Wirkung;
+  501 Kennungen abgewiesen
+- [x] Ohne Anmeldung leiten Reiter und Leseansicht zur Anmeldung (E2E)
+- [x] Eingaben: Namen und Quellenangaben werden als Text gerendert, Links nur `http(s)://`
+  (Datenbank-Bedingung) — kein Weg für Skript-Einschleusung (Code)
+- [x] `get_advisors`: nur der bekannte Hinweis zum Passwortschutz
+
+**Hinweis ohne Handlungsbedarf:** Ein Nutzer kann über die Schnittstelle an einer **eigenen** Übung
+`library_exercise_id` auf eine beliebige Kennung setzen. Die Fremdschlüsselprüfung läuft ohne
+Zugriffsregeln, also verrät sie, ob eine Kennung im Bestand existiert — auch bei Entwürfen und
+Zurückgezogenem. Wer das nutzen wollte, müsste eine zufällige UUID erraten; zu sehen bekommt er
+dadurch nichts, und die Wirkung bleibt im eigenen Konto (die Übung gilt dort als „übernommen").
+
+### Fehler
+
+#### BUG-31: Ein Klick, der in das Laden einer Übungsliste fällt, geht verloren
+- **Schwere:** mittel
+- **Schritte:**
+  1. „Übungen" öffnen und sofort, während „Meine Übungen" noch lädt, auf „Übungsdatenbank" tippen
+  2. Erwartet: der Reiter wechselt
+  3. Tatsächlich: nur die Adresse wechselt auf `tab=library`; Reiter und Inhalt bleiben bei „Meine
+     Übungen". Erst ein zweiter Tipp wirkt (Skript: 4 von 5 Läufen, wenn der Klick in die laufende
+     Server-Aktion fällt)
+- **Auch:** Verlassen der Übungsdatenbank, während sie lädt — ein Klick auf „Gruppen" blieb in
+  1 von 5 Läufen wirkungslos; im Browser-Test zeigte „Gruppe anlegen" die neue Seite, während die
+  Adresse 15 s lang bei `/exercises?tab=library` stand. Von „Meine Übungen" weg ging dagegen kein
+  Klick verloren (8 von 8)
+- **Vermutete Ursache:** beide Reiter holen ihre Liste mit einer Server-Aktion aus dem Browser
+  (`getExercises`, `getLibrary`); eine Navigation, die währenddessen startet, wird verworfen
+- **Warum mittel:** es ist der Weg in das neue Feature, und am Handy ist das Ladefenster deutlich
+  länger als hier am Rechner. Ein zweiter Tipp hilft
+- **Priorität:** vor der Auslieferung beheben oder bewusst hinnehmen
+
+#### BUG-32: „Alles Passende hast du schon übernommen" bei nur ausgeblendeten Übungen
+- **Schwere:** niedrig
+- **Schritte:** eine passende Übung übernehmen, „Passt zu Gruppe" wählen, nach dieser einen Übung
+  suchen → der Satz erscheint, obwohl drei passende Übungen nicht übernommen, nur ausgeblendet sind
+- **Ursache:** der Satz rechnet mit der sichtbaren Liste
+- **Test:** als erwarteter Fehlschlag in der Suite
+- **Priorität:** im nächsten Durchgang
+
+#### BUG-33: Ein Teilnehmer-Filter ohne Treffer wird als „liegt an der Kombination" erklärt
+- **Schwere:** niedrig
+- **Schritte:** in der Übungsdatenbank nur „ab 20 Teilnehmern" filtern, wenn alle Übungen für
+  weniger sind → „Jeder Filter hat für sich Treffer, aber keine Übung erfüllt alle zugleich" — es
+  ist aber nur ein Filter gesetzt, und der Grund ist die Teilnehmerzahl
+- **Ursache:** `explainEmptyFilters` kennt die Teilnehmerfilter nicht. Widerspricht der Regel, dass
+  leere Ergebnisse jeden Grund nennen
+- **Test:** Unit, als erwarteter Fehlschlag. Im Browser mit dem Testblock nicht nachstellbar
+- **Priorität:** im nächsten Durchgang
+
+#### BUG-34: „1 Übung passen zu Sportart und Alter"
+- **Schwere:** niedrig (Text)
+- **Schritte:** „Passt zu Gruppe" mit genau einem Treffer → „1 Übung passen …" statt „passt"
+- **Test:** als erwarteter Fehlschlag in der Suite
+- **Priorität:** im nächsten Durchgang
+
+#### BUG-35: Gemischte Anführungszeichen in den Meldungen
+- **Schwere:** niedrig (Text)
+- **Beobachtung:** manche Sätze enden mit dem geraden Zeichen („E2E Fangspiel" hattest du schon
+  übernommen, die Gründe an den Übungen), andere mit dem typografischen („E2E Bockspringen“ steht
+  jetzt in „Meine Übungen“, die Hinweise zu Halle und Teilnehmerzahl). Im übrigen Programm ist
+  das gerade Zeichen üblich
+- **Priorität:** schön zu haben
+
+### Regression
+Der Gesamtlauf aller Stufen wurde gestartet und **abgebrochen**: ab etwa 1 Uhr nachts war der
+Rechner so ausgebremst, dass seine Ergebnisse nichts mehr aussagten. Belegt:
+- Die Bausteine der Seite (`/_next/static/chunks/…`) hingen im Browser über 20 s, während derselbe
+  Server sie `curl` in 0,2 s auslieferte; daraus wurde in Handybreite „Application error" auf
+  `/exercises`. Allein und mit einem Arbeiter geladen: kein Absturz
+- Supabase antwortete mit 0,55–0,7 s statt 0,23 s; ProtonVPN lief
+- Playwright brauchte zum Starten für drei kurze Tests rund 14 Minuten
+- Vitest brach ab, weil seine Arbeitsprozesse nicht rechtzeitig starteten („Timeout waiting for
+  worker to respond") — um 00:18 liefen dieselben Unit-Tests **709 von 709 in 13 s**
+- Der Prozessor war dabei kaum belastet (2 %)
+
+Gezielt und nacheinander mit einem Arbeiter gelaufen, was PROJ-4 am stärksten berührt:
+- **PROJ-4 am Rechner 49 von 49** (in zwei Durchgängen; fünf Tests nach Korrektur der Tests
+  einzeln nachgelaufen)
+- **PROJ-4 in Handybreite 49 von 49** in einem Zug
+- **PROJ-3 an Rechner und Handy 26 von 26** — ein Test (Liste der eigenen Übungen) kam im Lauf
+  nicht binnen 15 s an, einzeln dreimal grün
+- **Alle Tests ohne Anmeldung 18 von 18**, darunter die zwei neuen
+
+**Offen und vor `/deploy` nachzuholen:** PROJ-5, PROJ-6, PROJ-7, PROJ-14, PROJ-16, PROJ-19 und
+„exklusiv". Kein anderer Browser-Test prüft einen der Texte, die PROJ-4 geändert hat (gesucht);
+Regressionsrisiko steckt aber in zwei umgebauten Bausteinen: dem gemeinsamen Filter (PROJ-19,
+„Ohne Material" in „Meine Übungen") und der Materialprüfung des Generators, die jetzt die Fehlliste
+liefert (PROJ-6, PROJ-7, PROJ-16). Beide sind durch ihre Unit-Tests abgedeckt.
+
+### Weitere Beobachtungen (kein Fehler)
+- Das Angebot auf der Gruppenseite steht weiter da, wenn man die Seite direkt nach dem Anlegen neu
+  lädt (`?neu=1` bleibt in der Adresse)
+- Die Browser-Tests dieser Stufe brauchen hier 10–50 s je Test (Start des Browser-Kontexts unter
+  dem Virenscanner); die beiden Stufen zusammen rund eine Dreiviertelstunde
+
+### Nicht belegt
+- **Firefox und echtes Safari** — auf diesem Rechner nicht prüfbar
+- **Abdeckung → Einheit ohne Lücke** (F.3) — erst mit dem ersten echten Block
+- **Freigabe im Browser** — der Testblock wird nie freigegeben; „Zuletzt hinzugefügt" ist über
+  das gesetzte Datum geprüft, die Freigabe selbst am lebenden System im `/backend`
+- **Gruppe in einem anderen Tab geändert** (Edge 6) — nur am Code
 
 ## Deployment
 _To be added by /deploy_

@@ -66,6 +66,13 @@ const MANAGE_TESTS = /PROJ-16-(?!.*\.anon\.).*\.spec\.ts/
  * Handy laufen nacheinander.
  */
 const GRUNDSTOCK_TESTS = /PROJ-19-.*\.spec\.ts/
+/**
+ * Die Tests der Übungsdatenbank (PROJ-4) — eine eigene Stufe **nach** dem
+ * Grundstock. Sie legen Kopien in „Meine Übungen" an und räumen für die
+ * Leerzustände den Grundbestand zeitweise weg. Rechner und Handy laufen
+ * nacheinander. Die Datei ohne Anmeldung (`.anon.`) gehört nicht dazu.
+ */
+const LIBRARY_TESTS = /PROJ-4-(?!.*\.anon\.).*\.spec\.ts/
 const baseURL = `http://localhost:${port}`
 
 export default defineConfig({
@@ -127,6 +134,7 @@ export default defineConfig({
         LIVE_TESTS,
         MANAGE_TESTS,
         GRUNDSTOCK_TESTS,
+        LIBRARY_TESTS,
       ],
       use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
@@ -149,6 +157,7 @@ export default defineConfig({
         LIVE_TESTS,
         MANAGE_TESTS,
         GRUNDSTOCK_TESTS,
+        LIBRARY_TESTS,
       ],
       use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
       dependencies: ['setup'],
@@ -215,6 +224,20 @@ export default defineConfig({
       dependencies: ['grundstock'],
     },
 
+    // Die Übungsdatenbank (PROJ-4), nach dem Grundstock — siehe `LIBRARY_TESTS`.
+    {
+      name: 'uebungsdatenbank',
+      testMatch: LIBRARY_TESTS,
+      use: { ...devices['Desktop Chrome'], ...browser, storageState: STORAGE_STATE },
+      dependencies: ['grundstock mobil'],
+    },
+    {
+      name: 'uebungsdatenbank mobil',
+      testMatch: LIBRARY_TESTS,
+      use: { ...devices['iPhone 13'], ...mobileBrowser, storageState: STORAGE_STATE },
+      dependencies: ['uebungsdatenbank'],
+    },
+
     // Tests, die den Bestand des Testkontos leerräumen und deshalb niemanden
     // neben sich dulden. Über `dependencies` laufen sie garantiert erst,
     // wenn alle übrigen Projekte durch sind.
@@ -234,6 +257,8 @@ export default defineConfig({
         'verwaltung mobil',
         'grundstock',
         'grundstock mobil',
+        'uebungsdatenbank',
+        'uebungsdatenbank mobil',
       ],
     },
   ],

@@ -372,7 +372,19 @@ Am selben Tag nach Rückfrage des Nutzers geändert: das **Angebot nach dem Anle
 
 **Nicht belegt** und in `/qa`: „Kopie löschen, dann neu übernehmen" (der Block mit `DELETE` wird vom Werkzeug abgelehnt), zwei gleichzeitige Übernahmen, 100 Übungen auf einmal; die Browser-Tests sind nicht gelaufen. **Für `/deploy`, unabhängig von PROJ-4:** `npm audit` meldet sechs Funde in den Paketen der App, einer „kritisch" in `next`.
 
-**Nächster Schritt:** `/qa` für PROJ-4.
+**PROJ-4 ist seit dem 2026-10-19 freigegeben** — Abschnitt „QA Test Results" in der Spec, Stand Commit `bbd81cf`. **53 von 57 Akzeptanzkriterien bestanden**, 1 nicht bestanden (BUG-31), 1 erst mit dem ersten echten Block prüfbar, 2 entfallen für die App (Vorgaben je Block). Kein kritischer oder hoher Fehler, **kein Befund zur Sicherheit** — ein normales Konto sieht und übernimmt keinen Entwurf, `anon` sieht nichts, Schreiben in den Bestand, Einlesen und Freigeben sind gesperrt (am lebenden System, zurückgerollt). Neu belegt, was im Backend offen war: **Kopie löschen und neu übernehmen**, **drei gleichzeitige Übernahmen → eine Kopie**, **100 Übungen auf einmal in 0,3 s** mit allen Material- und Variantenzeilen; die Übungsdatenbank mit 105 Übungen lädt schneller als „Meine Übungen".
+
+- **BUG-31 (mittel):** ein Klick, der in das Laden einer Übungsliste fällt, geht verloren — der Reiter „Übungsdatenbank" wechselt dann nur die Adresse (4 von 5 Läufen), und auch das Verlassen der ladenden Übungsdatenbank kann verpuffen. Ein zweiter Klick hilft. Vermutlich, weil beide Reiter ihre Liste per Server-Aktion aus dem Browser holen
+- **BUG-32 (niedrig):** „Alles Passende hast du schon übernommen" erscheint auch, wenn nur ein Filter das noch nicht Übernommene ausblendet
+- **BUG-33 (niedrig):** ein Teilnehmer-Filter ohne Treffer wird als „liegt an der Kombination" erklärt
+- **BUG-34 (niedrig):** „1 Übung passen zu Sportart und Alter"
+- **BUG-35 (niedrig):** gemischte Anführungszeichen in den Meldungen
+
+**Neue Browser-Tests:** `tests/PROJ-4-starter-datenbank.spec.ts`, 49 je Rechner und Handy, als eigene Stufe „uebungsdatenbank" / „uebungsdatenbank mobil" nach dem Grundstock und vor „exklusiv"; dazu zwei Tests ohne Anmeldung. Beide Stufen grün (49 von 49 je Stufe, BUG-32 und BUG-34 als erwartete Fehlschläge). **Unit-Tests: 710 grün, 1 erwarteter Fehlschlag** (BUG-33).
+
+**Der Gesamtlauf aller Stufen ist nicht gelaufen — vor `/deploy` nachholen.** Ab etwa 1 Uhr nachts war der Rechner so ausgebremst (Seitenbausteine hingen im Browser über 20 s, Vitest-Prozesse starteten nicht rechtzeitig, Playwright brauchte 14 Minuten zum Start; Prozessor bei 2 %, ProtonVPN lief), dass der Gesamtlauf abgebrochen wurde. Grün sind außer PROJ-4: PROJ-3 an Rechner und Handy (26 von 26) und alle Tests ohne Anmeldung (18 von 18). Offen: PROJ-5, 6, 7, 14, 16, 19 und „exklusiv" — Risiko vor allem dort, wo PROJ-4 gemeinsame Bausteine umgebaut hat (Filter → PROJ-19, Materialprüfung des Generators → PROJ-6, 7, 16).
+
+**Nächster Schritt:** entscheiden, ob BUG-31 vor der Auslieferung behoben wird (dann `/frontend`), danach den Gesamtlauf auf einem ruhigen Rechner — dann `/deploy`.
 
 ## Features
 
@@ -381,7 +393,7 @@ Am selben Tag nach Rückfrage des Nutzers geändert: das **Angebot nach dem Anle
 | PROJ-1 | Supabase Infrastructure Setup | P0 | None | Deployed | [Spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-09-28 |
 | PROJ-2 | Benutzerregistrierung & Login | P0 | PROJ-1 | Deployed | [Spec](PROJ-2-benutzerregistrierung-login.md) | 2026-09-28 |
 | PROJ-3 | Übungsdatenbank (CRUD + Metadaten) | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-3-uebungsdatenbank.md) | 2026-09-28 |
-| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | In Progress | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
+| PROJ-4 | Starter-Datenbank (50–100 Übungen) | P0 | PROJ-3, PROJ-5, PROJ-19 | Approved | [Spec](PROJ-4-starter-datenbank.md) | 2026-09-28 |
 | PROJ-5 | Gruppenprofile | P0 | PROJ-1, PROJ-2 | Deployed | [Spec](PROJ-5-gruppenprofile.md) | 2026-09-28 |
 | PROJ-6 | Einheiten-Generator | P0 | PROJ-3, PROJ-5 | Deployed | [Spec](PROJ-6-einheiten-generator.md) | 2026-09-28 |
 | PROJ-7 | Einheiten-Editor | P0 | PROJ-6 | Deployed | [Spec](PROJ-7-einheiten-editor.md) | 2026-09-28 |
