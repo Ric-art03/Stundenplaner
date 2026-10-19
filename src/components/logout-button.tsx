@@ -25,6 +25,9 @@ export function LogoutButton() {
     setIsLoading(true)
     try {
       await logout()
+      // Vollständiger Seitenwechsel statt router.push, damit kein Seitenstand
+      // der abgemeldeten Sitzung stehen bleibt — wie nach dem Anmelden.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = '/'
     } catch {
       setIsLoading(false)

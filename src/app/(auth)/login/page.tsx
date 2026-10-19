@@ -39,7 +39,7 @@ export default function LoginPage() {
       // Session serverseitig gelesen wird — so vorgeschrieben in
       // .claude/rules/frontend.md. Läuft im Event-Handler, nicht im Render;
       // die Reinheitsregel greift hier daneben.
-      // eslint-disable-next-line react-hooks/immutability
+      // eslint-disable-next-line react-hooks/immutability, @next/next/no-location-assign-relative-destination
       window.location.href = '/dashboard'
     } catch {
       setError('Verbindungsfehler. Bitte versuche es erneut.')
