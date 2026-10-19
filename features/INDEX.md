@@ -392,7 +392,11 @@ Offen aus der QA: **BUG-32 bis BUG-35** (alle niedrig).
 
 **In der Produktion ist noch keine Übung freigegeben** — der Reiter „Übungsdatenbank" sagt allen außer dem Testkonto, dass sie gerade aufgebaut wird, und die Einstiege bleiben verborgen. Inhalt kommt mit dem ersten Block aus den Block-Sitzungen. Offen: von Hand anmelden und beide Reiter ansehen; **BUG-32 bis BUG-35** (alle niedrig); `SUPABASE_SERVICE_ROLE_KEY` (nur fürs Prüfprogramm) fehlt in `.env.local.example`.
 
-**Nächster Schritt:** das Update von `next` (16.1.1 → 16.4.x) gegen die sechs Funde aus `npm audit` (einer „kritisch") — vom Nutzer am 2026-10-19 als eigener Schritt direkt nach PROJ-4 entschieden, mit Build, Unit-Tests und vollem Browser-Testlauf. Danach der erste Block für die Übungsdatenbank.
+**`next` 16.1.1 → 16.3.8 ist am 2026-10-19 ausgeliefert** — Commit `a084c2e`, kein eigenes Feature. 16.3.8 ist die älteste Fassung, die alle Funde abdeckt (rund 40 Meldungen allein zu `next`, darunter Umgehungen der Middleware, in der die Anmeldung geprüft wird); dazu `eslint-config-next` 16.3.8 und `source-map-js` 1.2.2. **`npm audit --omit=dev`: 0 Funde** (vorher 6, einer kritisch); die Funde in reinen Entwicklungspaketen (etwa `uuid` über `exceljs`) sind nicht angefasst. Build, Lint, Typprüfung und 713 Unit-Tests grün. Die neue Lint-Regel gegen `window.location.href` ist an den zwei gewollten Seitenwechseln nach An- und Abmelden ausgeschaltet. Nach dem Hochladen: Vercel meldet die Auslieferung als abgeschlossen, öffentliche Seiten 200, geschützte 307 auf `/login`, Sicherheits-Kopfzeilen liegen an.
+
+**Browser-Tests: jede Stufe mit 16.3.8 einmal ganz grün, aber nie alle 568 in einem Zug.** Supabase lag den ganzen Abend bei 0,7–1,2 s je Anfrage (nachmittags 0,2 s); drei Gesamtläufe brachen nach je einem Hänger über 15 s ab, fünfmal an fünf Stellen — keiner ließ sich nachstellen, einer traf eine gewöhnliche Abfrage statt einer Server-Aktion. Danach Stufe für Stufe: Editor 64/64, Live 87/87 und 87/87, Verwaltung 45/45 und 45/45, Grundstock 17/17 und 17/17, Übungsdatenbank 48/49 (der eine einzeln 3/3) und 49/49, exklusiv 1/1. **Nachzuholen:** ein Gesamtlauf in einem Zug bei ruhiger Leitung; ist er grün, entfällt der Gegenlauf mit 16.1.1.
+
+**Nächster Schritt:** der erste Block für die Übungsdatenbank.
 
 ## Features
 
