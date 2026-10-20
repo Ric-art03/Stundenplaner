@@ -396,6 +396,8 @@ Offen aus der QA: **BUG-32 bis BUG-35** (alle niedrig).
 
 **Browser-Tests: jede Stufe mit 16.3.8 einmal ganz grün, aber nie alle 568 in einem Zug.** Supabase lag den ganzen Abend bei 0,7–1,2 s je Anfrage (nachmittags 0,2 s); drei Gesamtläufe brachen nach je einem Hänger über 15 s ab, fünfmal an fünf Stellen — keiner ließ sich nachstellen, einer traf eine gewöhnliche Abfrage statt einer Server-Aktion. Danach Stufe für Stufe: Editor 64/64, Live 87/87 und 87/87, Verwaltung 45/45 und 45/45, Grundstock 17/17 und 17/17, Übungsdatenbank 48/49 (der eine einzeln 3/3) und 49/49, exklusiv 1/1. **Nachzuholen:** ein Gesamtlauf in einem Zug bei ruhiger Leitung; ist er grün, entfällt der Gegenlauf mit 16.1.1.
 
+**Das Logo hat seit dem 2026-10-20 drei Detailstufen** — kein eigenes Feature, deshalb ohne Spec. Groß wirkte das Symbol wie ein App-Symbol, vor allem wegen des grünen Quadrats. Jetzt gibt es dieselbe Zeichnung dreimal, alle in `src/components/logo.tsx`: das bisherige Symbol bis etwa 40 px (Favicon, App-Symbol, Kopfzeile am Handy), eine **gezeichnete Stufe** ohne Quadrat und mit Stoppuhr für die Kopfzeile ab 768 px und über der Anmeldekarte (96 px), und eine **plastische Stufe** mit Verläufen und Schatten groß auf der Landingpage, neben der Überschrift (am Handy darüber). Entwürfe: https://claude.ai/artifact/9fyq7LkBhFPj6eKAFPT8wS. Geprüft: Typprüfung, Lint, Build, 713 Unit-Tests; Landingpage, Anmeldung und Startseite nach dem Anmelden am Produktionsbuild bei 375, 768 und 1280 px angesehen, nichts scrollt waagerecht. Die Browser-Tests sind nicht gelaufen.
+
 **Nächster Schritt:** der erste Block für die Übungsdatenbank.
 
 ## Features
