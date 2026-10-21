@@ -36,10 +36,10 @@ export const ORGANIZATION_FORMS = [
 // deshalb nicht hier (siehe `NO_MATERIAL` in terms.ts).
 export const MATERIALS = [
   'Ball', 'Seil/Springseil', 'Reifen', 'Stab', 'Tuch', 'Schwungtuch',
-  'Leibchen', 'Hütchen', 'Kegel', 'Markierung', 'Turnmatte', 'Yoga-Matte',
+  'Leibchen', 'Würfel', 'Hütchen', 'Kegel', 'Markierung', 'Turnmatte', 'Yoga-Matte',
   'Weichbodenmatte', 'Bank', 'Kleiner Kasten', 'Großer Kasten', 'Bock',
   'Pferd', 'Sprossenwand', 'Turnringe', 'Stufenbarren', 'Tor',
-  'Volleyballnetz',
+  'Volleyballnetz', 'Musikanlage',
 ] as const
 
 export const DIFFICULTY_LEVELS = [

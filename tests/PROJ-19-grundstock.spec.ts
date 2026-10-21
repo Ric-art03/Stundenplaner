@@ -37,10 +37,10 @@ const ORGANIZATION_FORMS = [
   'Zwei Mannschaften (gemeinsames Spielfeld)', 'Zwei Mannschaften (getrenntes Spielfeld)',
 ]
 const MATERIALS = [
-  'Ball', 'Seil/Springseil', 'Reifen', 'Stab', 'Tuch', 'Schwungtuch', 'Leibchen', 'Hütchen',
-  'Kegel', 'Markierung', 'Turnmatte', 'Yoga-Matte', 'Weichbodenmatte', 'Bank', 'Kleiner Kasten',
-  'Großer Kasten', 'Bock', 'Pferd', 'Sprossenwand', 'Turnringe', 'Stufenbarren', 'Tor',
-  'Volleyballnetz',
+  'Ball', 'Seil/Springseil', 'Reifen', 'Stab', 'Tuch', 'Schwungtuch', 'Leibchen', 'Würfel',
+  'Hütchen', 'Kegel', 'Markierung', 'Turnmatte', 'Yoga-Matte', 'Weichbodenmatte', 'Bank',
+  'Kleiner Kasten', 'Großer Kasten', 'Bock', 'Pferd', 'Sprossenwand', 'Turnringe', 'Stufenbarren',
+  'Tor', 'Volleyballnetz', 'Musikanlage',
 ]
 const GONE = [
   'Vorschulturnen', 'Allgemeinsport', 'Eltern-Kind Turnen', '1-gegen-1', 'Senioren (60+)',

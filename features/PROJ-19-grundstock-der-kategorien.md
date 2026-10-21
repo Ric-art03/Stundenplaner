@@ -129,7 +129,8 @@ kommen dazu; „Eltern-Kind Turnen" schreibt sich „Eltern-Kind-Turnen".
 1-gegen-1 fällt weg. Ordnung: erst die ganze Gruppe zusammen, dann aufgeteilt nach Gruppengröße,
 zuletzt Mannschaften.
 
-**Material (23)**
+**Material (25)** *(23 bis 2026-10-21; „Würfel" und „Musikanlage" auf Wunsch des Nutzers für den
+ersten Block der Übungsdatenbank ergänzt — Würfelfangen, Stopptanz)*
 1. Ball
 2. Seil/Springseil
 3. Reifen
@@ -137,22 +138,24 @@ zuletzt Mannschaften.
 5. Tuch
 6. Schwungtuch
 7. Leibchen
-8. Hütchen
-9. Kegel
-10. Markierung
-11. Turnmatte
-12. Yoga-Matte
-13. Weichbodenmatte
-14. Bank
-15. Kleiner Kasten
-16. Großer Kasten
-17. Bock
-18. Pferd
-19. Sprossenwand
-20. Turnringe
-21. Stufenbarren
-22. Tor
-23. Volleyballnetz
+8. Würfel
+9. Hütchen
+10. Kegel
+11. Markierung
+12. Turnmatte
+13. Yoga-Matte
+14. Weichbodenmatte
+15. Bank
+16. Kleiner Kasten
+17. Großer Kasten
+18. Bock
+19. Pferd
+20. Sprossenwand
+21. Turnringe
+22. Stufenbarren
+23. Tor
+24. Volleyballnetz
+25. Musikanlage
 
 *Gegenüber heute:* „Tor/Netz" heißt „Tor"; Stufenbarren und Volleyballnetz kommen dazu; „Kein
 Material" ist kein Material mehr (Abschnitt C). Ordnung: von klein nach groß, wie man es im
@@ -356,6 +359,7 @@ Ein eigenes Hilfe-Kapitel dazu gehört in PROJ-20 (Hilfe & Tutorial).
 | Altersgrenzen dürfen sich überschneiden; Senioren werden in 60–75 und 75+ geteilt | Vom Nutzer so gewollt. Fitte Jungsenioren und Hochaltrige (Sturzprophylaxe, Sitzgymnastik) unterscheiden sich stark | 2026-10-18 |
 | Organisationsformen: „Kreis" statt „Kreis / Sitzkreis", Schachbrettformation neu, 1-gegen-1 fällt weg | Vom Nutzer festgelegt | 2026-10-18 |
 | Material: „Tor" statt „Tor/Netz", Volleyballnetz und Stufenbarren neu | Ohne eigenen Begriff für das Netz könnte der Generator für Volleyball nicht prüfen, ob die Halle eins hat | 2026-10-18 |
+| Material: „Würfel" (bei den Kleingeräten) und „Musikanlage" (am Ende) neu | Vom Nutzer beim ersten Block der Übungsdatenbank verlangt (Würfelfangen, Stopptanz); der Bestand darf nur Begriffe des Grundstocks tragen. Keine Migration — die Liste steht nur im Code; ein gleichnamiger eigener Begriff geht wie vorgesehen im mitgelieferten auf | 2026-10-21 |
 | „Kein Material" ist kein Materialbegriff mehr, sondern eine eigene Wahl („Ohne Material") bei Varianten und im Filter | Heute kann es neben „Ball" stehen, und sechs Stellen im Code filtern es eigens heraus; die Starter-Datenbank bräuchte sonst eine Sonderregel | 2026-10-18 |
 | Vorhandene Begriffe lassen sich nirgends ein zweites Mal anlegen; im Formular wird der vorhandene stattdessen ausgewählt | Der Nutzer wollte den Begriff haben; eine Fehlermeldung wäre Bevormundung, stilles Nichtstun (heute) verwirrt | 2026-10-18 |
 | Wächst der Grundstock, geht ein gleichnamiger eigener Begriff still im mitgelieferten auf, ohne seinen Platz oben zu behalten | Den Platz zu behalten hieße: „Löschen" löscht nicht, „Umbenennen" lässt den Begriff wieder auftauchen. Zu viel Erklärung für einen seltenen Fall. Vom Nutzer nach Abwägung gewählt | 2026-10-18 |

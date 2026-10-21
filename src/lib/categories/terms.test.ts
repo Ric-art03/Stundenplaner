@@ -33,7 +33,7 @@ describe('Grundstock', () => {
     expect(AGE_GROUPS).toHaveLength(11)
     expect(PHASES).toHaveLength(3)
     expect(ORGANIZATION_FORMS).toHaveLength(9)
-    expect(MATERIALS).toHaveLength(23)
+    expect(MATERIALS).toHaveLength(25)
   })
 
   it('enthält keinen weggefallenen Begriff', () => {
