@@ -398,7 +398,13 @@ Offen aus der QA: **BUG-32 bis BUG-35** (alle niedrig).
 
 **Das Logo hat seit dem 2026-10-20 drei Detailstufen** — kein eigenes Feature, deshalb ohne Spec. Groß wirkte das Symbol wie ein App-Symbol, vor allem wegen des grünen Quadrats. Jetzt gibt es dieselbe Zeichnung dreimal, alle in `src/components/logo.tsx`: das bisherige Symbol bis etwa 40 px (Favicon, App-Symbol, Kopfzeile am Handy), eine **gezeichnete Stufe** ohne Quadrat und mit Stoppuhr für die Kopfzeile ab 768 px und über der Anmeldekarte (96 px), und eine **plastische Stufe** mit Verläufen und Schatten groß auf der Landingpage, neben der Überschrift (am Handy darüber). Entwürfe: https://claude.ai/artifact/9fyq7LkBhFPj6eKAFPT8wS. Geprüft: Typprüfung, Lint, Build, 713 Unit-Tests; Landingpage, Anmeldung und Startseite nach dem Anmelden am Produktionsbuild bei 375, 768 und 1280 px angesehen, nichts scrollt waagerecht. Die Browser-Tests sind nicht gelaufen.
 
-**Nächster Schritt:** der erste Block für die Übungsdatenbank.
+**Die Arbeit am Bestand ist am 2026-10-21 gelockert** — Spec von PROJ-4, Abschnitte F und G. Ein Block darf einem **Thema** folgen (etwa „Kinderspiele") und beliebig groß sein; 3 / 5 / 3 ist nur noch ein **Kontrollblick**, kein Arbeitsauftrag. Die Pflichtangaben je Übung bleiben. **Quellen tragen Nutzer und Claude gemeinsam zusammen:** Claude sucht mit, legt eine Quellenliste mit Einschätzung nach den Urheberrechtsregeln vor, entschieden wird gemeinsam. Am Prüfprogramm ändert sich nichts — Einlesen und Freigeben hingen nie an der Abdeckung.
+
+**Der erste Block ist am 2026-10-21 geschrieben** — „Block 01 – Klassische Kinderspiele", 42 Übungen, 46 Varianten, vom Prüfprogramm fehlerfrei geprüft, **noch nicht eingelesen**. Tabelle und Quellenliste liegen außerhalb des Projekts in `Übungsdatenbank Blöcke\`; je Block eine eigene Quellenliste, die nie überschrieben wird (Spec von PROJ-4, Abschnitt G). 15 Quellen gemischt, dazu überlieferte Spiele und die **Praxis des Nutzers** als neue Quellenart; mobilesport.ch vom Nutzer ausgeschlossen (Lizenz nur nicht-kommerziell). Vorgemerkt für spätere Blöcke: die Julei-Spielesammlung (Draußen, Teambuilding) und die Kita-Broschüre der Unfallkasse (Gerätelandschaften).
+
+Dafür ist der **Grundstock um zwei Materialien erweitert** (PROJ-19): **„Würfel"** und **„Musikanlage"**, auf 25. Keine Migration — die Liste steht nur im Code. Typprüfung, Lint, Build und 713 Unit-Tests grün; die Browser-Tests von PROJ-19 sind angepasst, aber nicht gelaufen.
+
+**Nächster Schritt:** der Nutzer sieht den Block in Excel durch; danach prüfen, einlesen als Entwurf, in der App ansehen, freigeben.
 
 ## Features
 

@@ -2,7 +2,7 @@
 
 ## Status: Deployed
 **Created:** 2026-09-28
-**Last Updated:** 2026-10-19
+**Last Updated:** 2026-10-21
 
 ## Worum es geht
 
@@ -248,6 +248,20 @@ damit der Generator für eine 60-Minuten-Gruppe eine Einheit füllt und etwas ab
 - Altersgrenzen der Zielgruppe sind die Altersgruppen des Grundstocks (PROJ-19); eine Zielgruppe
   darf mehrere davon zusammenfassen, z. B. „Senioren 60–75 und 75+"
 
+**Blöcke nach Thema, 3 / 5 / 3 nur zur Kontrolle** *(2026-10-21, vom Nutzer gewünscht)*. Ein
+Block muss nicht eine Zielgruppe vollmachen. Er darf auch einem **Thema** folgen, etwa
+„Kinderspiele", und so viele Übungen enthalten, wie gute Quellen hergeben. Die Zählung 3 / 5 / 3
+ist dann **kein Arbeitsauftrag, sondern ein Kontrollblick**: zwischendurch aufgerufen, zeigt sie,
+wo es dünn ist (bei Spielen meist im Cool-Down), und ein kleinerer Block füllt gezielt nach.
+
+- **Je Übung bleibt alles Pflicht:** Sportart, Altersgruppe und Phase, Herkunft, im Hauptteil
+  zwei Varianten oder eine Begründung. Die Altersgruppen sind ein Merkmal des einzelnen Spiels,
+  keine Zielgruppen-Planung — ein Fangspiel trägt jede Altersgruppe, für die es taugt
+- **Einlesen und Freigeben hängen nicht an der Abdeckung** — das war schon so gebaut, das
+  Prüfprogramm zählt nur auf eigenen Aufruf (`abdeckung`)
+- Die Liste der Zielgruppen für die Zählung ist damit **freiwillig**; sie lohnt sich, sobald eine
+  bestimmte Gruppe sicher eine volle Einheit bekommen soll
+
 *Ersetzt die frühere Vorgabe „je Bereich, fünf feste Bereiche (Vorschulkinder bis Senioren)" — die
 Bereiche passten nach PROJ-19 nicht mehr zu den Altersgruppen und hätten alle Sportarten über einen
 Kamm geschoren.*
@@ -262,8 +276,10 @@ Kamm geschoren.*
 
 Der Bestand hat **keinen Verwaltungsbildschirm**. Er wird so gepflegt:
 
-1. Der Nutzer zeigt Quellen (Webseiten, PDFs, eigene Notizen) zu einer Sportart oder einem Bereich
-   und sagt, was und wie daraus übernommen werden soll
+1. Nutzer und Claude **tragen Quellen zusammen** (Webseiten, PDFs, eigene Notizen) zu einer
+   Zielgruppe oder einem Thema, besprechen sie und legen fest, was und wie daraus übernommen
+   werden soll — siehe „Quellen zusammentragen" unten *(2026-10-21; vorher zeigte nur der Nutzer
+   Quellen)*
 2. Claude erstellt daraus einen **Block** als **Tabelle**: eine Zeile je Übung, verschachtelte
    Angaben in kurzer Schreibweise (z. B. Material `Ball 1 je TN; Hütchen 12`, Varianten mit Titel,
    Beschreibung und Abweichungen)
@@ -279,6 +295,41 @@ Der Bestand hat **keinen Verwaltungsbildschirm**. Er wird so gepflegt:
 Korrekturen an bereits freigegebenen Übungen laufen genauso (Tabelle → Prüfung → Freigabe); sie
 erreichen übernommene Kopien nicht. Eine Übung lässt sich aus dem Bestand **zurückziehen** — sie
 verschwindet aus der Übungsdatenbank, Kopien bei Nutzern bleiben.
+
+### Quellen zusammentragen *(2026-10-21, vom Nutzer gewünscht)*
+
+Beide suchen, dann wird gemeinsam entschieden. Erst danach entsteht der Block.
+
+1. **Thema festlegen** — Zielgruppe oder Thema des Blocks (z. B. „Kinderspiele"), dazu, was
+   besonders gebraucht wird (etwa ruhige Spiele fürs Cool-Down)
+2. **Beide tragen zusammen.** Claude sucht im Netz (Vereins- und Verbandsseiten, Schul- und
+   Bildungsserver, frei veröffentlichte Sammlungen, Quellen unter freier Lizenz); der Nutzer
+   bringt eigene Funde, PDFs und Notizen dazu. Ein Spiel, das allgemein überliefert ist (etwa
+   „Feuer, Wasser, Sturm"), ist ebenfalls eine Quelle — Herkunft dann „überliefertes Spiel"
+   plus die Stelle, an der es nachgeprüft wurde
+3. **Claude legt eine Quellenliste vor**, eine Zeile je Quelle:
+   - Titel, Herausgeber, Link oder Datei
+   - Art (Webseite, PDF, Buchauszug, eigene Notiz, überliefert)
+   - **Einschätzung nach Abschnitt H:** frei verwendbar als Idee / nur mit Quellenangabe (freie
+     Lizenz) / **nicht verwenden** (ausdrückliches Nutzungsverbot, kostenpflichtig, hinter
+     Anmeldung) — mit dem Satz aus Impressum, Lizenz oder Nutzungsbedingungen, auf den sich die
+     Einschätzung stützt
+   - wie viele brauchbare Übungen ungefähr darin stehen, für welche Phasen und Altersgruppen
+   - Bemerkung zur Qualität (Sicherheit, Verständlichkeit, Varianten)
+4. **Besprechen:** welche Quellen genommen werden, welche Spiele daraus, wie viel aus einer
+   einzelnen Quelle (Abschnitt H: mischen statt eine Sammlung abgrasen). Erst nach diesem Ja
+   schreibt Claude den Block (Schritt 2 oben)
+
+Die Quellenliste liegt **im Ordner der Blöcke, außerhalb des Projektordners**, wie die Tabellen
+selbst. **Je Block eine eigene Datei, die nie überschrieben wird** *(2026-10-21, vom Nutzer
+gewünscht)*, z. B. „Quellenliste Block 01 - Klassische Kinderspiele.md"; wie stark eine Quelle
+schon genutzt ist, zeigen alle Listen zusammen. PDFs, die der Nutzer beisteuert, liegen daneben in
+`Quellen-PDFs\`. Was Claude von einer Seite nicht lesen kann (Anmeldung, gesperrte PDFs), wird
+in der Liste vermerkt und nicht umgangen.
+
+Eine weitere Quellenart *(2026-10-21)*: die **Praxis des Nutzers** — ein Spiel, das der Nutzer aus
+seiner Arbeit kennt und das keine gefundene Quelle unter dem Namen führt. Der Nutzer beschreibt es
+in ein, zwei Sätzen; Herkunft in der Tabelle „Praxis Übungsleiter".
 
 ### Akzeptanzkriterien
 - [ ] Angenommen ein Block in der Tabelle mit einem Fehler (unbekannte Sportart, Dauer 0, Modus falsch geschrieben), wenn er eingelesen wird, dann wird nichts eingelesen und jeder Fehler mit Zeile und Feld genannt
@@ -376,6 +427,8 @@ verschwindet aus der Übungsdatenbank, Kopien bei Nutzern bleiben.
 | Angebot nach dem Anlegen einer Gruppe nennt beide Zahlen: was passt, und wie viel davon sofort einplanbar ist | Sonst schwiege das Angebot, wenn der Halle für alles noch Material fehlt — gerade dann ist es nützlich. Vom Nutzer nach einem Beispiel gewählt | 2026-10-18 |
 | Ein Filter blendet ausgewählte Übungen aus, wählt sie aber nicht ab; die Leiste nennt, wie viele ausgeblendet sind | Wer kurz filtert, soll seine Vorauswahl nicht still verlieren; übernommen wird, was angekreuzt ist, und die Leiste sagt es. Vom Nutzer nach einem Beispiel gewählt | 2026-10-18 |
 | Abdeckung je Zielgruppe (Sportart + Alter) statt je festem Altersbereich; keine feste Liste zum Launch | Vom Nutzer beim Tech Design gewünscht: Stück für Stück, die wichtigsten Zielgruppen zuerst, und sehen, wie weit es realistisch reicht. Eine Gruppe braucht Übungen, die zu Sportart und Alter zugleich passen | 2026-10-18 |
+| Blöcke dürfen einem Thema folgen (z. B. „Kinderspiele") und beliebig groß sein; 3 / 5 / 3 nur noch als Kontrollblick | Vom Nutzer gewünscht: gute Quellen ganz ausschöpfen, statt je Zielgruppe die Marken abzuarbeiten. Die Pflichtangaben je Übung bleiben, damit der Generator jede Übung findet; Lücken zeigt die Zählung | 2026-10-21 |
+| Quellen tragen Nutzer und Claude gemeinsam zusammen; Claude legt eine Quellenliste mit Einschätzung nach Abschnitt H vor, entschieden wird gemeinsam | Vom Nutzer gewünscht. Mehr Quellen erleichtern das Mischen (Abschnitt H); die Liste macht die rechtliche Einschätzung je Quelle nachvollziehbar und zeigt, wie stark eine Quelle schon genutzt ist | 2026-10-21 |
 
 ### Technical Decisions
 <!-- Added by /architecture -->
@@ -566,6 +619,8 @@ Prüfprogramm „Abdeckung"  zählt den freigegebenen Bestand je Zielgruppe (Spo
 
 Welche Zielgruppen gezählt werden, steht in einer kleinen eigenen Liste im Ordner der Blöcke. Der
 Nutzer ergänzt sie Zielgruppe für Zielgruppe, in der Reihenfolge, in der er sie angehen will.
+*Seit dem 2026-10-21 freiwillig: Blöcke dürfen einem Thema folgen, die Zählung ist dann nur ein
+Kontrollblick (Abschnitt F).*
 
 Das Prüfprogramm liegt im Projekt, die Tabellen nicht. Es prüft mit **denselben Listen und
 Grenzen wie das Übungsformular** (die Begriffe des Grundstocks aus PROJ-19, die Längen und Zahlen
@@ -597,13 +652,13 @@ im Konto des Nutzers zu sehen sind.
 
 | # | Wer | Was | Wo |
 |---|---|---|---|
-| 1 | Nutzer | sagt, wofür der Block ist (z. B. „Kinderturnen 4–6, Aufwärmen und Hauptteil"), zeigt Quellen (Links, PDFs, eigene Notizen) und sagt, was daraus werden soll | Chat |
+| 1 | Nutzer und Claude | legen fest, wofür der Block ist (Zielgruppe wie „Kinderturnen 4–6" oder Thema wie „Kinderspiele"), tragen Quellen zusammen, Claude legt die Quellenliste vor, gemeinsam wird entschieden, was daraus werden soll (Abschnitt G, „Quellen zusammentragen") | Chat, Quellenliste im Ordner der Blöcke |
 | 2 | Claude | liest die Quellen, schreibt die Übungen in eigenen Worten in die Tabelle, trägt die Herkunft ein, lässt „prüfen" selbst laufen, bis es fehlerfrei ist | .xlsx im Ordner der Blöcke |
 | 3 | Nutzer | öffnet die Tabelle, schreibt um, streicht, ergänzt, speichert | Excel |
 | 4 | Claude | „prüfen": Fehlerliste (zurück zu 3) oder Gegenüberstellung, was neu ist und was sich ändert | Terminal, Ergebnis im Chat |
 | 5 | Claude, nach Ja des Nutzers | „einlesen": die Übungen stehen als **Entwurf** im Konto des Nutzers unter „Übungsdatenbank" | Datenbank |
 | 6 | Nutzer | sieht sie in der App an, probiert „Passt zu Gruppe" mit einer Gruppe, übernimmt vielleicht welche und generiert eine Einheit. Gefällt etwas nicht: zurück zu 3 | App |
-| 7 | Claude, nach Ja des Nutzers | „freigeben": ab jetzt sehen alle Nutzer den Block; danach „Abdeckung" für den Stand je Zielgruppe | Datenbank |
+| 7 | Claude, nach Ja des Nutzers | „freigeben": ab jetzt sehen alle Nutzer den Block; auf Wunsch danach „Abdeckung" als Kontrollblick je Zielgruppe | Datenbank |
 
 **Ein „Hochladen" zu GitHub oder Vercel gibt es dabei nicht.** Übungen sind Daten in der
 Datenbank, kein Code: Einlesen und Freigeben gehen direkt dorthin, ohne Auslieferung, ohne Commit,
